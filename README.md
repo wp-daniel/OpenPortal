@@ -128,4 +128,4 @@ can never disagree with what the server enforces.
 
 ## License
 
-[MIT](LICENSE). Use it, change it, ship it.
+[MIT](LICENSE). Use it, change it, ship it. Third-party licenses are listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

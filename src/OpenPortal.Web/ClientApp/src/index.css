@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
 
 /*
   Theme tokens follow the shadcn/ui convention so that generated components, the ones hand-written here and
@@ -25,6 +28,8 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
@@ -53,14 +58,15 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
+  --success: oklch(0.527 0.154 150);
+  --warning: oklch(0.68 0.16 70);
 }
 
 /*
-  Dark is the default appearance rather than the fallback, and `prefers-color-scheme: light` still wins when
-  the reader has asked for a light interface. Pinning dark on :root instead of only on @media keeps the
-  explicit choice available to a future theme toggle without changing the token names.
+  Light is the :root default; the `dark` class on <html> switches to the dark tokens. The class is managed
+  by ThemeProvider (src/components/theme-provider.tsx), so the user's explicit choice wins over the OS.
 */
-:root {
+.dark {
   color-scheme: dark;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -81,31 +87,8 @@
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 18%);
   --ring: oklch(0.556 0 0);
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color-scheme: light;
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --destructive-foreground: oklch(0.985 0 0);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-  }
+  --success: oklch(0.765 0.177 163);
+  --warning: oklch(0.828 0.189 84);
 }
 
 @layer base {
@@ -122,15 +105,7 @@
     color: var(--color-foreground);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-font-smoothing: antialiased;
-  }
-
-  /*
-    A visible focus ring is required rather than optional: every interactive element here is reachable by
-    keyboard, and removing the UA outline without replacing it would strand keyboard users.
-  */
-  :focus-visible {
-    outline: 2px solid var(--color-ring);
-    outline-offset: 2px;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -143,4 +118,73 @@
       scroll-behavior: auto !important;
     }
   }
+}
+/* Hides the system cursor while <MagneticCursor> is mounted (fine pointers only; it adds this class). */
+html.custom-cursor,
+html.custom-cursor * {
+  cursor: none !important;
+}
+
+
+/*
+  Cursor glow (see components/MagneticCursor.tsx). Both the highlighted control and the cursor ring are lit
+  from one point and fade away from it, in the theme's own foreground colour so it stays minimal on light and
+  dark. The component drives it with custom properties: --gx/--gy/--gr/--ga for the control (centre, spread,
+  strength 0..1) and --ra/--rs/--rg for the ring (angle of the lit arc, its half-width in degrees, strength
+  0..1). The edge layers draw only a thin border by masking out the middle.
+*/
+.magnetic-glow > *,
+.magnetic-ring > * {
+  position: absolute;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.magnetic-glow > * {
+  inset: 0;
+}
+
+.magnetic-ring > * {
+  inset: -1px;
+}
+
+.magnetic-glow__fill {
+  background: radial-gradient(
+    circle at var(--gx, 50%) var(--gy, 50%),
+    color-mix(in oklab, var(--foreground) calc(var(--ga, 0) * 7%), transparent),
+    transparent var(--gr, 0px)
+  );
+}
+
+.magnetic-glow__edge {
+  padding: 1px;
+  background: radial-gradient(
+    circle at var(--gx, 50%) var(--gy, 50%),
+    color-mix(in oklab, var(--foreground) calc(var(--ga, 0) * 55%), transparent),
+    transparent var(--gr, 0px)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+}
+
+.magnetic-ring__edge {
+  padding: 1.5px;
+  background: conic-gradient(
+    from calc(var(--ra, 0deg) - var(--rs, 0deg)),
+    transparent,
+    color-mix(in oklab, var(--foreground) calc(var(--rg, 0) * 75%), transparent) var(--rs, 0deg),
+    transparent calc(var(--rs, 0deg) * 2)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
 }
