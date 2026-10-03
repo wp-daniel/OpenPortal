@@ -1,17 +1,39 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Loader2, Plus } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { z } from 'zod'
-import { ApiError } from '../api/client'
 import {
   contentAdminApi,
   projectToForm,
   toProjectRequest,
   type ProjectForm as ProjectFields,
-} from '../api/content'
-import type { ManagedProject } from '../api/types'
-import { Badge, Button, Card, EmptyState, ErrorPanel, Field } from '../components/ui'
-import { describeError, traceIdOf } from '../hooks/useRetryableError'
+} from '@/api/content'
+import type { ManagedProject } from '@/api/types'
+import { FormField } from '@/components/FormField'
+import { PageHeader } from '@/components/PageHeader'
+import { Section } from '@/components/Section'
+import { EmptyState, ErrorPanel, LoadingState } from '@/components/StatePanels'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Textarea } from '@/components/ui/textarea'
+import { describeError, traceIdOf } from '@/lib/errors'
+import { notify } from '@/hooks/useToast'
+import { reportFormError, serverFieldErrors, zodFieldErrors } from '@/lib/forms'
 
 const schema = z
   .object({
@@ -32,37 +54,40 @@ const schema = z
     startedOn: z.union([z.literal(''), z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use the date picker.')]),
     completedOn: z.union([z.literal(''), z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use the date picker.')]),
   })
-  .refine(
-    (values) => !values.startedOn || !values.completedOn || values.completedOn >= values.startedOn,
-    { message: 'Completion cannot precede the start.', path: ['completedOn'] },
-  )
+  .refine((values) => !values.startedOn || !values.completedOn || values.completedOn >= values.startedOn, {
+    message: 'Completion cannot precede the start.',
+    path: ['completedOn'],
+  })
+
+type TextField = Exclude<keyof ProjectFields, 'id' | 'isPublished'>
 
 /** The project editor: lists every project and creates or edits the one named in the route. */
 export function ContentProjectPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const [pendingDelete, setPendingDelete] = useState<ManagedProject | null>(null)
 
   const projects = useQuery({
     queryKey: ['manage-projects'],
     queryFn: ({ signal }) => contentAdminApi.listProjects(signal),
   })
 
+  // Failures on both mutations are toasted by the global MutationCache handler.
   const setPublished = useMutation({
-    mutationFn: ({ id, published }: { id: string; published: boolean }) =>
-      contentAdminApi.setPublished(id, published),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['manage-projects'] }),
+    mutationFn: ({ project, published }: { project: ManagedProject; published: boolean }) =>
+      contentAdminApi.setPublished(project.id, published),
+    onSuccess: async (_result, { project, published }) => {
+      notify.success(published ? 'Project published' : 'Project unpublished', project.name)
+      await queryClient.invalidateQueries({ queryKey: ['manage-projects'] })
+    },
   })
 
   const remove = useMutation({
-    mutationFn: (id: string) => contentAdminApi.deleteProject(id),
-    onSuccess: async () => {
-      // A deleted project also disappears from the public pages, so both caches are stale.
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['manage-projects'] }),
-        queryClient.invalidateQueries({ queryKey: ['public-content'] }),
-        queryClient.invalidateQueries({ queryKey: ['public-project'] }),
-      ])
+    mutationFn: (project: ManagedProject) => contentAdminApi.deleteProject(project.id),
+    onSuccess: async (_result, project) => {
+      notify.success('Project deleted', project.name)
+      await queryClient.invalidateQueries({ queryKey: ['manage-projects'] })
 
       if (projectId) {
         await navigate('/admin/content/projects', { replace: true })
@@ -77,66 +102,70 @@ export function ContentProjectPage() {
       <ErrorPanel
         message={describeError(projects.error)}
         traceId={traceIdOf(projects.error)}
-        onRetry={() => projects.refetch()}
+        onRetry={() => void projects.refetch()}
       />
     )
   }
 
   return (
-    <div className="space-y-10">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
-        <Button onClick={() => navigate('/admin/content/projects/new')}>New project</Button>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        title="Projects"
+        actions={
+          <Button asChild>
+            <Link to="/admin/content/projects/new">
+              <Plus /> New project
+            </Link>
+          </Button>
+        }
+      />
 
       {projects.isPending ? (
-        <p role="status" className="text-muted-foreground py-8 text-center text-sm">
-          Loading…
-        </p>
+        <LoadingState />
       ) : (projects.data?.length ?? 0) === 0 ? (
         <EmptyState title="No projects yet" description="Create the first one to get started." />
       ) : (
-        <ul className="space-y-3">
-          {projects.data!.map((project) => (
-            <li key={project.id}>
-              <Card>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-base font-semibold">{project.name}</h2>
-                      <Badge tone={project.isPublished ? 'success' : 'warning'}>
-                        {project.isPublished ? 'Published' : 'Draft'}
-                      </Badge>
-                    </div>
-                    <p className="text-muted-foreground mt-1 font-mono text-xs">/{project.slug}</p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Link to={`/admin/content/projects/${project.id}`}>
-                      <Button variant="outline">Edit</Button>
-                    </Link>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Slug</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {projects.data!.map((project) => (
+              <TableRow key={project.id}>
+                <TableCell className="font-medium">{project.name}</TableCell>
+                <TableCell className="text-muted-foreground font-mono text-xs">/{project.slug}</TableCell>
+                <TableCell>
+                  <Badge variant={project.isPublished ? 'success' : 'warning'}>
+                    {project.isPublished ? 'Published' : 'Draft'}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <Button asChild variant="outline" size="sm">
+                      <Link to={`/admin/content/projects/${project.id}`}>Edit</Link>
+                    </Button>
                     <Button
                       variant="outline"
+                      size="sm"
                       disabled={setPublished.isPending}
-                      onClick={() =>
-                        setPublished.mutate({ id: project.id, published: !project.isPublished })
-                      }
+                      onClick={() => setPublished.mutate({ project, published: !project.isPublished })}
                     >
                       {project.isPublished ? 'Unpublish' : 'Publish'}
                     </Button>
-                    <Button
-                      variant="destructive"
-                      disabled={remove.isPending}
-                      onClick={() => remove.mutate(project.id)}
-                    >
+                    <Button variant="destructive" size="sm" disabled={remove.isPending} onClick={() => setPendingDelete(project)}>
                       Delete
                     </Button>
                   </div>
-                </div>
-              </Card>
-            </li>
-          ))}
-        </ul>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
 
       {/*
@@ -146,46 +175,68 @@ export function ContentProjectPage() {
       <ProjectEditor
         key={projectId ?? 'none'}
         project={projectId === 'new' ? null : (selected ?? null)}
+        creating={projectId === 'new'}
         missing={projectId !== undefined && projectId !== 'new' && projects.data !== undefined && !selected}
       />
+
+      <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this project?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDelete?.name} will be permanently removed. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingDelete) {
+                  remove.mutate(pendingDelete)
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
 
 function ProjectEditor({
   project,
+  creating,
   missing,
 }: {
   project: ManagedProject | null
+  creating: boolean
   missing: boolean
 }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [form, setForm] = useState<ProjectFields>(() => projectToForm(project))
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<TextField, string>>>({})
 
   const save = useMutation({
     mutationFn: (values: ProjectFields) => contentAdminApi.saveProject(toProjectRequest(values)),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['manage-projects'] }),
-        queryClient.invalidateQueries({ queryKey: ['public-content'] }),
-      ])
-
+    meta: { handlesErrors: true },
+    onSuccess: async (saved) => {
+      notify.success('Project saved', saved.name)
+      await queryClient.invalidateQueries({ queryKey: ['manage-projects'] })
       await navigate('/admin/content/projects', { replace: true })
     },
+    onError: (failure) => reportFormError(failure, 'The project could not be saved'),
   })
 
   if (missing) {
     return (
-      <ErrorPanel
-        title="Project not found"
-        message="It may have been deleted. Pick another project from the list."
-      />
+      <ErrorPanel title="Project not found" message="It may have been deleted. Pick another project from the list." />
     )
   }
 
-  if (!project) {
+  if (!project && !creating) {
     return null
   }
 
@@ -195,9 +246,7 @@ function ProjectEditor({
     const parsed = schema.safeParse(form)
 
     if (!parsed.success) {
-      setFieldErrors(
-        Object.fromEntries(parsed.error.issues.map((issue) => [issue.path[0] as string, issue.message])),
-      )
+      setFieldErrors(zodFieldErrors<TextField>(parsed.error))
 
       return
     }
@@ -206,107 +255,70 @@ function ProjectEditor({
     save.mutate(form)
   }
 
-  const serverErrors = save.error instanceof ApiError ? save.error.fieldErrors : {}
-  const summaryError =
-    save.isError && !(save.error instanceof ApiError && save.error.status === 400)
-      ? describeError(save.error)
-      : undefined
+  const serverErrors = serverFieldErrors(save.error)
 
-  const field = (key: keyof ProjectFields, id: string, label: string, extra?: { type?: string; hint?: string }) => (
-    <Field label={label} htmlFor={id} error={fieldErrors[key]} hint={extra?.hint}>
-      <input
-        id={id}
+  const field = (key: TextField, label: string, extra?: { type?: string; hint?: string; className?: string }) => (
+    <FormField
+      label={label}
+      htmlFor={key}
+      error={fieldErrors[key] ?? serverErrors[key]?.[0]}
+      hint={extra?.hint}
+      className={extra?.className}
+    >
+      <Input
         type={extra?.type ?? 'text'}
-        value={String(form[key])}
+        value={form[key]}
         onChange={(event) => setForm({ ...form, [key]: event.target.value })}
-        aria-invalid={Boolean(fieldErrors[key])}
-        className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
       />
-    </Field>
+    </FormField>
   )
 
   return (
-    <Card
+    <Section
       title={form.id ? 'Edit project' : 'New project'}
-      description={
-        form.id ? 'Publishing changes are visible on the public site immediately.' : 'The slug becomes the URL.'
-      }
+      description={form.id ? undefined : 'The slug becomes the project’s address.'}
     >
-      <form onSubmit={submit} noValidate className="space-y-5">
-        <div className="grid gap-5 sm:grid-cols-2">
-          {field('name', 'name', 'Name')}
-          {field('slug', 'slug', 'Slug', { hint: 'Lowercase, hyphen-separated.' })}
+      <form onSubmit={submit} noValidate className="grid gap-5">
+        <div className="grid items-start gap-5 sm:grid-cols-2">
+          {field('name', 'Name')}
+          {field('slug', 'Slug', { hint: 'Lowercase, hyphen-separated.' })}
+          {field('summary', 'Summary', { className: 'sm:col-span-2' })}
+
+          <FormField
+            label="Description"
+            htmlFor="description"
+            error={fieldErrors.description ?? serverErrors.description?.[0]}
+            className="sm:col-span-2"
+          >
+            <Textarea rows={8} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          </FormField>
+
+          {field('url', 'Live URL', { type: 'url' })}
+          {field('repositoryUrl', 'Repository URL', { type: 'url' })}
+          {field('startedOn', 'Started on', { type: 'date' })}
+          {field('completedOn', 'Completed on', { type: 'date', hint: 'Leave empty while ongoing.' })}
+          {field('position', 'Display position', { hint: 'Lower sorts first. Empty sorts last.' })}
+          {field('technologies', 'Technologies', { hint: 'Comma-separated; shared between projects.' })}
         </div>
 
-        {field('summary', 'summary', 'Summary')}
-
-        <Field label="Description" htmlFor="description" error={fieldErrors.description}>
-          <textarea
-            id="description"
-            rows={8}
-            value={form.description}
-            onChange={(event) => setForm({ ...form, description: event.target.value })}
-            className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
-          />
-        </Field>
-
-        <div className="grid gap-5 sm:grid-cols-2">
-          {field('url', 'url', 'Live URL', { type: 'url' })}
-          {field('repositoryUrl', 'repositoryUrl', 'Repository URL', { type: 'url' })}
-          {field('startedOn', 'startedOn', 'Started on', { type: 'date' })}
-          {field('completedOn', 'completedOn', 'Completed on', {
-            type: 'date',
-            hint: 'Leave empty while ongoing.',
-          })}
-          {field('position', 'position', 'Display position', {
-            hint: 'Lower sorts first. Empty sorts after positioned projects.',
-          })}
-        </div>
-
-        <Field
-          label="Technologies"
-          htmlFor="technologies"
-          hint="Comma-separated. They are created on first use and shared between projects."
-        >
-          <input
-            id="technologies"
-            value={form.technologies}
-            onChange={(event) => setForm({ ...form, technologies: event.target.value })}
-            className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
-          />
-        </Field>
-
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="isPublished"
             checked={form.isPublished}
-            onChange={(event) => setForm({ ...form, isPublished: event.target.checked })}
+            onCheckedChange={(checked) => setForm({ ...form, isPublished: checked === true })}
           />
-          Published
-        </label>
+          <Label htmlFor="isPublished" className="font-normal">
+            Published
+          </Label>
+        </div>
 
-        <div className="flex items-center gap-3">
+        <div>
           <Button type="submit" disabled={save.isPending}>
+            {save.isPending && <Loader2 className="animate-spin" />}
             {save.isPending ? 'Saving…' : 'Save project'}
           </Button>
-          {save.isSuccess && (
-            <span role="status" className="text-muted-foreground text-sm">
-              Saved.
-            </span>
-          )}
-          {summaryError && (
-            <span role="alert" className="text-destructive text-sm">
-              {summaryError}
-            </span>
-          )}
         </div>
-
-        {serverErrors.slug && (
-          <p role="alert" className="text-destructive text-sm">
-            {serverErrors.slug[0]}
-          </p>
-        )}
       </form>
-    </Card>
+    </Section>
   )
 }

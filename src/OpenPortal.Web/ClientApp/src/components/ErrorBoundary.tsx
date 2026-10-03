@@ -1,6 +1,7 @@
-import { isRouteErrorResponse, useRouteError } from 'react-router-dom'
-import { describeError, traceIdOf } from '../hooks/useRetryableError'
-import { Button } from './ui'
+import { isRouteErrorResponse, useNavigate, useRouteError } from 'react-router-dom'
+import { ErrorPanel } from '@/components/StatePanels'
+import { Button } from '@/components/ui/button'
+import { describeError, traceIdOf } from '@/lib/errors'
 
 /**
  * The last-resort failure screen for a render or route-loader crash.
@@ -11,26 +12,16 @@ import { Button } from './ui'
  */
 export function ErrorBoundary() {
   const error = useRouteError()
+  const navigate = useNavigate()
 
-  const message = isRouteErrorResponse(error)
-    ? `${error.status} ${error.statusText}`
-    : describeError(error)
-
+  const message = isRouteErrorResponse(error) ? `${error.status} ${error.statusText}` : describeError(error)
   const traceId = isRouteErrorResponse(error) ? undefined : traceIdOf(error)
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center px-4">
-      <div role="alert" className="border-destructive/40 bg-destructive/5 rounded-lg border p-6">
-        <h1 className="text-destructive text-lg font-semibold">This page could not be displayed</h1>
-        <p className="text-muted-foreground mt-2 text-sm">{message}</p>
-        {traceId && (
-          <p className="text-muted-foreground mt-3 font-mono text-xs">
-            Reference: <code>{traceId}</code>
-          </p>
-        )}
-        <div className="mt-5">
-          <Button onClick={() => window.location.assign('/')}>Back to the portal</Button>
-        </div>
+    <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-4 px-4">
+      <ErrorPanel title="This page could not be displayed" message={message} traceId={traceId} />
+      <div>
+        <Button onClick={() => void navigate('/')}>Back to the portal</Button>
       </div>
     </main>
   )

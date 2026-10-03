@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
 
 export function NotFoundPage() {
   return (
@@ -7,11 +8,9 @@ export function NotFoundPage() {
       <p className="text-muted-foreground mt-2 text-sm">
         The address you followed does not match anything on this portal.
       </p>
-      <p className="mt-6">
-        <Link to="/" className="underline underline-offset-4">
-          Back to the home page
-        </Link>
-      </p>
+      <Button asChild className="mt-6">
+        <Link to="/">Back to the dashboard</Link>
+      </Button>
     </div>
   )
 }

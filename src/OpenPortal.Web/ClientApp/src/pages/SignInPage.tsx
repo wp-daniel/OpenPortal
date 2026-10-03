@@ -1,11 +1,18 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Loader2 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { z } from 'zod'
-import { authApi } from '../api/auth'
-import { ApiError } from '../api/client'
-import { Button, Card, Field } from '../components/ui'
-import { useSession } from '../hooks/useSession'
+import { authApi } from '@/api/auth'
+import { ApiError } from '@/api/client'
+import { FormField } from '@/components/FormField'
+import { Section } from '@/components/Section'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { SESSION_QUERY_KEY } from '@/hooks/useSession'
+import { notify } from '@/hooks/useToast'
+import { zodFieldErrors } from '@/lib/forms'
 
 /**
  * Sign-in.
@@ -13,6 +20,9 @@ import { useSession } from '../hooks/useSession'
  * The schema checks only what the client can judge. Password complexity is deliberately not enforced here:
  * the authoritative policy is published by the server and enforced by the user store, and a client copy would
  * either drift or reject passwords the server would have accepted.
+ *
+ * Navigation after success is not done here: invalidating the session makes <PublicOnlyRoute> redirect to
+ * the page the user originally asked for (or the dashboard).
  */
 const schema = z.object({
   email: z.string().min(1, 'Email is required.').email('Enter a valid email address.'),
@@ -25,17 +35,20 @@ type Fields = z.infer<typeof schema>
 export function SignInPage() {
   const [fields, setFields] = useState<Fields>({ email: '', password: '', rememberMe: false })
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof Fields, string>>>({})
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { session } = useSession()
 
   const signIn = useMutation({
     mutationFn: (values: Fields) => authApi.login(values.email, values.password, values.rememberMe),
-    onSuccess: async () => {
-      // The session query is the app's source of truth for who is signed in; without invalidating it the
-      // header would still show the anonymous state after a successful sign-in.
-      await queryClient.invalidateQueries({ queryKey: ['session'] })
-      await navigate('/', { replace: true })
+    meta: { handlesErrors: true },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY }),
+    onError: (error) => {
+      // The server deliberately does not say which of the two fields was wrong, so this text must not imply
+      // that either one was. Echoing "unknown email" would confirm which addresses exist.
+      if (error instanceof ApiError && error.isUnauthenticated) {
+        notify.error('Sign-in failed', 'Those credentials were not accepted.')
+      } else {
+        notify.fromError(error, 'Sign-in failed')
+      }
     },
   })
 
@@ -45,11 +58,7 @@ export function SignInPage() {
     const parsed = schema.safeParse(fields)
 
     if (!parsed.success) {
-      setFieldErrors(
-        Object.fromEntries(
-          parsed.error.issues.map((issue) => [issue.path[0] as string, issue.message]),
-        ),
-      )
+      setFieldErrors(zodFieldErrors<keyof Fields>(parsed.error))
 
       return
     }
@@ -60,80 +69,51 @@ export function SignInPage() {
 
   const serverErrors = signIn.error instanceof ApiError ? signIn.error.fieldErrors : {}
 
-  if (session.isAuthenticated) {
-    return (
-      <Card title="You are already signed in">
-        <p className="text-muted-foreground text-sm">
-          Sign out first if you want to use a different account.
-        </p>
-      </Card>
-    )
-  }
-
   return (
-    <div className="mx-auto max-w-md">
-      <Card title="Sign in" description="Use the email address of an OpenPortal account.">
-        <form onSubmit={submit} noValidate className="space-y-5">
-          <Field label="Email" htmlFor="email" error={fieldErrors.email ?? serverErrors.email?.[0]}>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="username"
-              required
-              value={fields.email}
-              onChange={(event) => setFields({ ...fields, email: event.target.value })}
-              aria-invalid={Boolean(fieldErrors.email ?? serverErrors.email)}
-              className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
-            />
-          </Field>
+    <Section
+      title="Sign in"
+      description="Use the email address of an OpenPortal account."
+      className="bg-card/80 shadow-lg backdrop-blur"
+    >
+      <form onSubmit={submit} noValidate className="grid gap-5">
+        <FormField label="Email" htmlFor="email" error={fieldErrors.email ?? serverErrors.email?.[0]}>
+          <Input
+            name="email"
+            type="email"
+            autoComplete="username"
+            required
+            value={fields.email}
+            onChange={(event) => setFields({ ...fields, email: event.target.value })}
+          />
+        </FormField>
 
-          <Field
-            label="Password"
-            htmlFor="password"
-            error={fieldErrors.password ?? serverErrors.password?.[0]}
-          >
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={fields.password}
-              onChange={(event) => setFields({ ...fields, password: event.target.value })}
-              aria-invalid={Boolean(fieldErrors.password ?? serverErrors.password)}
-              className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
-            />
-          </Field>
+        <FormField label="Password" htmlFor="password" error={fieldErrors.password ?? serverErrors.password?.[0]}>
+          <Input
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={fields.password}
+            onChange={(event) => setFields({ ...fields, password: event.target.value })}
+          />
+        </FormField>
 
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={fields.rememberMe}
-              onChange={(event) => setFields({ ...fields, rememberMe: event.target.checked })}
-            />
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="rememberMe"
+            checked={fields.rememberMe}
+            onCheckedChange={(checked) => setFields({ ...fields, rememberMe: checked === true })}
+          />
+          <Label htmlFor="rememberMe" className="font-normal">
             Keep me signed in on this browser
-          </label>
+          </Label>
+        </div>
 
-          {signIn.isError && (
-            <p role="alert" className="text-destructive text-sm font-medium">
-              {/*
-                The server deliberately does not say which of the two fields was wrong, so this text must not
-                imply that either one was. Echoing "unknown email" would confirm which addresses exist.
-              */}
-              {signIn.error instanceof ApiError && signIn.error.status === 401
-                ? 'Those credentials were not accepted.'
-                : signIn.error instanceof ApiError
-                  ? signIn.error.summary
-                  : 'The request could not be completed.'}
-            </p>
-          )}
-
-          <Button type="submit" disabled={signIn.isPending} className="w-full">
-            {signIn.isPending ? 'Signing in…' : 'Sign in'}
-          </Button>
-        </form>
-      </Card>
-    </div>
+        <Button type="submit" disabled={signIn.isPending} className="w-full">
+          {signIn.isPending && <Loader2 className="animate-spin" />}
+          {signIn.isPending ? 'Signing in…' : 'Sign in'}
+        </Button>
+      </form>
+    </Section>
   )
 }

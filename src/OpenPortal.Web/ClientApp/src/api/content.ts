@@ -1,19 +1,11 @@
-import { api } from './client'
+import { ApiError, api } from './client'
 import type {
   ManagedProject,
   Profile,
   ProfileRequest,
-  Project,
   ProjectRequest,
-  PublicContent,
   SocialLinkRequest,
 } from './types'
-
-export const publicContentApi = {
-  all: (signal?: AbortSignal) => api.get<PublicContent>('/api/content', signal),
-  project: (slug: string, signal?: AbortSignal) =>
-    api.get<Project>(`/api/content/projects/${encodeURIComponent(slug)}`, signal),
-}
 
 export const contentAdminApi = {
   /** Returns null when no profile exists yet, so the editor can start from an empty form. */
@@ -22,7 +14,7 @@ export const contentAdminApi = {
       return await api.get<Profile>('/api/manage/content/profile', signal)
     } catch (error) {
       // 404 here means "not created yet", not a failure worth surfacing.
-      if (error instanceof Error && 'status' in error && (error as { status: number }).status === 404) {
+      if (error instanceof ApiError && error.status === 404) {
         return null
       }
 

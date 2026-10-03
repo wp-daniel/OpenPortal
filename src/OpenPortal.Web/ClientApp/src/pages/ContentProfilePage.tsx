@@ -1,10 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Loader2, Plus, Trash2 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { z } from 'zod'
-import { ApiError } from '../api/client'
-import { contentAdminApi, profileToForm, toProfileRequest, type ProfileForm } from '../api/content'
-import { Button, Card, ErrorPanel, Field } from '../components/ui'
-import { describeError, traceIdOf } from '../hooks/useRetryableError'
+import { contentAdminApi, profileToForm, toProfileRequest, type ProfileForm as ProfileFormValues } from '@/api/content'
+import { FormField } from '@/components/FormField'
+import { PageHeader } from '@/components/PageHeader'
+import { Section } from '@/components/Section'
+import { ErrorPanel, LoadingState } from '@/components/StatePanels'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { describeError, traceIdOf } from '@/lib/errors'
+import { notify } from '@/hooks/useToast'
+import { reportFormError, serverFieldErrors, zodFieldErrors } from '@/lib/forms'
 
 const schema = z.object({
   displayName: z.string().trim().min(2, 'Display name must be at least 2 characters.').max(120),
@@ -15,7 +23,9 @@ const schema = z.object({
   avatarUrl: z.union([z.literal(''), z.string().url('Enter an absolute image URL.')]),
 })
 
-/** Edits the single public profile, including its ordered social links. */
+type FieldName = keyof z.infer<typeof schema>
+
+/** Edits the single profile, including its ordered social links. */
 export function ContentProfilePage() {
   const queryClient = useQueryClient()
 
@@ -25,14 +35,13 @@ export function ContentProfilePage() {
   })
 
   const save = useMutation({
-    mutationFn: (form: ProfileForm) => contentAdminApi.saveProfile(toProfileRequest(form)),
+    mutationFn: (form: ProfileFormValues) => contentAdminApi.saveProfile(toProfileRequest(form)),
+    meta: { handlesErrors: true },
     onSuccess: async () => {
-      // Both the editor and the public page read from these keys; neither may keep showing the old copy.
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['manage-profile'] }),
-        queryClient.invalidateQueries({ queryKey: ['public-content'] }),
-      ])
+      notify.success('Profile saved')
+      await queryClient.invalidateQueries({ queryKey: ['manage-profile'] })
     },
+    onError: (failure) => reportFormError(failure, 'The profile could not be saved'),
   })
 
   if (profile.isError) {
@@ -40,48 +49,41 @@ export function ContentProfilePage() {
       <ErrorPanel
         message={describeError(profile.error)}
         traceId={traceIdOf(profile.error)}
-        onRetry={() => profile.refetch()}
+        onRetry={() => void profile.refetch()}
       />
     )
   }
 
   if (profile.isPending) {
-    return (
-      <p role="status" className="text-muted-foreground py-8 text-center text-sm">
-        Loading…
-      </p>
-    )
+    return <LoadingState />
   }
 
   return (
-    <ProfileForm
+    <ProfileEditor
       initial={profileToForm(profile.data)}
       onSubmit={(form) => save.mutate(form)}
       isSaving={save.isPending}
-      saved={save.isSuccess}
-      error={save.isError ? save.error : undefined}
+      error={save.error}
       created={profile.data !== null}
     />
   )
 }
 
-function ProfileForm({
+function ProfileEditor({
   initial,
   onSubmit,
   isSaving,
-  saved,
   error,
   created,
 }: {
-  initial: ProfileForm
-  onSubmit: (form: ProfileForm) => void
+  initial: ProfileFormValues
+  onSubmit: (form: ProfileFormValues) => void
   isSaving: boolean
-  saved: boolean
   error: unknown
   created: boolean
 }) {
   const [form, setForm] = useState(initial)
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldName, string>>>({})
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -89,9 +91,7 @@ function ProfileForm({
     const parsed = schema.safeParse(form)
 
     if (!parsed.success) {
-      setFieldErrors(
-        Object.fromEntries(parsed.error.issues.map((issue) => [issue.path[0] as string, issue.message])),
-      )
+      setFieldErrors(zodFieldErrors<FieldName>(parsed.error))
 
       return
     }
@@ -100,200 +100,112 @@ function ProfileForm({
     onSubmit(form)
   }
 
-  const serverErrors = error instanceof ApiError ? error.fieldErrors : {}
-  const summaryError = error && !(error instanceof ApiError && error.status === 400)
-    ? describeError(error)
-    : undefined
+  const serverErrors = serverFieldErrors(error)
+  const errorFor = (name: FieldName) => fieldErrors[name] ?? serverErrors[name]?.[0]
+
+  const updateLink = (index: number, patch: Partial<ProfileFormValues['socialLinks'][number]>) =>
+    setForm({
+      ...form,
+      socialLinks: form.socialLinks.map((entry, position) => (position === index ? { ...entry, ...patch } : entry)),
+    })
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Public profile</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          {created
-            ? 'This is what visitors see at the top of the portal.'
-            : 'No profile exists yet. Saving creates it.'}
-        </p>
-      </div>
+    <>
+      <PageHeader
+        title="Profile"
+        description={created ? 'The single profile record for this portal.' : 'No profile exists yet. Saving creates it.'}
+      />
 
-      <form onSubmit={submit} noValidate className="space-y-8">
-        <Card title="Identity">
-          <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Display name" htmlFor="displayName" error={fieldErrors.displayName ?? serverErrors.displayName?.[0]}>
-              <input
-                id="displayName"
-                required
-                value={form.displayName}
-                onChange={(event) => setForm({ ...form, displayName: event.target.value })}
-                className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
-              />
-            </Field>
+      <form onSubmit={submit} noValidate className="grid gap-6">
+        <Section title="Identity">
+          <div className="grid items-start gap-5 sm:grid-cols-2">
+            <FormField label="Display name" htmlFor="displayName" error={errorFor('displayName')}>
+              <Input required value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} />
+            </FormField>
 
-            <Field label="Headline" htmlFor="headline" error={fieldErrors.headline}>
-              <input
-                id="headline"
-                value={form.headline}
-                onChange={(event) => setForm({ ...form, headline: event.target.value })}
-                className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
-              />
-            </Field>
+            <FormField label="Headline" htmlFor="headline" error={errorFor('headline')}>
+              <Input value={form.headline} onChange={(e) => setForm({ ...form, headline: e.target.value })} />
+            </FormField>
 
-            <Field label="Location" htmlFor="location" error={fieldErrors.location}>
-              <input
-                id="location"
-                value={form.location}
-                onChange={(event) => setForm({ ...form, location: event.target.value })}
-                className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
-              />
-            </Field>
+            <FormField label="Location" htmlFor="location" error={errorFor('location')}>
+              <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+            </FormField>
 
-            <Field
-              label="Public contact email"
+            <FormField
+              label="Contact email"
               htmlFor="contactEmail"
-              error={fieldErrors.email}
-              hint="Separate from the sign-in address, which is never shown publicly."
+              error={errorFor('email')}
+              hint="Separate from the sign-in address."
             >
-              <input
-                id="contactEmail"
-                type="email"
-                value={form.email}
-                onChange={(event) => setForm({ ...form, email: event.target.value })}
-                className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
-              />
-            </Field>
+              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            </FormField>
 
-            <Field label="Avatar URL" htmlFor="avatarUrl" error={fieldErrors.avatarUrl}>
-              <input
-                id="avatarUrl"
-                type="url"
-                value={form.avatarUrl}
-                onChange={(event) => setForm({ ...form, avatarUrl: event.target.value })}
-                className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
-              />
-            </Field>
+            <FormField label="Avatar URL" htmlFor="avatarUrl" error={errorFor('avatarUrl')} className="sm:col-span-2">
+              <Input type="url" value={form.avatarUrl} onChange={(e) => setForm({ ...form, avatarUrl: e.target.value })} />
+            </FormField>
+
+            <FormField label="Summary" htmlFor="summary" error={errorFor('summary')} className="sm:col-span-2">
+              <Textarea rows={6} value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })} />
+            </FormField>
           </div>
+        </Section>
 
-          <div className="mt-5">
-            <Field label="Summary" htmlFor="summary" error={fieldErrors.summary}>
-              <textarea
-                id="summary"
-                rows={6}
-                value={form.summary}
-                onChange={(event) => setForm({ ...form, summary: event.target.value })}
-                className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
-              />
-            </Field>
-          </div>
-        </Card>
-
-        <Card
+        <Section
           title="Social links"
           description="Shown in order. Saving replaces the whole list."
           actions={
             <Button
               variant="outline"
+              size="sm"
               onClick={() =>
-                setForm({
-                  ...form,
-                  socialLinks: [...form.socialLinks, { platform: '', url: '', label: '' }],
-                })
+                setForm({ ...form, socialLinks: [...form.socialLinks, { platform: '', url: '', label: '' }] })
               }
             >
-              Add link
+              <Plus /> Add link
             </Button>
           }
         >
           {form.socialLinks.length === 0 ? (
             <p className="text-muted-foreground text-sm">No links yet.</p>
           ) : (
-            <ul className="space-y-4">
+            <ul className="grid gap-4">
               {form.socialLinks.map((link, index) => (
-                <li key={index} className="grid gap-3 sm:grid-cols-[1fr_2fr_1fr_auto]">
-                  <Field label="Platform" htmlFor={`platform-${index}`}>
-                    <input
-                      id={`platform-${index}`}
-                      value={link.platform}
-                      onChange={(event) =>
-                        setForm({
-                          ...form,
-                          socialLinks: form.socialLinks.map((entry, position) =>
-                            position === index ? { ...entry, platform: event.target.value } : entry,
-                          ),
-                        })
-                      }
-                      className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
-                    />
-                  </Field>
+                <li key={index} className="grid items-end gap-3 sm:grid-cols-[1fr_2fr_1fr_auto]">
+                  <FormField label="Platform" htmlFor={`platform-${index}`}>
+                    <Input value={link.platform} onChange={(e) => updateLink(index, { platform: e.target.value })} />
+                  </FormField>
 
-                  <Field label="URL" htmlFor={`url-${index}`}>
-                    <input
-                      id={`url-${index}`}
-                      type="url"
-                      value={link.url}
-                      onChange={(event) =>
-                        setForm({
-                          ...form,
-                          socialLinks: form.socialLinks.map((entry, position) =>
-                            position === index ? { ...entry, url: event.target.value } : entry,
-                          ),
-                        })
-                      }
-                      className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
-                    />
-                  </Field>
+                  <FormField label="URL" htmlFor={`url-${index}`}>
+                    <Input type="url" value={link.url} onChange={(e) => updateLink(index, { url: e.target.value })} />
+                  </FormField>
 
-                  <Field label="Label" htmlFor={`label-${index}`} hint="Optional.">
-                    <input
-                      id={`label-${index}`}
-                      value={link.label}
-                      onChange={(event) =>
-                        setForm({
-                          ...form,
-                          socialLinks: form.socialLinks.map((entry, position) =>
-                            position === index ? { ...entry, label: event.target.value } : entry,
-                          ),
-                        })
-                      }
-                      className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
-                    />
-                  </Field>
+                  <FormField label="Label (optional)" htmlFor={`label-${index}`}>
+                    <Input value={link.label} onChange={(e) => updateLink(index, { label: e.target.value })} />
+                  </FormField>
 
-                  <div className="flex items-end">
-                    <Button
-                      variant="ghost"
-                      aria-label={`Remove link ${index + 1}`}
-                      onClick={() =>
-                        setForm({
-                          ...form,
-                          socialLinks: form.socialLinks.filter((_, position) => position !== index),
-                        })
-                      }
-                    >
-                      Remove
-                    </Button>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Remove link ${index + 1}`}
+                    onClick={() =>
+                      setForm({ ...form, socialLinks: form.socialLinks.filter((_, position) => position !== index) })
+                    }
+                  >
+                    <Trash2 />
+                  </Button>
                 </li>
               ))}
             </ul>
           )}
-        </Card>
+        </Section>
 
-        <div className="flex items-center gap-3">
+        <div>
           <Button type="submit" disabled={isSaving}>
+            {isSaving && <Loader2 className="animate-spin" />}
             {isSaving ? 'Saving…' : 'Save profile'}
           </Button>
-          {saved && (
-            <span role="status" className="text-muted-foreground text-sm">
-              Saved.
-            </span>
-          )}
-          {summaryError && (
-            <span role="alert" className="text-destructive text-sm">
-              {summaryError}
-            </span>
-          )}
         </div>
       </form>
-    </div>
+    </>
   )
 }
