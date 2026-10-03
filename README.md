@@ -125,3 +125,7 @@ expose draft work or break the editor.
 
 The password policy is served through `/api/auth/session` rather than duplicated in the client, so a form
 can never disagree with what the server enforces.
+
+## License
+
+[MIT](LICENSE). Use it, change it, ship it.
