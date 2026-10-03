@@ -177,19 +177,15 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   })
 
   if (!response.ok) {
+    const problem = await readProblem(response)
+
     // 400 from the antiforgery filter means the token no longer matches this identity. Dropping it makes the
     // next attempt fetch a fresh one instead of replaying the same rejected token forever.
-    if (response.status === 400) {
-      const problem = await readProblem(response)
-
-      if (problem?.errorCode === 'antiforgery.invalid_token') {
-        antiforgery.invalidate()
-      }
-
-      throw new ApiError(response.status, problem)
+    if (response.status === 400 && problem?.errorCode === 'antiforgery.invalid_token') {
+      antiforgery.invalidate()
     }
 
-    throw new ApiError(response.status, await readProblem(response))
+    throw new ApiError(response.status, problem)
   }
 
   if (response.status === 204) {

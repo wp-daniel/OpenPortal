@@ -1,5 +1,6 @@
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import path from 'node:path'
 import { defineConfig, loadEnv } from 'vite'
 
 // The dev server is proxied by Microsoft.AspNetCore.SpaProxy, so the browser always talks to the ASP.NET
@@ -13,6 +14,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), tailwindcss()],
+    resolve: { alias: { '@': path.resolve(import.meta.dirname, './src') } },
     server: {
       port: 5173,
       strictPort: true,
@@ -22,8 +24,6 @@ export default defineConfig(({ mode }) => {
           {
             target: backend,
             changeOrigin: false,
-            // Server-sent events and long-lived antiforgery responses must not be buffered.
-            ws: true,
           },
         ]),
       ),

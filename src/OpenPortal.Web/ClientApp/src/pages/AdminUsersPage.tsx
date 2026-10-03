@@ -1,13 +1,32 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Loader2 } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { z } from 'zod'
-import { ApiError } from '../api/client'
-import type { PasswordPolicy, UserSummary } from '../api/types'
-import { userAdminApi } from '../api/users'
-import { Badge, Button, Card, ErrorPanel, Field } from '../components/ui'
-import { describeError, traceIdOf } from '../hooks/useRetryableError'
-import { useSession } from '../hooks/useSession'
-import { describePasswordPolicy, newPasswordSchema } from '../lib/passwordPolicy'
+import type { PasswordPolicy, UserSummary } from '@/api/types'
+import { userAdminApi } from '@/api/users'
+import { FormField } from '@/components/FormField'
+import { PageHeader } from '@/components/PageHeader'
+import { Section } from '@/components/Section'
+import { ErrorPanel, LoadingState } from '@/components/StatePanels'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { describeError, traceIdOf } from '@/lib/errors'
+import { useSession } from '@/hooks/useSession'
+import { notify } from '@/hooks/useToast'
+import { reportFormError, serverFieldErrors, zodFieldErrors } from '@/lib/forms'
+import { describePasswordPolicy, newPasswordSchema } from '@/lib/passwordPolicy'
 
 /** The roles the server recognises. Anything else is rejected there, so the list is fixed here. */
 const ROLES = ['Administrator', 'User'] as const
@@ -26,46 +45,50 @@ export function AdminUsersPage() {
 
   const users = useQuery({
     queryKey: ['admin-users', page, appliedSearch],
-    queryFn: ({ signal }) =>
-      userAdminApi.list({ page, pageSize: 20, search: appliedSearch }, signal),
+    queryFn: ({ signal }) => userAdminApi.list({ page, pageSize: 20, search: appliedSearch }, signal),
   })
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['admin-users'] })
 
+  // Failures are toasted by the global MutationCache handler, so a failed role change is never silent.
   const setRoles = useMutation({
-    mutationFn: ({ id, roles }: { id: string; roles: string[] }) =>
-      userAdminApi.update(id, { displayName: displayNameOf(users.data, id), roles }),
-    onSuccess: refresh,
+    mutationFn: ({ user, roles }: { user: UserSummary; roles: string[] }) =>
+      userAdminApi.update(user.id, { displayName: user.displayName, roles }),
+    onSuccess: async (_result, { user }) => {
+      notify.success('Roles updated', user.email)
+      await refresh()
+    },
   })
 
+  function applySearch(event: FormEvent) {
+    event.preventDefault()
+    const parsed = searchSchema.safeParse({ search })
+
+    if (!parsed.success) {
+      notify.warning(parsed.error.issues[0]?.message ?? 'Invalid search')
+
+      return
+    }
+
+    setPage(1)
+    setAppliedSearch(parsed.data.search)
+  }
+
   return (
-    <div className="space-y-8">
-      <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
+    <div className="space-y-6">
+      <PageHeader title="Users" description="Create accounts and manage who can administer the portal." />
 
       <CreateUserForm onCreated={refresh} policy={session.passwordPolicy} />
 
-      <Card title="Accounts">
-        <form
-          onSubmit={(event: FormEvent) => {
-            event.preventDefault()
-            const parsed = searchSchema.safeParse({ search })
-
-            if (parsed.success) {
-              setPage(1)
-              setAppliedSearch(parsed.data.search)
-            }
-          }}
-          className="mb-5 flex flex-wrap items-end gap-3"
-        >
-          <Field label="Search" htmlFor="search">
-            <input
-              id="search"
+      <Section title="Accounts">
+        <form onSubmit={applySearch} className="mb-5 flex flex-wrap items-end gap-3">
+          <FormField label="Search" htmlFor="search" className="w-full sm:w-72">
+            <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Email or display name"
-              className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm sm:w-72"
             />
-          </Field>
+          </FormField>
           <Button type="submit" variant="outline">
             Search
           </Button>
@@ -87,15 +110,11 @@ export function AdminUsersPage() {
           <ErrorPanel
             message={describeError(users.error)}
             traceId={traceIdOf(users.error)}
-            onRetry={() => users.refetch()}
+            onRetry={() => void users.refetch()}
           />
         )}
 
-        {users.isPending && (
-          <p role="status" className="text-muted-foreground py-6 text-center text-sm">
-            Loading…
-          </p>
-        )}
+        {users.isPending && <LoadingState />}
 
         {users.data && users.data.items.length === 0 && (
           <p className="text-muted-foreground py-6 text-center text-sm">No accounts match.</p>
@@ -103,92 +122,84 @@ export function AdminUsersPage() {
 
         {users.data && users.data.items.length > 0 && (
           <>
-            <table className="w-full text-left text-sm">
-              <caption className="sr-only">
+            <Table>
+              <TableCaption className="sr-only">
                 Accounts, page {users.data.page} of {users.data.totalPages}
-              </caption>
-              <thead className="border-border text-muted-foreground border-b text-xs">
-                <tr>
-                  <th scope="col" className="py-2 pr-3 font-medium">
-                    Email
-                  </th>
-                  <th scope="col" className="py-2 pr-3 font-medium">
-                    Display name
-                  </th>
-                  <th scope="col" className="py-2 pr-3 font-medium">
-                    Roles
-                  </th>
-                  <th scope="col" className="py-2 pr-3 font-medium">
-                    Status
-                  </th>
-                  <th scope="col" className="py-2 font-medium">
-                    Administrator
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.data.items.map((user) => (
-                  <tr key={user.id} className="border-border border-b last:border-0">
-                    <td className="py-3 pr-3 font-mono text-xs">{user.email}</td>
-                    <td className="py-3 pr-3">{user.displayName}</td>
-                    <td className="py-3 pr-3">
-                      <div className="flex flex-wrap gap-1">
-                        {user.roles.map((role) => (
-                          <Badge key={role}>{role}</Badge>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="py-3 pr-3">
-                      {user.isLockedOut ? (
-                        <Badge tone="warning">Locked out</Badge>
-                      ) : user.emailConfirmed ? (
-                        <Badge tone="success">Active</Badge>
-                      ) : (
-                        <Badge tone="warning">Unconfirmed</Badge>
-                      )}
-                    </td>
-                    <td className="py-3">
-                      <Button
-                        variant="outline"
-                        disabled={setRoles.isPending}
-                        onClick={() =>
-                          setRoles.mutate({
-                            id: user.id,
-                            roles: user.roles.includes('Administrator')
-                              ? user.roles.filter((role) => role !== 'Administrator')
-                              : [...user.roles, 'Administrator'],
-                          })
-                        }
-                      >
-                        {user.roles.includes('Administrator') ? 'Revoke admin' : 'Make admin'}
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              </TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Display name</TableHead>
+                  <TableHead>Roles</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.data.items.map((user) => {
+                  const isAdmin = user.roles.includes('Administrator')
 
-            <nav aria-label="Pagination" className="mt-4 flex items-center justify-between text-sm">
-              <Button variant="outline" disabled={!users.data.hasPrevious} onClick={() => setPage(page - 1)}>
+                  return (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-mono text-xs">{user.email}</TableCell>
+                      <TableCell>{user.displayName}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {user.roles.map((role) => (
+                            <Badge key={role} variant="secondary">
+                              {role}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {user.isLockedOut ? (
+                          <Badge variant="warning">Locked out</Badge>
+                        ) : user.emailConfirmed ? (
+                          <Badge variant="success">Active</Badge>
+                        ) : (
+                          <Badge variant="warning">Unconfirmed</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={setRoles.isPending}
+                          onClick={() =>
+                            setRoles.mutate({
+                              user,
+                              roles: isAdmin
+                                ? user.roles.filter((role) => role !== 'Administrator')
+                                : [...user.roles, 'Administrator'],
+                            })
+                          }
+                        >
+                          {isAdmin ? 'Revoke admin' : 'Make admin'}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+
+            <nav aria-label="Pagination" className="mt-4 flex items-center justify-between gap-2 text-sm">
+              <Button variant="outline" size="sm" disabled={!users.data.hasPrevious} onClick={() => setPage(page - 1)}>
                 Previous
               </Button>
-              <span className="text-muted-foreground">
+              <span className="text-muted-foreground text-center">
                 Page {users.data.page} of {users.data.totalPages} ({users.data.totalCount} accounts)
               </span>
-              <Button variant="outline" disabled={!users.data.hasNext} onClick={() => setPage(page + 1)}>
+              <Button variant="outline" size="sm" disabled={!users.data.hasNext} onClick={() => setPage(page + 1)}>
                 Next
               </Button>
             </nav>
           </>
         )}
-      </Card>
+      </Section>
     </div>
   )
-}
-
-/** Reads the current display name for a row so an update does not blank it. */
-function displayNameOf(result: { items: readonly UserSummary[] } | undefined, id: string): string {
-  return result?.items.find((item) => item.id === id)?.displayName ?? ''
 }
 
 function CreateUserForm({ onCreated, policy }: { onCreated: () => void; policy: PasswordPolicy }) {
@@ -196,7 +207,7 @@ function CreateUserForm({ onCreated, policy }: { onCreated: () => void; policy: 
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [roles, setRoles] = useState<string[]>([])
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [errors, setErrors] = useState<Partial<Record<'email' | 'password' | 'displayName', string>>>({})
 
   // Built from the policy the server published, so this form cannot quietly disagree with what the user
   // store will accept. The display name stays optional because the server derives one from the address.
@@ -208,10 +219,7 @@ function CreateUserForm({ onCreated, policy }: { onCreated: () => void; policy: 
         displayName: z
           .string()
           .trim()
-          .refine(
-            (value) => value === '' || value.length >= 2,
-            'Display name must be at least 2 characters.',
-          )
+          .refine((value) => value === '' || value.length >= 2, 'Display name must be at least 2 characters.')
           .max(120, 'Display name must be at most 120 characters.'),
       }),
     [policy],
@@ -229,7 +237,9 @@ function CreateUserForm({ onCreated, policy }: { onCreated: () => void; policy: 
         roles,
       })
     },
-    onSuccess: async () => {
+    meta: { handlesErrors: true },
+    onSuccess: async (created) => {
+      notify.success('Account created', created.email)
       onCreated()
       setEmail('')
       setPassword('')
@@ -237,6 +247,7 @@ function CreateUserForm({ onCreated, policy }: { onCreated: () => void; policy: 
       setRoles([])
       setErrors({})
     },
+    onError: (failure) => reportFormError(failure, 'The account could not be created'),
   })
 
   function submit(event: FormEvent) {
@@ -245,9 +256,7 @@ function CreateUserForm({ onCreated, policy }: { onCreated: () => void; policy: 
     const parsed = schema.safeParse({ email, password, displayName })
 
     if (!parsed.success) {
-      setErrors(
-        Object.fromEntries(parsed.error.issues.map((issue) => [issue.path[0] as string, issue.message])),
-      )
+      setErrors(zodFieldErrors(parsed.error))
 
       return
     }
@@ -256,90 +265,67 @@ function CreateUserForm({ onCreated, policy }: { onCreated: () => void; policy: 
     create.mutate()
   }
 
-  const serverErrors = create.error instanceof ApiError ? create.error.fieldErrors : {}
-  const summaryError =
-    create.isError && !(create.error instanceof ApiError && create.error.status === 400)
-      ? describeError(create.error)
-      : undefined
+  const serverErrors = serverFieldErrors(create.error)
 
   return (
-    <Card title="Create an account" description="The password must satisfy the server's policy.">
-      <form onSubmit={submit} noValidate className="space-y-5">
-        <div className="grid gap-5 sm:grid-cols-3">
-          <Field label="Email" htmlFor="newEmail" error={errors.email ?? serverErrors.email?.[0]}>
-            <input
-              id="newEmail"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
-            />
-          </Field>
+    <Section title="Create an account" description="The password must satisfy the server's policy.">
+      <form onSubmit={submit} noValidate className="grid gap-5">
+        <div className="grid items-start gap-5 sm:grid-cols-3">
+          <FormField label="Email" htmlFor="newEmail" error={errors.email ?? serverErrors.email?.[0]}>
+            <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
+          </FormField>
 
-          <Field
+          <FormField
             label="Password"
             htmlFor="newPassword"
             error={errors.password ?? serverErrors.password?.[0]}
             hint={describePasswordPolicy(policy)}
           >
-            <input
-              id="newPassword"
+            <Input
               type="password"
               autoComplete="new-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
             />
-          </Field>
+          </FormField>
 
-          <Field
+          <FormField
             label="Display name"
             htmlFor="newDisplayName"
             error={errors.displayName ?? serverErrors.displayName?.[0]}
             hint="Defaults to the email's local part."
           >
-            <input
-              id="newDisplayName"
-              value={displayName}
-              onChange={(event) => setDisplayName(event.target.value)}
-              className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
-            />
-          </Field>
+            <Input value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
+          </FormField>
         </div>
 
-        <fieldset>
+        <fieldset className="grid gap-2">
           <legend className="text-sm font-medium">Roles</legend>
-          <div className="mt-2 flex gap-4">
+          <div className="flex gap-6">
             {ROLES.map((role) => (
-              <label key={role} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
+              <div key={role} className="flex items-center gap-2">
+                <Checkbox
+                  id={`role-${role}`}
                   checked={roles.includes(role)}
-                  onChange={(event) =>
-                    setRoles(
-                      event.target.checked
-                        ? [...roles, role]
-                        : roles.filter((entry) => entry !== role),
-                    )
+                  onCheckedChange={(checked) =>
+                    setRoles(checked === true ? [...roles, role] : roles.filter((entry) => entry !== role))
                   }
                 />
-                {role}
-              </label>
+                <Label htmlFor={`role-${role}`} className="font-normal">
+                  {role}
+                </Label>
+              </div>
             ))}
           </div>
         </fieldset>
 
-        <div className="flex items-center gap-3">
+        <div>
           <Button type="submit" disabled={create.isPending}>
+            {create.isPending && <Loader2 className="animate-spin" />}
             {create.isPending ? 'Creating…' : 'Create account'}
           </Button>
-          {summaryError && (
-            <span role="alert" className="text-destructive text-sm">
-              {summaryError}
-            </span>
-          )}
         </div>
       </form>
-    </Card>
+    </Section>
   )
 }
