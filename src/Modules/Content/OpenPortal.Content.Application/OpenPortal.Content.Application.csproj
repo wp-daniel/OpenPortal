@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>OpenPortal.Content.Application</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpenPortal.Content.Domain\OpenPortal.Content.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

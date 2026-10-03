@@ -1,0 +1,40 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+
+[*.{cs,csx}]
+indent_size = 4
+max_line_length = 120
+
+[*.{json,jsonc,js,jsx,ts,tsx,mjs,cjs,css,scss,html,yml,yaml}]
+indent_size = 2
+
+[*.{csproj,props,targets,config,slnx,xml}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+# --- C# naming conventions ---
+[*.cs]
+dotnet_diagnostic.CA1707.severity = none # underscores allowed in public API identifiers
+dotnet_diagnostic.IDE0130.severity = none # Namespace does not match folder structure is allowed
+
+# --- Generated / vendored code is not analysed for style ---
+[ClientApp/**.cs]
+generated_code = true
+
+# --- Frontend ---
+[ClientApp/**.ts]
+indent_size = 2
+
+[*.{ts,tsx}]
+quote_type = single
+jsx_quotes = double
+semi_always = true
+trailing_comma = all

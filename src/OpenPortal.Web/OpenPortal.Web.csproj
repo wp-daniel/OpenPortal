@@ -1,0 +1,114 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>OpenPortal.Web</RootNamespace>
+    <UserSecretsId>openportal-web-6f1c1f2e-8b1a-4f2a-9a3d-0c5f7b2d9e44</UserSecretsId>
+    <SpaRoot>ClientApp\</SpaRoot>
+    <SpaProxyLaunchCommand>npm run dev</SpaProxyLaunchCommand>
+    <SpaProxyServerUrl>http://localhost:5173</SpaProxyServerUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Modules\Content\OpenPortal.Content.Infrastructure\OpenPortal.Content.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Identity\OpenPortal.Identity.Infrastructure\OpenPortal.Identity.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.AspNetCore.SpaProxy" />
+    <!--
+      The concrete database provider is referenced by the composition root only. Domain, Application
+      and the module Infrastructure projects never see it, which is what keeps the SQLite -> PostgreSQL
+      switch confined to Infrastructure/Persistence/DatabaseProviderSelector.cs.
+    -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- ClientApp sources are compiled into the .csproj tree but never published as backend content. -->
+    <Content Remove="ClientApp\**" />
+    <None Remove="ClientApp\**" />
+    <None Include="ClientApp\**" Exclude="ClientApp\node_modules\**;ClientApp\dist\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="OpenPortal.Tests.Integration" />
+  </ItemGroup>
+
+  <!--
+    Client build integration.
+
+    Vite builds into its own dist folder and the result is copied into wwwroot, so the host serves the SPA
+    from the same place in every environment: `dotnet run` against Production and `dotnet publish` both need
+    no extra step, and the fallback route's WebRootPath/index.html lookup resolves in both. Development is
+    unaffected because SpaProxy answers before the static files are reached.
+
+    The copy leaves error.html alone: that page is rendered by the status-code middleware, not by the client,
+    and deleting it would leave every error response with no document to serve.
+  -->
+  <Target Name="BuildClientApp"
+          BeforeTargets="BeforeBuild"
+          Condition="'$(SkipClientBuild)' != 'true' AND Exists('$(SpaRoot)package.json')"
+          Inputs="@(ClientSource)"
+          Outputs="$(SpaClientStamp)">
+
+    <Exec Command="npm ci" WorkingDirectory="$(SpaRoot)" Condition="!Exists('$(SpaRoot)node_modules')" />
+    <Exec Command="npm run build" WorkingDirectory="$(SpaRoot)" />
+
+    <!--
+      Empty the previous bundle before copying. Vite content-hashes every asset filename, so each build
+      produces a new set and a plain copy would leave the old ones in place indefinitely: the published
+      output would accumulate bundles that nothing references, and a superseded one could keep shipping a
+      vulnerability long after the fix landed.
+
+      Only wwwroot\assets is emptied. error.html sits beside it and is rendered by the status-code
+      middleware rather than by the client, so deleting it would leave every error response without a
+      document to serve.
+    -->
+    <RemoveDir Directories="wwwroot\assets" Condition="Exists('wwwroot\assets')" />
+
+    <ItemGroup>
+      <SpaBuiltAsset Include="$(SpaRoot)dist\**\*" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(SpaBuiltAsset)"
+          DestinationFolder="wwwroot\%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+
+    <Touch Files="$(SpaClientStamp)" AlwaysCreate="true" />
+  </Target>
+
+  <PropertyGroup>
+    <!--
+      Outside wwwroot: a stamp inside the Vite output would be deleted by the emptyOutDir step Vite runs
+      before writing, so the target would never see its own output as up to date.
+    -->
+    <SpaClientStamp>$(IntermediateOutputPath)spa-client.stamp</SpaClientStamp>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Client sources. Their timestamps drive the incremental check in BuildClientApp. -->
+    <ClientSource Include="$(SpaRoot)src\**\*" />
+    <ClientSource Include="$(SpaRoot)index.html" />
+    <ClientSource Include="$(SpaRoot)package.json" />
+    <ClientSource Include="$(SpaRoot)package-lock.json" />
+    <ClientSource Include="$(SpaRoot)tsconfig*.json" />
+    <ClientSource Include="$(SpaRoot)vite.config.ts" />
+    <ClientSource Include="$(SpaRoot)postcss.config.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The built client is copied into wwwroot by BuildClientApp; its own dist folder never ships. -->
+    <Content Remove="$(SpaRoot)dist\**" />
+    <None Remove="$(SpaRoot)dist\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FileWrites Include="$(SpaClientStamp)" />
+  </ItemGroup>
+
+</Project>
