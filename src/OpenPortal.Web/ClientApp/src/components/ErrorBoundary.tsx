@@ -1,6 +1,7 @@
 import { isRouteErrorResponse, useNavigate, useRouteError } from 'react-router-dom'
 import { ErrorPanel } from '@/components/StatePanels'
 import { Button } from '@/components/ui/button'
+import { useI18n } from '@/i18n/useI18n'
 import { describeError, traceIdOf } from '@/lib/errors'
 
 /**
@@ -13,15 +14,16 @@ import { describeError, traceIdOf } from '@/lib/errors'
 export function ErrorBoundary() {
   const error = useRouteError()
   const navigate = useNavigate()
+  const { t } = useI18n()
 
   const message = isRouteErrorResponse(error) ? `${error.status} ${error.statusText}` : describeError(error)
   const traceId = isRouteErrorResponse(error) ? undefined : traceIdOf(error)
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-4 px-4">
-      <ErrorPanel title="This page could not be displayed" message={message} traceId={traceId} />
+      <ErrorPanel title={t('errorBoundary.title')} message={message} traceId={traceId} />
       <div>
-        <Button onClick={() => void navigate('/')}>Back to the portal</Button>
+        <Button onClick={() => void navigate('/')}>{t('errorBoundary.back')}</Button>
       </div>
     </main>
   )

@@ -1,4 +1,5 @@
 import { toast } from 'sonner'
+import { translate } from '@/i18n/store'
 import { describeError } from '@/lib/errors'
 
 /**
@@ -11,7 +12,7 @@ export const notify = {
   info: (message: string, description?: string) => toast.info(message, { description }),
   warning: (message: string, description?: string) => toast.warning(message, { description }),
   /** Shows a caught error, using the server's problem detail when there is one. */
-  fromError: (error: unknown, fallback = 'Something went wrong') =>
+  fromError: (error: unknown, fallback = translate('common.somethingWrong')) =>
     toast.error(fallback, { description: describeError(error) }),
 }
 

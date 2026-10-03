@@ -13,7 +13,8 @@ public sealed record SessionUserDto(
     string Email,
     string DisplayName,
     bool EmailConfirmed,
-    IReadOnlyList<string> Roles);
+    IReadOnlyList<string> Roles,
+    string? Language);
 
 /// <summary>Current session state as observed by the client.</summary>
 /// <param name="IsAuthenticated">Whether a valid session cookie was presented.</param>

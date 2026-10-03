@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using OpenPortal.SharedKernel.Results;
+using OpenPortal.Web.Localization;
 
 namespace OpenPortal.Web.Infrastructure;
 
@@ -87,8 +88,9 @@ public static class ProblemDetailsFactory
         var problem = new ProblemDetails
         {
             Status = statusCode,
-            Title = title ?? DefaultTitle(error.Type),
-            Detail = error.Description,
+            Title = title ?? context.Localize("problem.title." + error.Type, DefaultTitle(error.Type)),
+            // The description is the English fallback; a translation keyed by the stable error code wins.
+            Detail = context.Localize("error." + error.Code, error.Description),
             Type = $"https://tools.ietf.org/html/rfc9110#section-15.{statusCode / 100}.{statusCode % 100}",
             Instance = context.Request.Path,
         };

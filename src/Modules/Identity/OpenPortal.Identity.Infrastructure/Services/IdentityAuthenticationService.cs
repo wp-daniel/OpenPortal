@@ -133,7 +133,8 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
                 Email: user.Email ?? string.Empty,
                 DisplayName: user.DisplayName,
                 EmailConfirmed: user.EmailConfirmed,
-                Roles: roles.Order(StringComparer.Ordinal).ToArray()),
+                Roles: roles.Order(StringComparer.Ordinal).ToArray(),
+                Language: user.Language),
             PasswordPolicy: PasswordPolicy));
     }
 

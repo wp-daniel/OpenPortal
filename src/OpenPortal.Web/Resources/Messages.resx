@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="nav.main" xml:space="preserve"><value>Main</value></data>
+  <data name="nav.skip" xml:space="preserve"><value>Skip to content</value></data>
+  <data name="nav.openMenu" xml:space="preserve"><value>Open menu</value></data>
+  <data name="nav.dashboard" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="nav.users" xml:space="preserve"><value>Users</value></data>
+  <data name="nav.profile" xml:space="preserve"><value>Profile</value></data>
+  <data name="nav.projects" xml:space="preserve"><value>Projects</value></data>
+  <data name="nav.account" xml:space="preserve"><value>Account</value></data>
+  <data name="nav.signOut" xml:space="preserve"><value>Sign out</value></data>
+  <data name="nav.signingOut" xml:space="preserve"><value>Signing out…</value></data>
+  <data name="theme.toLight" xml:space="preserve"><value>Switch to light theme</value></data>
+  <data name="theme.toDark" xml:space="preserve"><value>Switch to dark theme</value></data>
+  <data name="language.label" xml:space="preserve"><value>Language</value></data>
+  <data name="language.change" xml:space="preserve"><value>Change language</value></data>
+  <data name="common.loading" xml:space="preserve"><value>Loading…</value></data>
+  <data name="common.somethingWrong" xml:space="preserve"><value>Something went wrong</value></data>
+  <data name="common.tryAgain" xml:space="preserve"><value>Try again</value></data>
+  <data name="common.reference" xml:space="preserve"><value>Reference:</value></data>
+  <data name="common.cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="common.delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="common.edit" xml:space="preserve"><value>Edit</value></data>
+  <data name="common.save" xml:space="preserve"><value>Save</value></data>
+  <data name="common.saving" xml:space="preserve"><value>Saving…</value></data>
+  <data name="common.search" xml:space="preserve"><value>Search</value></data>
+  <data name="common.clear" xml:space="preserve"><value>Clear</value></data>
+  <data name="common.previous" xml:space="preserve"><value>Previous</value></data>
+  <data name="common.next" xml:space="preserve"><value>Next</value></data>
+  <data name="common.none" xml:space="preserve"><value>None</value></data>
+  <data name="common.actions" xml:space="preserve"><value>Actions</value></data>
+  <data name="common.status" xml:space="preserve"><value>Status</value></data>
+  <data name="common.email" xml:space="preserve"><value>Email</value></data>
+  <data name="common.password" xml:space="preserve"><value>Password</value></data>
+  <data name="common.displayName" xml:space="preserve"><value>Display name</value></data>
+  <data name="common.roles" xml:space="preserve"><value>Roles</value></data>
+  <data name="role.Administrator" xml:space="preserve"><value>Administrator</value></data>
+  <data name="role.User" xml:space="preserve"><value>User</value></data>
+  <data name="clientError.sessionEnded" xml:space="preserve"><value>Your session has ended</value></data>
+  <data name="clientError.signInAgain" xml:space="preserve"><value>Sign in again to continue.</value></data>
+  <data name="clientError.actionFailed" xml:space="preserve"><value>The action could not be completed</value></data>
+  <data name="clientError.fieldsNeedAttention" xml:space="preserve"><value>Some fields need attention</value></data>
+  <data name="clientError.requestFailed" xml:space="preserve"><value>The request failed with status {status}.</value></data>
+  <data name="clientError.unknown" xml:space="preserve"><value>Something went wrong.</value></data>
+  <data name="errorBoundary.title" xml:space="preserve"><value>This page could not be displayed</value></data>
+  <data name="errorBoundary.back" xml:space="preserve"><value>Back to the portal</value></data>
+  <data name="guards.checking" xml:space="preserve"><value>Checking your session…</value></data>
+  <data name="guards.errorTitle" xml:space="preserve"><value>Could not check your session</value></data>
+  <data name="guards.errorMessage" xml:space="preserve"><value>The server could not be reached. Try again in a moment.</value></data>
+  <data name="notFound.title" xml:space="preserve"><value>Page not found</value></data>
+  <data name="notFound.description" xml:space="preserve"><value>The address you followed does not match anything on this portal.</value></data>
+  <data name="notFound.back" xml:space="preserve"><value>Back to the dashboard</value></data>
+  <data name="validation.emailRequired" xml:space="preserve"><value>Email is required.</value></data>
+  <data name="validation.emailInvalid" xml:space="preserve"><value>Enter a valid email address.</value></data>
+  <data name="validation.passwordRequired" xml:space="preserve"><value>Password is required.</value></data>
+  <data name="validation.displayNameMin" xml:space="preserve"><value>Display name must be at least {min} characters.</value></data>
+  <data name="validation.displayNameMax" xml:space="preserve"><value>Display name must be at most {max} characters.</value></data>
+  <data name="validation.maxLength" xml:space="preserve"><value>Keep it under {max} characters.</value></data>
+  <data name="validation.currentPasswordRequired" xml:space="preserve"><value>Enter your current password.</value></data>
+  <data name="validation.newPasswordRequired" xml:space="preserve"><value>Enter a new password.</value></data>
+  <data name="validation.passwordRequiredNew" xml:space="preserve"><value>A password is required.</value></data>
+  <data name="validation.emailRequiredNew" xml:space="preserve"><value>An email is required.</value></data>
+  <data name="validation.searchMax" xml:space="preserve"><value>Keep the search under {max} characters.</value></data>
+  <data name="validation.invalidSearch" xml:space="preserve"><value>Invalid search</value></data>
+  <data name="validation.nameRequired" xml:space="preserve"><value>A name is required.</value></data>
+  <data name="validation.slugRequired" xml:space="preserve"><value>A slug is required.</value></data>
+  <data name="validation.slugFormat" xml:space="preserve"><value>Use letters, numbers and single hyphens.</value></data>
+  <data name="validation.absoluteUrl" xml:space="preserve"><value>Enter an absolute URL.</value></data>
+  <data name="validation.absoluteImageUrl" xml:space="preserve"><value>Enter an absolute image URL.</value></data>
+  <data name="validation.contactEmail" xml:space="preserve"><value>Enter a valid public contact address.</value></data>
+  <data name="validation.wholeNumber" xml:space="preserve"><value>Position must be a whole number.</value></data>
+  <data name="validation.datePicker" xml:space="preserve"><value>Use the date picker.</value></data>
+  <data name="validation.completionBeforeStart" xml:space="preserve"><value>Completion cannot precede the start.</value></data>
+  <data name="password.min_one" xml:space="preserve"><value>Use at least {count} character.</value></data>
+  <data name="password.min_other" xml:space="preserve"><value>Use at least {count} characters.</value></data>
+  <data name="password.lowercase" xml:space="preserve"><value>Add a lowercase letter.</value></data>
+  <data name="password.uppercase" xml:space="preserve"><value>Add an uppercase letter.</value></data>
+  <data name="password.digit" xml:space="preserve"><value>Add a digit.</value></data>
+  <data name="password.symbol" xml:space="preserve"><value>Add a symbol.</value></data>
+  <data name="password.unique_other" xml:space="preserve"><value>Use at least {count} different characters.</value></data>
+  <data name="password.policyUnknown" xml:space="preserve"><value>The server publishes the complexity policy.</value></data>
+  <data name="password.requires" xml:space="preserve"><value>Requires {list}.</value></data>
+  <data name="password.part.length_one" xml:space="preserve"><value>at least {count} character</value></data>
+  <data name="password.part.length_other" xml:space="preserve"><value>at least {count} characters</value></data>
+  <data name="password.part.lowercase" xml:space="preserve"><value>a lowercase letter</value></data>
+  <data name="password.part.uppercase" xml:space="preserve"><value>an uppercase letter</value></data>
+  <data name="password.part.digit" xml:space="preserve"><value>a digit</value></data>
+  <data name="password.part.symbol" xml:space="preserve"><value>a symbol</value></data>
+  <data name="password.part.unique_other" xml:space="preserve"><value>{count} different characters</value></data>
+  <data name="signIn.title" xml:space="preserve"><value>Sign in</value></data>
+  <data name="signIn.description" xml:space="preserve"><value>Use the email address of an OpenPortal account.</value></data>
+  <data name="signIn.remember" xml:space="preserve"><value>Keep me signed in on this browser</value></data>
+  <data name="signIn.submit" xml:space="preserve"><value>Sign in</value></data>
+  <data name="signIn.submitting" xml:space="preserve"><value>Signing in…</value></data>
+  <data name="signIn.failed" xml:space="preserve"><value>Sign-in failed</value></data>
+  <data name="signIn.rejected" xml:space="preserve"><value>Those credentials were not accepted.</value></data>
+  <data name="dashboard.welcome" xml:space="preserve"><value>Welcome, {name}</value></data>
+  <data name="dashboard.signedIn" xml:space="preserve"><value>Signed in to OpenPortal.</value></data>
+  <data name="dashboard.account.title" xml:space="preserve"><value>Your account</value></data>
+  <data name="dashboard.account.description" xml:space="preserve"><value>Update your display name and change your password.</value></data>
+  <data name="dashboard.account.open" xml:space="preserve"><value>Open account</value></data>
+  <data name="dashboard.users.title" xml:space="preserve"><value>Users</value></data>
+  <data name="dashboard.users.description" xml:space="preserve"><value>Create accounts, assign roles and review sign-in status.</value></data>
+  <data name="dashboard.users.manage" xml:space="preserve"><value>Manage users</value></data>
+  <data name="dashboard.content.title" xml:space="preserve"><value>Content</value></data>
+  <data name="dashboard.content.description" xml:space="preserve"><value>Sample module: profile and projects.</value></data>
+  <data name="account.title" xml:space="preserve"><value>Account</value></data>
+  <data name="account.description" xml:space="preserve"><value>Your profile and sign-in details.</value></data>
+  <data name="account.displayNameSection" xml:space="preserve"><value>Display name</value></data>
+  <data name="account.displayNameSaved" xml:space="preserve"><value>Display name saved</value></data>
+  <data name="account.saveFailed" xml:space="preserve"><value>The change could not be saved</value></data>
+  <data name="account.passwordSection" xml:space="preserve"><value>Change password</value></data>
+  <data name="account.currentPassword" xml:space="preserve"><value>Current password</value></data>
+  <data name="account.newPassword" xml:space="preserve"><value>New password</value></data>
+  <data name="account.changing" xml:space="preserve"><value>Changing…</value></data>
+  <data name="account.passwordChanged" xml:space="preserve"><value>Password changed</value></data>
+  <data name="account.passwordRejected" xml:space="preserve"><value>Password not changed</value></data>
+  <data name="account.passwordRejectedDetail" xml:space="preserve"><value>The change was rejected. Check the current password and the new one against the policy.</value></data>
+  <data name="account.passwordFailed" xml:space="preserve"><value>The password could not be changed</value></data>
+  <data name="account.details" xml:space="preserve"><value>Details</value></data>
+  <data name="account.emailConfirmed" xml:space="preserve"><value>Email confirmed</value></data>
+  <data name="account.confirmed" xml:space="preserve"><value>Confirmed</value></data>
+  <data name="account.notConfirmed" xml:space="preserve"><value>Not confirmed</value></data>
+  <data name="account.memberSince" xml:space="preserve"><value>Member since</value></data>
+  <data name="users.title" xml:space="preserve"><value>Users</value></data>
+  <data name="users.description" xml:space="preserve"><value>Create accounts and manage who can administer the portal.</value></data>
+  <data name="users.rolesUpdated" xml:space="preserve"><value>Roles updated</value></data>
+  <data name="users.accounts" xml:space="preserve"><value>Accounts</value></data>
+  <data name="users.searchPlaceholder" xml:space="preserve"><value>Email or display name</value></data>
+  <data name="users.noMatch" xml:space="preserve"><value>No accounts match.</value></data>
+  <data name="users.caption" xml:space="preserve"><value>Accounts, page {page} of {total}</value></data>
+  <data name="users.lockedOut" xml:space="preserve"><value>Locked out</value></data>
+  <data name="users.active" xml:space="preserve"><value>Active</value></data>
+  <data name="users.unconfirmed" xml:space="preserve"><value>Unconfirmed</value></data>
+  <data name="users.revokeAdmin" xml:space="preserve"><value>Revoke admin</value></data>
+  <data name="users.makeAdmin" xml:space="preserve"><value>Make admin</value></data>
+  <data name="users.pagination" xml:space="preserve"><value>Pagination</value></data>
+  <data name="users.pageOf_one" xml:space="preserve"><value>Page {page} of {total} ({count} account)</value></data>
+  <data name="users.pageOf_other" xml:space="preserve"><value>Page {page} of {total} ({count} accounts)</value></data>
+  <data name="users.create.title" xml:space="preserve"><value>Create an account</value></data>
+  <data name="users.create.description" xml:space="preserve"><value>The password must satisfy the server's policy.</value></data>
+  <data name="users.create.displayNameHint" xml:space="preserve"><value>Defaults to the email's local part.</value></data>
+  <data name="users.create.submit" xml:space="preserve"><value>Create account</value></data>
+  <data name="users.create.submitting" xml:space="preserve"><value>Creating…</value></data>
+  <data name="users.create.created" xml:space="preserve"><value>Account created</value></data>
+  <data name="users.create.failed" xml:space="preserve"><value>The account could not be created</value></data>
+  <data name="profile.title" xml:space="preserve"><value>Profile</value></data>
+  <data name="profile.exists" xml:space="preserve"><value>The single profile record for this portal.</value></data>
+  <data name="profile.missing" xml:space="preserve"><value>No profile exists yet. Saving creates it.</value></data>
+  <data name="profile.saved" xml:space="preserve"><value>Profile saved</value></data>
+  <data name="profile.saveFailed" xml:space="preserve"><value>The profile could not be saved</value></data>
+  <data name="profile.identity" xml:space="preserve"><value>Identity</value></data>
+  <data name="profile.headline" xml:space="preserve"><value>Headline</value></data>
+  <data name="profile.location" xml:space="preserve"><value>Location</value></data>
+  <data name="profile.contactEmail" xml:space="preserve"><value>Contact email</value></data>
+  <data name="profile.contactEmailHint" xml:space="preserve"><value>Separate from the sign-in address.</value></data>
+  <data name="profile.avatarUrl" xml:space="preserve"><value>Avatar URL</value></data>
+  <data name="profile.summary" xml:space="preserve"><value>Summary</value></data>
+  <data name="profile.links.title" xml:space="preserve"><value>Social links</value></data>
+  <data name="profile.links.description" xml:space="preserve"><value>Shown in order. Saving replaces the whole list.</value></data>
+  <data name="profile.links.add" xml:space="preserve"><value>Add link</value></data>
+  <data name="profile.links.none" xml:space="preserve"><value>No links yet.</value></data>
+  <data name="profile.links.platform" xml:space="preserve"><value>Platform</value></data>
+  <data name="profile.links.url" xml:space="preserve"><value>URL</value></data>
+  <data name="profile.links.label" xml:space="preserve"><value>Label (optional)</value></data>
+  <data name="profile.links.remove" xml:space="preserve"><value>Remove link {n}</value></data>
+  <data name="profile.submit" xml:space="preserve"><value>Save profile</value></data>
+  <data name="projects.title" xml:space="preserve"><value>Projects</value></data>
+  <data name="projects.new" xml:space="preserve"><value>New project</value></data>
+  <data name="projects.emptyTitle" xml:space="preserve"><value>No projects yet</value></data>
+  <data name="projects.emptyDescription" xml:space="preserve"><value>Create the first one to get started.</value></data>
+  <data name="projects.name" xml:space="preserve"><value>Name</value></data>
+  <data name="projects.slug" xml:space="preserve"><value>Slug</value></data>
+  <data name="projects.published" xml:space="preserve"><value>Published</value></data>
+  <data name="projects.draft" xml:space="preserve"><value>Draft</value></data>
+  <data name="projects.publish" xml:space="preserve"><value>Publish</value></data>
+  <data name="projects.unpublish" xml:space="preserve"><value>Unpublish</value></data>
+  <data name="projects.nowPublished" xml:space="preserve"><value>Project published</value></data>
+  <data name="projects.nowUnpublished" xml:space="preserve"><value>Project unpublished</value></data>
+  <data name="projects.deleted" xml:space="preserve"><value>Project deleted</value></data>
+  <data name="projects.deleteTitle" xml:space="preserve"><value>Delete this project?</value></data>
+  <data name="projects.deleteDescription" xml:space="preserve"><value>{name} will be permanently removed. This cannot be undone.</value></data>
+  <data name="projects.notFoundTitle" xml:space="preserve"><value>Project not found</value></data>
+  <data name="projects.notFoundMessage" xml:space="preserve"><value>It may have been deleted. Pick another project from the list.</value></data>
+  <data name="projects.saved" xml:space="preserve"><value>Project saved</value></data>
+  <data name="projects.saveFailed" xml:space="preserve"><value>The project could not be saved</value></data>
+  <data name="projects.editTitle" xml:space="preserve"><value>Edit project</value></data>
+  <data name="projects.newTitle" xml:space="preserve"><value>New project</value></data>
+  <data name="projects.newDescription" xml:space="preserve"><value>The slug becomes the project’s address.</value></data>
+  <data name="projects.slugHint" xml:space="preserve"><value>Lowercase, hyphen-separated.</value></data>
+  <data name="projects.summary" xml:space="preserve"><value>Summary</value></data>
+  <data name="projects.description" xml:space="preserve"><value>Description</value></data>
+  <data name="projects.liveUrl" xml:space="preserve"><value>Live URL</value></data>
+  <data name="projects.repositoryUrl" xml:space="preserve"><value>Repository URL</value></data>
+  <data name="projects.startedOn" xml:space="preserve"><value>Started on</value></data>
+  <data name="projects.completedOn" xml:space="preserve"><value>Completed on</value></data>
+  <data name="projects.completedHint" xml:space="preserve"><value>Leave empty while ongoing.</value></data>
+  <data name="projects.position" xml:space="preserve"><value>Display position</value></data>
+  <data name="projects.positionHint" xml:space="preserve"><value>Lower sorts first. Empty sorts last.</value></data>
+  <data name="projects.technologies" xml:space="preserve"><value>Technologies</value></data>
+  <data name="projects.technologiesHint" xml:space="preserve"><value>Comma-separated; shared between projects.</value></data>
+  <data name="projects.submit" xml:space="preserve"><value>Save project</value></data>
+  <data name="validation.displayName.required" xml:space="preserve"><value>Display name is required.</value></data>
+  <data name="validation.displayName.length" xml:space="preserve"><value>Display name must be between 2 and 120 characters.</value></data>
+  <data name="validation.currentPassword.required" xml:space="preserve"><value>Current password is required.</value></data>
+  <data name="validation.currentPassword.max" xml:space="preserve"><value>Current password must not exceed 256 characters.</value></data>
+  <data name="validation.newPassword.required" xml:space="preserve"><value>New password is required.</value></data>
+  <data name="validation.newPassword.max" xml:space="preserve"><value>New password must not exceed 256 characters.</value></data>
+  <data name="validation.language.length" xml:space="preserve"><value>Language code is too long.</value></data>
+  <data name="validation.email.required" xml:space="preserve"><value>Email is required.</value></data>
+  <data name="validation.email.invalid" xml:space="preserve"><value>Email must be a valid email address.</value></data>
+  <data name="validation.email.max" xml:space="preserve"><value>Email must not exceed 256 characters.</value></data>
+  <data name="validation.password.required" xml:space="preserve"><value>Password is required.</value></data>
+  <data name="validation.password.max" xml:space="preserve"><value>Password must not exceed 256 characters.</value></data>
+  <data name="validation.page.min" xml:space="preserve"><value>Page must be 1 or greater.</value></data>
+  <data name="validation.pageSize.range" xml:space="preserve"><value>PageSize must be between 1 and 100.</value></data>
+  <data name="validation.search.max" xml:space="preserve"><value>Search must not exceed 256 characters.</value></data>
+  <data name="problem.title.Validation" xml:space="preserve"><value>The request is not valid.</value></data>
+  <data name="problem.title.Unauthorized" xml:space="preserve"><value>Authentication is required.</value></data>
+  <data name="problem.title.Forbidden" xml:space="preserve"><value>Access is denied.</value></data>
+  <data name="problem.title.NotFound" xml:space="preserve"><value>The requested resource was not found.</value></data>
+  <data name="problem.title.Conflict" xml:space="preserve"><value>The request conflicts with the current state.</value></data>
+  <data name="problem.title.Failure" xml:space="preserve"><value>The request could not be completed.</value></data>
+  <data name="problem.title.413" xml:space="preserve"><value>The request payload is too large.</value></data>
+  <data name="problem.title.415" xml:space="preserve"><value>The request media type is not supported.</value></data>
+  <data name="problem.title.429" xml:space="preserve"><value>Too many requests.</value></data>
+  <data name="problem.title.5xx" xml:space="preserve"><value>The server could not complete the request.</value></data>
+  <data name="error.identity.invalid_credentials" xml:space="preserve"><value>The supplied email or password is not valid.</value></data>
+  <data name="error.identity.account_locked_out" xml:space="preserve"><value>The account is temporarily locked after too many failed attempts.</value></data>
+  <data name="error.identity.account_not_allowed" xml:space="preserve"><value>The account is not allowed to sign in.</value></data>
+  <data name="error.identity.two_factor_required" xml:space="preserve"><value>The account requires an additional verification step.</value></data>
+  <data name="error.identity.not_authenticated" xml:space="preserve"><value>No authenticated session was found.</value></data>
+  <data name="error.identity.forbidden" xml:space="preserve"><value>The caller is not allowed to perform this operation.</value></data>
+  <data name="error.identity.user_not_found" xml:space="preserve"><value>The requested user does not exist.</value></data>
+  <data name="error.identity.duplicate_email" xml:space="preserve"><value>An account with this email address already exists.</value></data>
+  <data name="error.identity.unsupported_language" xml:space="preserve"><value>The requested language is not supported.</value></data>
+  <data name="error.identity.unknown_role" xml:space="preserve"><value>One or more supplied roles are not recognised by this platform.</value></data>
+  <data name="error.identity.cannot_modify_own_roles" xml:space="preserve"><value>An administrator cannot change their own roles.</value></data>
+  <data name="error.identity.password_complexity" xml:space="preserve"><value>The password does not satisfy the configured complexity policy.</value></data>
+  <data name="error.identity.current_password_incorrect" xml:space="preserve"><value>The current password is not correct.</value></data>
+  <data name="error.identity.display_name_required" xml:space="preserve"><value>A display name is required.</value></data>
+  <data name="error.identity.display_name_too_short" xml:space="preserve"><value>The display name must be at least 2 characters.</value></data>
+  <data name="error.identity.display_name_too_long" xml:space="preserve"><value>The display name must not exceed 120 characters.</value></data>
+  <data name="error.identity.email_required" xml:space="preserve"><value>An email address is required.</value></data>
+  <data name="error.identity.role_update_failed" xml:space="preserve"><value>The account's roles could not be updated.</value></data>
+  <data name="error.content.edit_forbidden" xml:space="preserve"><value>Editing site content requires an administrator account.</value></data>
+  <data name="error.content.profile_not_found" xml:space="preserve"><value>The requested profile does not exist.</value></data>
+  <data name="error.content.project_not_found" xml:space="preserve"><value>The requested project does not exist.</value></data>
+  <data name="error.content.display_name_required" xml:space="preserve"><value>A display name is required.</value></data>
+  <data name="error.content.display_name_too_short" xml:space="preserve"><value>The display name must be at least 2 characters.</value></data>
+  <data name="error.content.display_name_too_long" xml:space="preserve"><value>The display name must not exceed 120 characters.</value></data>
+  <data name="error.content.headline_too_long" xml:space="preserve"><value>The headline must not exceed 160 characters.</value></data>
+  <data name="error.content.summary_too_long" xml:space="preserve"><value>The summary must not exceed 2000 characters.</value></data>
+  <data name="error.content.location_too_long" xml:space="preserve"><value>The location must not exceed 120 characters.</value></data>
+  <data name="error.content.email_invalid" xml:space="preserve"><value>The email address is not a valid address.</value></data>
+  <data name="error.content.url_invalid" xml:space="preserve"><value>The value must be an absolute http or https URL.</value></data>
+  <data name="error.content.slug_required" xml:space="preserve"><value>A slug is required.</value></data>
+  <data name="error.content.slug_too_long" xml:space="preserve"><value>The slug must not exceed 160 characters.</value></data>
+  <data name="error.content.slug_invalid" xml:space="preserve"><value>A slug may only contain ASCII letters, digits, hyphens and underscores.</value></data>
+  <data name="error.content.slug_already_in_use" xml:space="preserve"><value>Another project already uses this slug.</value></data>
+  <data name="error.content.project_summary_too_long" xml:space="preserve"><value>The summary must not exceed 400 characters.</value></data>
+  <data name="error.content.description_too_long" xml:space="preserve"><value>The description must not exceed 8000 characters.</value></data>
+  <data name="error.content.technology_name_required" xml:space="preserve"><value>A technology name cannot be blank.</value></data>
+  <data name="error.content.technology_name_too_long" xml:space="preserve"><value>A technology name must not exceed 80 characters.</value></data>
+  <data name="error.content.project_name_required" xml:space="preserve"><value>A project name is required.</value></data>
+  <data name="error.content.project_name_too_long" xml:space="preserve"><value>The project name must not exceed 160 characters.</value></data>
+  <data name="error.content.completion_before_start" xml:space="preserve"><value>A project cannot be completed before it started.</value></data>
+  <data name="error.content.social_link_platform_required" xml:space="preserve"><value>A social link requires a platform.</value></data>
+  <data name="error.content.social_link_platform_too_long" xml:space="preserve"><value>The platform must not exceed 60 characters.</value></data>
+  <data name="error.content.social_link_label_too_long" xml:space="preserve"><value>The label must not exceed 120 characters.</value></data>
+  <data name="error.content.duplicate_technology" xml:space="preserve"><value>The same technology cannot be listed twice.</value></data>
+  <data name="error.http.validation_failed" xml:space="preserve"><value>The request is not valid.</value></data>
+  <data name="error.http.endpoint_not_found" xml:space="preserve"><value>The requested API endpoint does not exist.</value></data>
+  <data name="error.http.bad_request" xml:space="preserve"><value>The request is not valid.</value></data>
+  <data name="error.http.route_not_found" xml:space="preserve"><value>The requested resource was not found.</value></data>
+  <data name="error.http.conflict" xml:space="preserve"><value>The request conflicts with the current state.</value></data>
+  <data name="error.http.payload_too_large" xml:space="preserve"><value>The request payload is too large.</value></data>
+  <data name="error.http.unsupported_media_type" xml:space="preserve"><value>The request media type is not supported.</value></data>
+  <data name="error.http.too_many_requests" xml:space="preserve"><value>Too many requests.</value></data>
+  <data name="error.request.cancelled" xml:space="preserve"><value>The request was cancelled.</value></data>
+  <data name="error.antiforgery.invalid_token" xml:space="preserve"><value>The antiforgery token is missing, invalid or was issued for a different user.</value></data>
+  <data name="error.persistence.conflict" xml:space="preserve"><value>The change conflicts with data that already exists.</value></data>
+  <data name="error.server.unexpected_error" xml:space="preserve"><value>An unexpected error occurred.</value></data>
+  <data name="error.server.error" xml:space="preserve"><value>The server could not complete the request.</value></data>
+</root>

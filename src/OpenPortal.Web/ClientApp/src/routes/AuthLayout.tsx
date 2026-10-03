@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { MagneticCursor } from '@/components/MagneticCursor'
 import { StarField } from '@/components/StarField'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -7,7 +8,7 @@ const currentYear = new Date().getFullYear()
 
 /**
  * Chrome-free frame for the sign-in screen: starfield background, a magnetic cursor, a quiet brand header, the form, a small
- * footer and the theme toggle top-right.
+ * footer and the language selector and theme toggle top-right.
  */
 export function AuthLayout() {
   return (
@@ -20,7 +21,10 @@ export function AuthLayout() {
           <img src="/favicon.svg" alt="" className="size-6" />
           <span className="text-xs font-medium tracking-[0.25em] uppercase">OpenPortal</span>
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-1">
+          <LanguageSwitcher />
+          <ThemeToggle />
+        </div>
       </header>
 
       <main id="main" className="relative z-10 mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-8">

@@ -28,5 +28,7 @@ export const authApi = {
 export const accountApi = {
   profile: (signal?: AbortSignal) => api.get<AccountProfile>('/api/account/profile', signal),
   updateProfile: (body: UpdateProfileRequest) => api.put<AccountProfile>('/api/account/profile', body),
+  /** Saves the preferred UI language (null clears it). */
+  updateLanguage: (language: string | null) => api.put<AccountProfile>('/api/account/language', { language }),
   changePassword: (body: ChangePasswordRequest) => api.post<void>('/api/account/change-password', body),
 }

@@ -3,12 +3,15 @@ import { AlertCircle } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useI18n } from '@/i18n/useI18n'
 
 /** Placeholder shown while a query is pending. */
-export function LoadingState({ label = 'Loading…' }: { label?: string }) {
+export function LoadingState({ label }: { label?: string }) {
+  const { t } = useI18n()
+
   return (
     <div role="status" aria-live="polite" className="space-y-3">
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">{label ?? t('common.loading')}</span>
       <Skeleton className="h-6 w-1/3" />
       <Skeleton className="h-24 w-full" />
     </div>
@@ -17,7 +20,7 @@ export function LoadingState({ label = 'Loading…' }: { label?: string }) {
 
 /** A page-level failure with an optional retry, and the trace id when the server supplied one. */
 export function ErrorPanel({
-  title = 'Something went wrong',
+  title,
   message,
   traceId,
   onRetry,
@@ -27,20 +30,22 @@ export function ErrorPanel({
   traceId?: string | undefined
   onRetry?: (() => void) | undefined
 }) {
+  const { t } = useI18n()
+
   return (
     <Alert variant="destructive">
       <AlertCircle />
-      <AlertTitle>{title}</AlertTitle>
+      <AlertTitle>{title ?? t('common.somethingWrong')}</AlertTitle>
       <AlertDescription>
         <p>{message}</p>
         {traceId && (
           <p className="font-mono text-xs">
-            Reference: <code>{traceId}</code>
+            {t('common.reference')} <code>{traceId}</code>
           </p>
         )}
         {onRetry && (
           <Button variant="outline" size="sm" className="mt-2" onClick={onRetry}>
-            Try again
+            {t('common.tryAgain')}
           </Button>
         )}
       </AlertDescription>

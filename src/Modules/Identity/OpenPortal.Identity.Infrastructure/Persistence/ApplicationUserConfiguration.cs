@@ -20,6 +20,9 @@ internal sealed class ApplicationUserConfiguration : IEntityTypeConfiguration<Ap
             .HasMaxLength(ApplicationUser.DisplayNameMaxLength)
             .IsRequired();
 
+        builder.Property(user => user.Language)
+            .HasMaxLength(ApplicationUser.LanguageMaxLength);
+
         builder.Property(user => user.CreatedAtUtc)
             .IsRequired();
 

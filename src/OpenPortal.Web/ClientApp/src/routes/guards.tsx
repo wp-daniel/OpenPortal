@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { ErrorPanel, LoadingState } from '@/components/StatePanels'
 import { useSession } from '@/hooks/useSession'
+import { useI18n } from '@/i18n/useI18n'
 
 /** Where the user was heading before being sent to sign in, so sign-in can return them there. */
 export interface RedirectState {
@@ -18,11 +19,12 @@ function FullPage({ children }: { children: React.ReactNode }) {
 export function ProtectedRoute() {
   const { session, isPending, isError, refetch } = useSession()
   const location = useLocation()
+  const { t } = useI18n()
 
   if (isPending) {
     return (
       <FullPage>
-        <LoadingState label="Checking your session…" />
+        <LoadingState label={t('guards.checking')} />
       </FullPage>
     )
   }
@@ -31,8 +33,8 @@ export function ProtectedRoute() {
     return (
       <FullPage>
         <ErrorPanel
-          title="Could not check your session"
-          message="The server could not be reached. Try again in a moment."
+          title={t('guards.errorTitle')}
+          message={t('guards.errorMessage')}
           onRetry={() => void refetch()}
         />
       </FullPage>
@@ -59,11 +61,12 @@ export function AdminRoute() {
 export function PublicOnlyRoute() {
   const { session, isPending } = useSession()
   const location = useLocation()
+  const { t } = useI18n()
 
   if (isPending) {
     return (
       <FullPage>
-        <LoadingState label="Checking your session…" />
+        <LoadingState label={t('guards.checking')} />
       </FullPage>
     )
   }

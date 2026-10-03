@@ -89,4 +89,64 @@ public sealed class ApplicationUserTests
         user.DisplayName.ShouldBe("Grace Hopper");
         user.UpdatedAtUtc.ShouldBe(Now);
     }
+
+    [Fact]
+    public void A_new_user_has_no_language_preference()
+    {
+        NewUser().Language.ShouldBeNull();
+    }
+
+    [Theory]
+    [InlineData("it")]
+    [InlineData("pt-BR")]
+    [InlineData("  fr  ")]
+    public void SetLanguage_stores_a_well_formed_code(string code)
+    {
+        var user = NewUser();
+
+        user.SetLanguage(code, Now.AddDays(1)).IsSuccess.ShouldBeTrue();
+
+        user.Language.ShouldBe(code.Trim());
+        user.UpdatedAtUtc.ShouldBe(Now.AddDays(1));
+    }
+
+    [Theory]
+    [InlineData("x")]
+    [InlineData("it_IT")]
+    [InlineData("-it")]
+    [InlineData("it-")]
+    [InlineData("abcdefghijkl")]
+    [InlineData("i t")]
+    public void SetLanguage_rejects_a_malformed_code(string code)
+    {
+        var user = NewUser();
+
+        var result = user.SetLanguage(code, Now);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Error.ShouldBe(UserErrors.UnsupportedLanguage);
+        user.Language.ShouldBeNull();
+    }
+
+    [Fact]
+    public void SetLanguage_with_null_clears_the_preference()
+    {
+        var user = NewUser();
+        user.SetLanguage("it", Now);
+
+        user.SetLanguage(null, Now.AddDays(1)).IsSuccess.ShouldBeTrue();
+
+        user.Language.ShouldBeNull();
+    }
+
+    [Fact]
+    public void SetLanguage_does_not_touch_the_timestamp_when_nothing_changes()
+    {
+        var user = NewUser();
+        user.SetLanguage("it", Now);
+
+        user.SetLanguage("it", Now.AddDays(1));
+
+        user.UpdatedAtUtc.ShouldBe(Now);
+    }
 }

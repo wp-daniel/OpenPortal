@@ -1,3 +1,4 @@
+import { currentLanguage, translate } from '@/i18n/store'
 import type { AntiforgeryToken, ValidationProblemDetails } from './types'
 
 /**
@@ -12,7 +13,7 @@ export class ApiError extends Error {
   readonly problem: ValidationProblemDetails | null
 
   constructor(status: number, problem: ValidationProblemDetails | null) {
-    super(problem?.title ?? `The request failed with status ${status}.`)
+    super(problem?.title ?? translate('clientError.requestFailed', { status }))
     this.name = 'ApiError'
     this.status = status
     this.problem = problem
@@ -48,7 +49,7 @@ export class ApiError extends Error {
     }
 
     if (this.problem?.errors && Object.keys(this.problem.errors).length > 0) {
-      return 'Some fields need attention.'
+      return translate('clientError.fieldsNeedAttention')
     }
 
     return this.message
@@ -158,7 +159,11 @@ async function readProblem(response: Response): Promise<ValidationProblemDetails
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const method = options.method ?? 'GET'
-  const headers: Record<string, string> = { Accept: 'application/json' }
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    // The server localizes its own messages (errors, validation) from this header.
+    'Accept-Language': currentLanguage(),
+  }
 
   if (options.body !== undefined) {
     headers['Content-Type'] = 'application/json'

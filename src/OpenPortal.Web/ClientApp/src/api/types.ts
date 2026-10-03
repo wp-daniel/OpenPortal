@@ -33,6 +33,7 @@ export interface SessionUser {
   readonly displayName: string
   readonly emailConfirmed: boolean
   readonly roles: readonly string[]
+  readonly language: string | null
 }
 
 /**
@@ -64,6 +65,7 @@ export interface AccountProfile {
   readonly createdAtUtc: string
   readonly updatedAtUtc: string | null
   readonly roles: readonly string[]
+  readonly language: string | null
 }
 
 export interface UpdateProfileRequest {

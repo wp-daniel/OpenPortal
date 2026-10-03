@@ -22,6 +22,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import type { TFunction } from '@/i18n/store'
+import { useI18n } from '@/i18n/useI18n'
 import { describeError, traceIdOf } from '@/lib/errors'
 import { useSession } from '@/hooks/useSession'
 import { notify } from '@/hooks/useToast'
@@ -31,9 +33,10 @@ import { describePasswordPolicy, newPasswordSchema } from '@/lib/passwordPolicy'
 /** The roles the server recognises. Anything else is rejected there, so the list is fixed here. */
 const ROLES = ['Administrator', 'User'] as const
 
-const searchSchema = z.object({
-  search: z.string().max(256, 'Keep the search under 256 characters.'),
-})
+const makeSearchSchema = (t: TFunction) =>
+  z.object({
+    search: z.string().max(256, t('validation.searchMax', { max: 256 })),
+  })
 
 /** Administrator-only account management. */
 export function AdminUsersPage() {
@@ -42,6 +45,8 @@ export function AdminUsersPage() {
   const [appliedSearch, setAppliedSearch] = useState('')
   const queryClient = useQueryClient()
   const { session } = useSession()
+  const { t } = useI18n()
+  const searchSchema = useMemo(() => makeSearchSchema(t), [t])
 
   const users = useQuery({
     queryKey: ['admin-users', page, appliedSearch],
@@ -55,7 +60,7 @@ export function AdminUsersPage() {
     mutationFn: ({ user, roles }: { user: UserSummary; roles: string[] }) =>
       userAdminApi.update(user.id, { displayName: user.displayName, roles }),
     onSuccess: async (_result, { user }) => {
-      notify.success('Roles updated', user.email)
+      notify.success(t('users.rolesUpdated'), user.email)
       await refresh()
     },
   })
@@ -65,7 +70,7 @@ export function AdminUsersPage() {
     const parsed = searchSchema.safeParse({ search })
 
     if (!parsed.success) {
-      notify.warning(parsed.error.issues[0]?.message ?? 'Invalid search')
+      notify.warning(parsed.error.issues[0]?.message ?? t('validation.invalidSearch'))
 
       return
     }
@@ -76,21 +81,21 @@ export function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Users" description="Create accounts and manage who can administer the portal." />
+      <PageHeader title={t('users.title')} description={t('users.description')} />
 
       <CreateUserForm onCreated={refresh} policy={session.passwordPolicy} />
 
-      <Section title="Accounts">
+      <Section title={t('users.accounts')}>
         <form onSubmit={applySearch} className="mb-5 flex flex-wrap items-end gap-3">
-          <FormField label="Search" htmlFor="search" className="w-full sm:w-72">
+          <FormField label={t('common.search')} htmlFor="search" className="w-full sm:w-72">
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Email or display name"
+              placeholder={t('users.searchPlaceholder')}
             />
           </FormField>
           <Button type="submit" variant="outline">
-            Search
+            {t('common.search')}
           </Button>
           {appliedSearch && (
             <Button
@@ -101,7 +106,7 @@ export function AdminUsersPage() {
                 setPage(1)
               }}
             >
-              Clear
+              {t('common.clear')}
             </Button>
           )}
         </form>
@@ -117,22 +122,22 @@ export function AdminUsersPage() {
         {users.isPending && <LoadingState />}
 
         {users.data && users.data.items.length === 0 && (
-          <p className="text-muted-foreground py-6 text-center text-sm">No accounts match.</p>
+          <p className="text-muted-foreground py-6 text-center text-sm">{t('users.noMatch')}</p>
         )}
 
         {users.data && users.data.items.length > 0 && (
           <>
             <Table>
               <TableCaption className="sr-only">
-                Accounts, page {users.data.page} of {users.data.totalPages}
+                {t('users.caption', { page: users.data.page, total: users.data.totalPages })}
               </TableCaption>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Display name</TableHead>
-                  <TableHead>Roles</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t('common.email')}</TableHead>
+                  <TableHead>{t('common.displayName')}</TableHead>
+                  <TableHead>{t('common.roles')}</TableHead>
+                  <TableHead>{t('common.status')}</TableHead>
+                  <TableHead className="text-right">{t('common.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -147,18 +152,18 @@ export function AdminUsersPage() {
                         <div className="flex flex-wrap gap-1">
                           {user.roles.map((role) => (
                             <Badge key={role} variant="secondary">
-                              {role}
+                              {t(`role.${role}`)}
                             </Badge>
                           ))}
                         </div>
                       </TableCell>
                       <TableCell>
                         {user.isLockedOut ? (
-                          <Badge variant="warning">Locked out</Badge>
+                          <Badge variant="warning">{t('users.lockedOut')}</Badge>
                         ) : user.emailConfirmed ? (
-                          <Badge variant="success">Active</Badge>
+                          <Badge variant="success">{t('users.active')}</Badge>
                         ) : (
-                          <Badge variant="warning">Unconfirmed</Badge>
+                          <Badge variant="warning">{t('users.unconfirmed')}</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
@@ -175,7 +180,7 @@ export function AdminUsersPage() {
                             })
                           }
                         >
-                          {isAdmin ? 'Revoke admin' : 'Make admin'}
+                          {isAdmin ? t('users.revokeAdmin') : t('users.makeAdmin')}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -184,15 +189,19 @@ export function AdminUsersPage() {
               </TableBody>
             </Table>
 
-            <nav aria-label="Pagination" className="mt-4 flex items-center justify-between gap-2 text-sm">
+            <nav aria-label={t('users.pagination')} className="mt-4 flex items-center justify-between gap-2 text-sm">
               <Button variant="outline" size="sm" disabled={!users.data.hasPrevious} onClick={() => setPage(page - 1)}>
-                Previous
+                {t('common.previous')}
               </Button>
               <span className="text-muted-foreground text-center">
-                Page {users.data.page} of {users.data.totalPages} ({users.data.totalCount} accounts)
+                {t('users.pageOf', {
+                  page: users.data.page,
+                  total: users.data.totalPages,
+                  count: users.data.totalCount,
+                })}
               </span>
               <Button variant="outline" size="sm" disabled={!users.data.hasNext} onClick={() => setPage(page + 1)}>
-                Next
+                {t('common.next')}
               </Button>
             </nav>
           </>
@@ -203,6 +212,7 @@ export function AdminUsersPage() {
 }
 
 function CreateUserForm({ onCreated, policy }: { onCreated: () => void; policy: PasswordPolicy }) {
+  const { t } = useI18n()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -214,15 +224,15 @@ function CreateUserForm({ onCreated, policy }: { onCreated: () => void; policy: 
   const schema = useMemo(
     () =>
       z.object({
-        email: z.string().trim().min(1, 'An email is required.').email('Enter a valid email address.'),
-        password: newPasswordSchema(policy, 'A password is required.'),
+        email: z.string().trim().min(1, t('validation.emailRequiredNew')).email(t('validation.emailInvalid')),
+        password: newPasswordSchema(policy, t, t('validation.passwordRequiredNew')),
         displayName: z
           .string()
           .trim()
-          .refine((value) => value === '' || value.length >= 2, 'Display name must be at least 2 characters.')
-          .max(120, 'Display name must be at most 120 characters.'),
+          .refine((value) => value === '' || value.length >= 2, t('validation.displayNameMin', { min: 2 }))
+          .max(120, t('validation.displayNameMax', { max: 120 })),
       }),
-    [policy],
+    [policy, t],
   )
 
   const create = useMutation({
@@ -239,7 +249,7 @@ function CreateUserForm({ onCreated, policy }: { onCreated: () => void; policy: 
     },
     meta: { handlesErrors: true },
     onSuccess: async (created) => {
-      notify.success('Account created', created.email)
+      notify.success(t('users.create.created'), created.email)
       onCreated()
       setEmail('')
       setPassword('')
@@ -247,7 +257,7 @@ function CreateUserForm({ onCreated, policy }: { onCreated: () => void; policy: 
       setRoles([])
       setErrors({})
     },
-    onError: (failure) => reportFormError(failure, 'The account could not be created'),
+    onError: (failure) => reportFormError(failure, t('users.create.failed')),
   })
 
   function submit(event: FormEvent) {
@@ -268,18 +278,18 @@ function CreateUserForm({ onCreated, policy }: { onCreated: () => void; policy: 
   const serverErrors = serverFieldErrors(create.error)
 
   return (
-    <Section title="Create an account" description="The password must satisfy the server's policy.">
+    <Section title={t('users.create.title')} description={t('users.create.description')}>
       <form onSubmit={submit} noValidate className="grid gap-5">
         <div className="grid items-start gap-5 sm:grid-cols-3">
-          <FormField label="Email" htmlFor="newEmail" error={errors.email ?? serverErrors.email?.[0]}>
+          <FormField label={t('common.email')} htmlFor="newEmail" error={errors.email ?? serverErrors.email?.[0]}>
             <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
           </FormField>
 
           <FormField
-            label="Password"
+            label={t('common.password')}
             htmlFor="newPassword"
             error={errors.password ?? serverErrors.password?.[0]}
-            hint={describePasswordPolicy(policy)}
+            hint={describePasswordPolicy(policy, t)}
           >
             <Input
               type="password"
@@ -290,17 +300,17 @@ function CreateUserForm({ onCreated, policy }: { onCreated: () => void; policy: 
           </FormField>
 
           <FormField
-            label="Display name"
+            label={t('common.displayName')}
             htmlFor="newDisplayName"
             error={errors.displayName ?? serverErrors.displayName?.[0]}
-            hint="Defaults to the email's local part."
+            hint={t('users.create.displayNameHint')}
           >
             <Input value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
           </FormField>
         </div>
 
         <fieldset className="grid gap-2">
-          <legend className="text-sm font-medium">Roles</legend>
+          <legend className="text-sm font-medium">{t('common.roles')}</legend>
           <div className="flex gap-6">
             {ROLES.map((role) => (
               <div key={role} className="flex items-center gap-2">
@@ -312,7 +322,7 @@ function CreateUserForm({ onCreated, policy }: { onCreated: () => void; policy: 
                   }
                 />
                 <Label htmlFor={`role-${role}`} className="font-normal">
-                  {role}
+                  {t(`role.${role}`)}
                 </Label>
               </div>
             ))}
@@ -322,7 +332,7 @@ function CreateUserForm({ onCreated, policy }: { onCreated: () => void; policy: 
         <div>
           <Button type="submit" disabled={create.isPending}>
             {create.isPending && <Loader2 className="animate-spin" />}
-            {create.isPending ? 'Creating…' : 'Create account'}
+            {create.isPending ? t('users.create.submitting') : t('users.create.submit')}
           </Button>
         </div>
       </form>

@@ -19,34 +19,34 @@ public sealed class UserListQuery
 {
     public const int MaxPageSize = 100;
 
-    [Range(1, int.MaxValue, ErrorMessage = "Page must be 1 or greater.")]
+    [Range(1, int.MaxValue, ErrorMessage = "validation.page.min")]
     public int Page { get; init; } = 1;
 
-    [Range(1, MaxPageSize, ErrorMessage = "PageSize must be between 1 and 100.")]
+    [Range(1, MaxPageSize, ErrorMessage = "validation.pageSize.range")]
     public int PageSize { get; init; } = 20;
 
     /// <summary>Free-text filter matched against email and display name.</summary>
-    [StringLength(256, ErrorMessage = "Search must not exceed 256 characters.")]
+    [StringLength(256, ErrorMessage = "validation.search.max")]
     public string? Search { get; init; }
 }
 
 /// <summary>A new account created by an administrator.</summary>
 public sealed class CreateUserRequest
 {
-    [Required(AllowEmptyStrings = false, ErrorMessage = "Email is required.")]
-    [EmailAddress(ErrorMessage = "Email must be a valid email address.")]
-    [StringLength(256, ErrorMessage = "Email must not exceed 256 characters.")]
+    [Required(AllowEmptyStrings = false, ErrorMessage = "validation.email.required")]
+    [EmailAddress(ErrorMessage = "validation.email.invalid")]
+    [StringLength(256, ErrorMessage = "validation.email.max")]
     public string Email { get; init; } = string.Empty;
 
-    [Required(AllowEmptyStrings = false, ErrorMessage = "Password is required.")]
-    [StringLength(256, ErrorMessage = "Password must not exceed 256 characters.")]
+    [Required(AllowEmptyStrings = false, ErrorMessage = "validation.password.required")]
+    [StringLength(256, ErrorMessage = "validation.password.max")]
     public string Password { get; init; } = string.Empty;
 
     /// <summary>Optional; defaults to the local part of the email address when omitted.</summary>
     [StringLength(
         ApplicationUser.DisplayNameMaxLength,
         MinimumLength = ApplicationUser.DisplayNameMinLength,
-        ErrorMessage = "Display name must be between 2 and 120 characters.")]
+        ErrorMessage = "validation.displayName.length")]
     public string? DisplayName { get; init; }
 
     /// <summary>
@@ -59,11 +59,11 @@ public sealed class CreateUserRequest
 /// <summary>Editable fields and role membership of an existing account.</summary>
 public sealed class UpdateUserRequest
 {
-    [Required(AllowEmptyStrings = false, ErrorMessage = "Display name is required.")]
+    [Required(AllowEmptyStrings = false, ErrorMessage = "validation.displayName.required")]
     [StringLength(
         ApplicationUser.DisplayNameMaxLength,
         MinimumLength = ApplicationUser.DisplayNameMinLength,
-        ErrorMessage = "Display name must be between 2 and 120 characters.")]
+        ErrorMessage = "validation.displayName.length")]
     public string DisplayName { get; init; } = string.Empty;
 
     public IReadOnlyList<string> Roles { get; init; } = [];
@@ -72,7 +72,7 @@ public sealed class UpdateUserRequest
 /// <summary>A new password set by an administrator on another account.</summary>
 public sealed class ResetPasswordRequest
 {
-    [Required(AllowEmptyStrings = false, ErrorMessage = "New password is required.")]
-    [StringLength(256, ErrorMessage = "New password must not exceed 256 characters.")]
+    [Required(AllowEmptyStrings = false, ErrorMessage = "validation.newPassword.required")]
+    [StringLength(256, ErrorMessage = "validation.newPassword.max")]
     public string NewPassword { get; init; } = string.Empty;
 }

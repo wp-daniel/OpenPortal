@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { z } from 'zod'
 import { authApi } from '@/api/auth'
 import { ApiError } from '@/api/client'
@@ -12,6 +12,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { SESSION_QUERY_KEY } from '@/hooks/useSession'
 import { notify } from '@/hooks/useToast'
+import { useI18n } from '@/i18n/useI18n'
+import type { TFunction } from '@/i18n/store'
 import { zodFieldErrors } from '@/lib/forms'
 
 /**
@@ -24,18 +26,21 @@ import { zodFieldErrors } from '@/lib/forms'
  * Navigation after success is not done here: invalidating the session makes <PublicOnlyRoute> redirect to
  * the page the user originally asked for (or the dashboard).
  */
-const schema = z.object({
-  email: z.string().min(1, 'Email is required.').email('Enter a valid email address.'),
-  password: z.string().min(1, 'Password is required.'),
-  rememberMe: z.boolean(),
-})
+const makeSchema = (t: TFunction) =>
+  z.object({
+    email: z.string().min(1, t('validation.emailRequired')).email(t('validation.emailInvalid')),
+    password: z.string().min(1, t('validation.passwordRequired')),
+    rememberMe: z.boolean(),
+  })
 
-type Fields = z.infer<typeof schema>
+type Fields = z.infer<ReturnType<typeof makeSchema>>
 
 export function SignInPage() {
   const [fields, setFields] = useState<Fields>({ email: '', password: '', rememberMe: false })
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof Fields, string>>>({})
   const queryClient = useQueryClient()
+  const { t } = useI18n()
+  const schema = useMemo(() => makeSchema(t), [t])
 
   const signIn = useMutation({
     mutationFn: (values: Fields) => authApi.login(values.email, values.password, values.rememberMe),
@@ -45,9 +50,9 @@ export function SignInPage() {
       // The server deliberately does not say which of the two fields was wrong, so this text must not imply
       // that either one was. Echoing "unknown email" would confirm which addresses exist.
       if (error instanceof ApiError && error.isUnauthenticated) {
-        notify.error('Sign-in failed', 'Those credentials were not accepted.')
+        notify.error(t('signIn.failed'), t('signIn.rejected'))
       } else {
-        notify.fromError(error, 'Sign-in failed')
+        notify.fromError(error, t('signIn.failed'))
       }
     },
   })
@@ -71,12 +76,12 @@ export function SignInPage() {
 
   return (
     <Section
-      title="Sign in"
-      description="Use the email address of an OpenPortal account."
+      title={t('signIn.title')}
+      description={t('signIn.description')}
       className="bg-card/80 shadow-lg backdrop-blur"
     >
       <form onSubmit={submit} noValidate className="grid gap-5">
-        <FormField label="Email" htmlFor="email" error={fieldErrors.email ?? serverErrors.email?.[0]}>
+        <FormField label={t('common.email')} htmlFor="email" error={fieldErrors.email ?? serverErrors.email?.[0]}>
           <Input
             name="email"
             type="email"
@@ -87,7 +92,7 @@ export function SignInPage() {
           />
         </FormField>
 
-        <FormField label="Password" htmlFor="password" error={fieldErrors.password ?? serverErrors.password?.[0]}>
+        <FormField label={t('common.password')} htmlFor="password" error={fieldErrors.password ?? serverErrors.password?.[0]}>
           <Input
             name="password"
             type="password"
@@ -105,13 +110,13 @@ export function SignInPage() {
             onCheckedChange={(checked) => setFields({ ...fields, rememberMe: checked === true })}
           />
           <Label htmlFor="rememberMe" className="font-normal">
-            Keep me signed in on this browser
+            {t('signIn.remember')}
           </Label>
         </div>
 
         <Button type="submit" disabled={signIn.isPending} className="w-full">
           {signIn.isPending && <Loader2 className="animate-spin" />}
-          {signIn.isPending ? 'Signing in…' : 'Sign in'}
+          {signIn.isPending ? t('signIn.submitting') : t('signIn.submit')}
         </Button>
       </form>
     </Section>

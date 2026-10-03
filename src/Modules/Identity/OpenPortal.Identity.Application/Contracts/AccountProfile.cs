@@ -11,7 +11,8 @@ public sealed record AccountProfileDto(
     bool EmailConfirmed,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset? UpdatedAtUtc,
-    IReadOnlyList<string> Roles);
+    IReadOnlyList<string> Roles,
+    string? Language);
 
 /// <summary>Mutable fields of the signed-in account's profile.</summary>
 /// <para>
@@ -20,26 +21,33 @@ public sealed record AccountProfileDto(
 /// </para>
 public sealed class UpdateProfileRequest
 {
-    [Required(AllowEmptyStrings = false, ErrorMessage = "Display name is required.")]
+    [Required(AllowEmptyStrings = false, ErrorMessage = "validation.displayName.required")]
     [StringLength(
         ApplicationUser.DisplayNameMaxLength,
         MinimumLength = ApplicationUser.DisplayNameMinLength,
-        ErrorMessage = "Display name must be between 2 and 120 characters.")]
+        ErrorMessage = "validation.displayName.length")]
     public string DisplayName { get; init; } = string.Empty;
 }
 
 /// <summary>A password change for the signed-in account.</summary>
 public sealed class ChangePasswordRequest
 {
-    [Required(AllowEmptyStrings = false, ErrorMessage = "Current password is required.")]
-    [StringLength(256, ErrorMessage = "Current password must not exceed 256 characters.")]
+    [Required(AllowEmptyStrings = false, ErrorMessage = "validation.currentPassword.required")]
+    [StringLength(256, ErrorMessage = "validation.currentPassword.max")]
     public string CurrentPassword { get; init; } = string.Empty;
 
     /// <summary>
     /// Not annotated with a length rule on purpose: the configured complexity policy is published through
     /// the session response and validated authoritatively by the user store.
     /// </summary>
-    [Required(AllowEmptyStrings = false, ErrorMessage = "New password is required.")]
-    [StringLength(256, ErrorMessage = "New password must not exceed 256 characters.")]
+    [Required(AllowEmptyStrings = false, ErrorMessage = "validation.newPassword.required")]
+    [StringLength(256, ErrorMessage = "validation.newPassword.max")]
     public string NewPassword { get; init; } = string.Empty;
+}
+
+/// <summary>Sets (or clears, with <see langword="null"/>) the signed-in account's preferred UI language.</summary>
+public sealed class UpdateLanguageRequest
+{
+    [StringLength(ApplicationUser.LanguageMaxLength, ErrorMessage = "validation.language.length")]
+    public string? Language { get; init; }
 }

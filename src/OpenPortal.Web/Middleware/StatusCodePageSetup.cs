@@ -1,3 +1,4 @@
+using OpenPortal.Web.Localization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -68,7 +69,7 @@ public static class StatusCodePageSetup
         var problem = new ProblemDetails
         {
             Status = status,
-            Title = TitleFor(status),
+            Title = context.Localize("error." + ErrorCodeFor(status), TitleFor(status)),
             Instance = context.Request.Path,
         };
 

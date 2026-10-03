@@ -34,6 +34,9 @@ public static class UserErrors
     public static Error DuplicateEmail { get; } =
         Error.Conflict(Prefix + "duplicate_email", "An account with this email address already exists.");
 
+    public static Error UnsupportedLanguage { get; } =
+        Error.Validation(Prefix + "unsupported_language", "The requested language is not supported.");
+
     public static Error UnknownRole { get; } =
         Error.Validation(Prefix + "unknown_role", "One or more supplied roles are not recognised by this platform.");
 

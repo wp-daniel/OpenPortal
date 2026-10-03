@@ -13,12 +13,15 @@ internal sealed class IdentityAccountService : IAccountService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly UserLookup _userLookup;
     private readonly IClock _clock;
+    private readonly ILanguageCatalog _languages;
 
     public IdentityAccountService(
         UserManager<ApplicationUser> userManager,
         UserLookup userLookup,
-        IClock clock)
+        IClock clock,
+        ILanguageCatalog languages)
     {
+        _languages = languages;
         _userManager = userManager;
         _userLookup = userLookup;
         _clock = clock;
@@ -60,6 +63,38 @@ internal sealed class IdentityAccountService : IAccountService
             : Result<AccountProfileDto>.Failure(persisted.ToError(UserErrors.DisplayNameRequired));
     }
 
+    public async Task<Result<AccountProfileDto>> UpdateLanguageAsync(
+        UpdateLanguageRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var lookup = await _userLookup.FindCurrentAsync(cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
+        {
+            return Result<AccountProfileDto>.Failure(lookup.Error);
+        }
+
+        var requested = string.IsNullOrWhiteSpace(request.Language) ? null : request.Language.Trim();
+        if (requested is not null && !_languages.IsSupported(requested))
+        {
+            return Result<AccountProfileDto>.Failure(UserErrors.UnsupportedLanguage);
+        }
+
+        var user = lookup.Value;
+        var applied = user.SetLanguage(requested is null ? null : _languages.Canonicalize(requested), _clock.UtcNow);
+        if (applied.IsFailure)
+        {
+            return Result<AccountProfileDto>.Failure(applied.Error);
+        }
+
+        var persisted = await _userManager.UpdateAsync(user).ConfigureAwait(false);
+
+        return persisted.Succeeded
+            ? await ToProfileAsync(user, cancellationToken).ConfigureAwait(false)
+            : Result<AccountProfileDto>.Failure(persisted.ToError(UserErrors.UnsupportedLanguage));
+    }
+
     public async Task<Result> ChangePasswordAsync(
         ChangePasswordRequest request,
         CancellationToken cancellationToken)
@@ -98,6 +133,7 @@ internal sealed class IdentityAccountService : IAccountService
             EmailConfirmed: user.EmailConfirmed,
             CreatedAtUtc: user.CreatedAtUtc,
             UpdatedAtUtc: user.UpdatedAtUtc,
-            Roles: roles.Order(StringComparer.Ordinal).ToArray()));
+            Roles: roles.Order(StringComparer.Ordinal).ToArray(),
+            Language: user.Language));
     }
 }

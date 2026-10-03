@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { LogOut, Menu, User } from 'lucide-react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { authApi } from '@/api/auth'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,23 +14,27 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useSession } from '@/hooks/useSession'
+import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 
 interface NavEntry {
   readonly to: string
-  readonly label: string
+  /** Translation key of the link text. */
+  readonly labelKey: string
   readonly end?: boolean
 }
 
-const userLinks: readonly NavEntry[] = [{ to: '/', label: 'Dashboard', end: true }]
+const userLinks: readonly NavEntry[] = [{ to: '/', labelKey: 'nav.dashboard', end: true }]
 
 const adminLinks: readonly NavEntry[] = [
-  { to: '/admin/users', label: 'Users' },
-  { to: '/admin/content/profile', label: 'Profile' },
-  { to: '/admin/content/projects', label: 'Projects' },
+  { to: '/admin/users', labelKey: 'nav.users' },
+  { to: '/admin/content/profile', labelKey: 'nav.profile' },
+  { to: '/admin/content/projects', labelKey: 'nav.projects' },
 ]
 
-function NavItem({ to, label, end }: NavEntry) {
+function NavItem({ to, labelKey, end }: NavEntry) {
+  const { t } = useI18n()
+
   return (
     <NavLink
       to={to}
@@ -43,7 +48,7 @@ function NavItem({ to, label, end }: NavEntry) {
         )
       }
     >
-      {label}
+      {t(labelKey)}
     </NavLink>
   )
 }
@@ -57,6 +62,7 @@ const currentYear = new Date().getFullYear()
 
 export function AppLayout() {
   const { user, isAdministrator } = useSession()
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const links = isAdministrator ? [...userLinks, ...adminLinks] : userLinks
@@ -77,7 +83,7 @@ export function AppLayout() {
         href="#main"
         className="bg-primary text-primary-foreground sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:px-4 focus:py-2"
       >
-        Skip to content
+        {t('nav.skip')}
       </a>
 
       <header className="bg-background/95 sticky top-0 z-40 border-b backdrop-blur">
@@ -87,25 +93,26 @@ export function AppLayout() {
             OpenPortal
           </Link>
 
-          <nav aria-label="Main" className="hidden flex-1 items-center gap-1 md:flex">
+          <nav aria-label={t('nav.main')} className="hidden flex-1 items-center gap-1 md:flex">
             {links.map((link) => (
               <NavItem key={link.to} {...link} />
             ))}
           </nav>
 
           <div className="ml-auto flex items-center gap-1">
+            <LanguageSwitcher />
             <ThemeToggle />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open menu">
+                <Button variant="ghost" size="icon" className="md:hidden" aria-label={t('nav.openMenu')}>
                   <Menu />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="md:hidden">
                 {links.map((link) => (
                   <DropdownMenuItem key={link.to} asChild>
-                    <Link to={link.to}>{link.label}</Link>
+                    <Link to={link.to}>{t(link.labelKey)}</Link>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -122,11 +129,11 @@ export function AppLayout() {
                 <DropdownMenuLabel className="text-muted-foreground font-normal">{user?.email}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/account">Account</Link>
+                  <Link to="/account">{t('nav.account')}</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled={signOut.isPending} onSelect={() => signOut.mutate()}>
                   <LogOut />
-                  {signOut.isPending ? 'Signing out…' : 'Sign out'}
+                  {signOut.isPending ? t('nav.signingOut') : t('nav.signOut')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

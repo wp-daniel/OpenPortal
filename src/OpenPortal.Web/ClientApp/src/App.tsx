@@ -3,6 +3,8 @@ import { RouterProvider, createBrowserRouter } from 'react-router-dom'
 import { ApiError } from '@/api/client'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ThemeProvider } from '@/components/theme-provider'
+import { I18nProvider, LanguageSync } from '@/i18n/I18nProvider'
+import { translate } from '@/i18n/store'
 import { Toaster } from '@/components/ui/sonner'
 import { notify } from '@/hooks/useToast'
 import { SESSION_QUERY_KEY } from '@/hooks/useSession'
@@ -29,13 +31,13 @@ const mutationCache = new MutationCache({
     }
 
     if (error instanceof ApiError && error.isUnauthenticated) {
-      notify.warning('Your session has ended', 'Sign in again to continue.')
+      notify.warning(translate('clientError.sessionEnded'), translate('clientError.signInAgain'))
       void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY })
 
       return
     }
 
-    notify.fromError(error, 'The action could not be completed')
+    notify.fromError(error, translate('clientError.actionFailed'))
   },
 })
 
@@ -103,10 +105,13 @@ const router = createBrowserRouter([
 export function App() {
   return (
     <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-        <Toaster />
-      </QueryClientProvider>
+      <I18nProvider>
+        <QueryClientProvider client={queryClient}>
+          <LanguageSync />
+          <RouterProvider router={router} />
+          <Toaster />
+        </QueryClientProvider>
+      </I18nProvider>
     </ThemeProvider>
   )
 }

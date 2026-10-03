@@ -16,6 +16,11 @@ public interface IAccountService
         UpdateProfileRequest request,
         CancellationToken cancellationToken);
 
+    /// <summary>Stores the caller's preferred UI language after checking it is one the deployment offers.</summary>
+    Task<Result<AccountProfileDto>> UpdateLanguageAsync(
+        UpdateLanguageRequest request,
+        CancellationToken cancellationToken);
+
     /// <summary>
     /// Replaces the caller's password after verifying the current one. Changing the password rotates the
     /// security stamp, which invalidates every other session belonging to the account.

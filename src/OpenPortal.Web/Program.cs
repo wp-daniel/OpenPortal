@@ -10,6 +10,7 @@ using OpenPortal.Web;
 using OpenPortal.Web.Authentication;
 using OpenPortal.Web.Authorization;
 using OpenPortal.Web.Infrastructure;
+using OpenPortal.Web.Localization;
 using OpenPortal.Web.Middleware;
 using OpenPortal.Web.Persistence;
 
@@ -63,6 +64,10 @@ builder.Services.Configure<DatabaseOptions>(options =>
 builder.Services.AddOptions<BootstrapAdminOptions>()
     .Bind(builder.Configuration.GetSection(BootstrapAdminOptions.SectionName));
 
+// Languages, request culture and the resource-based message catalog. Registered before the modules
+// because the Identity module validates a saved language against ILanguageCatalog.
+builder.Services.AddOpenPortalLocalization(builder.Configuration);
+
 // ---------------------------------------------------------------------------
 // Modules.
 //
@@ -102,10 +107,22 @@ builder.Services
             var problem = new ValidationProblemDetails(context.ModelState)
             {
                 Status = StatusCodes.Status400BadRequest,
-                Title = "The request is not valid.",
+                Title = context.HttpContext.Localize("error.http.validation_failed", "The request is not valid."),
                 Instance = context.HttpContext.Request.Path,
                 Type = "https://tools.ietf.org/html/rfc9110#section-15.5.1",
             };
+
+            // DataAnnotations messages on the request contracts are resource keys (validation.*), because
+            // those contracts live in modules that must not depend on localization. Resolve them here;
+            // anything that is not a known key (a binder's own message) is passed through untouched.
+            foreach (var field in problem.Errors.Keys.ToArray())
+            {
+                problem.Errors[field] = problem.Errors[field]
+                    .Select(message => message.StartsWith("validation.", StringComparison.Ordinal)
+                        ? context.HttpContext.Localize(message, message)
+                        : message)
+                    .ToArray();
+            }
 
             problem.Extensions["errorCode"] = "http.validation_failed";
             problem.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
@@ -181,6 +198,9 @@ if (!app.Environment.IsDevelopment())
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
+// Before the exception handler, so even an error body is written in the caller's language.
+app.UseRequestLocalization();
+
 app.UseExceptionHandler();
 
 // Gives an empty 401/403/404 a body, choosing ProblemDetails for /api and the static shell for a page.
@@ -212,7 +232,7 @@ app.MapFallback(async context =>
                 new ProblemDetails
                 {
                     Status = StatusCodes.Status404NotFound,
-                    Title = "The requested API endpoint does not exist.",
+                    Title = context.Localize("error.http.endpoint_not_found", "The requested API endpoint does not exist."),
                     Instance = context.Request.Path,
                     Type = "https://tools.ietf.org/html/rfc9110#section-10.2.2",
                     Extensions = { ["errorCode"] = "http.endpoint_not_found" },

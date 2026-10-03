@@ -1,5 +1,6 @@
 import { ApiError } from '@/api/client'
 import { notify } from '@/hooks/useToast'
+import { translate } from '@/i18n/store'
 import type { ZodError } from 'zod'
 
 /** First message per field from a zod failure, keyed by the field names the form also uses. */
@@ -21,7 +22,7 @@ export function zodFieldErrors<T extends string>(error: ZodError): Partial<Recor
  */
 export function reportFormError(error: unknown, fallback: string): void {
   if (error instanceof ApiError && error.status === 400 && Object.keys(error.fieldErrors).length > 0) {
-    notify.warning('Some fields need attention')
+    notify.warning(translate('clientError.fieldsNeedAttention'))
 
     return
   }

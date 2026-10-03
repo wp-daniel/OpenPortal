@@ -13,6 +13,14 @@
         document.documentElement.classList.toggle("dark", t === "dark");
       } catch (e) {}
     </script>
+    <script>
+      // Sets <html lang> from the saved language before first paint; the app corrects it once the list of
+      // offered languages is known.
+      try {
+        var l = localStorage.getItem("openportal-lang");
+        if (l && /^[A-Za-z-]{2,10}$/.test(l)) document.documentElement.lang = l;
+      } catch (e) {}
+    </script>
     <meta name="description" content="OpenPortal — a reusable application shell with user management and sessions." />
     <title>OpenPortal</title>
   </head>

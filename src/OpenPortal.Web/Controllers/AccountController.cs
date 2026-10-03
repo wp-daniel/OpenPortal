@@ -56,6 +56,22 @@ public sealed class AccountController : ControllerBase
             : ProblemResults.FromResult(HttpContext, updated);
     }
 
+    /// <summary>Stores the signed-in account's preferred UI language (null clears it).</summary>
+    [HttpPut("language")]
+    [ProducesResponseType<AccountProfileDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<AccountProfileDto>> UpdateLanguageAsync(
+        [FromBody] UpdateLanguageRequest request,
+        CancellationToken cancellationToken)
+    {
+        var updated = await _account.UpdateLanguageAsync(request, cancellationToken).ConfigureAwait(false);
+
+        return updated.IsSuccess
+            ? Ok(updated.Value)
+            : ProblemResults.FromResult(HttpContext, updated);
+    }
+
     /// <summary>
     /// Replaces the signed-in account's password.
     /// <para>

@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { PasswordPolicy } from '../api/types'
+import { formatList, type TFunction } from '../i18n/store'
 
 /**
  * The stand-in used before the session has loaded, or when the session request failed.
@@ -36,7 +37,7 @@ export function isPasswordPolicyKnown(policy: PasswordPolicy): boolean {
  * them to match exactly would be pointless work, since anything they wrongly reject is still accepted by the
  * server on the next attempt — whereas a check the server would have rejected is caught here for free.
  */
-export function newPasswordSchema(policy: PasswordPolicy, label = 'Enter a password.') {
+export function newPasswordSchema(policy: PasswordPolicy, t: TFunction, label: string) {
   let schema = z.string().min(1, label)
 
   if (!isPasswordPolicyKnown(policy)) {
@@ -46,79 +47,67 @@ export function newPasswordSchema(policy: PasswordPolicy, label = 'Enter a passw
   }
 
   if (policy.requiredLength > 1) {
-    schema = schema.min(policy.requiredLength, `Use at least ${policy.requiredLength} characters.`)
+    schema = schema.min(policy.requiredLength, t('password.min', { count: policy.requiredLength }))
   }
 
   if (policy.requireLowercase) {
-    schema = schema.regex(/[a-z]/, 'Add a lowercase letter.')
+    schema = schema.regex(/[a-z]/, t('password.lowercase'))
   }
 
   if (policy.requireUppercase) {
-    schema = schema.regex(/[A-Z]/, 'Add an uppercase letter.')
+    schema = schema.regex(/[A-Z]/, t('password.uppercase'))
   }
 
   if (policy.requireDigit) {
-    schema = schema.regex(/[0-9]/, 'Add a digit.')
+    schema = schema.regex(/[0-9]/, t('password.digit'))
   }
 
   if (policy.requireNonAlphanumeric) {
-    schema = schema.regex(/[^A-Za-z0-9]/, 'Add a symbol.')
+    schema = schema.regex(/[^A-Za-z0-9]/, t('password.symbol'))
   }
 
   if (policy.requiredUniqueChars > 1) {
     schema = schema.refine(
       (value) => new Set(value).size >= policy.requiredUniqueChars,
-      `Use at least ${policy.requiredUniqueChars} different characters.`,
+      t('password.unique', { count: policy.requiredUniqueChars }),
     )
   }
 
   return schema
 }
 
-/** Joins items as "a, b and c" so the generated hint reads like a sentence. */
-function joinWithAnd(parts: readonly string[]): string {
-  if (parts.length === 0) {
-    return ''
-  }
-
-  if (parts.length === 1) {
-    return parts[0]
-  }
-
-  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`
-}
-
 /** The same policy in a sentence, for the field hint. */
-export function describePasswordPolicy(policy: PasswordPolicy): string {
+export function describePasswordPolicy(policy: PasswordPolicy, t: TFunction): string {
   if (!isPasswordPolicyKnown(policy)) {
-    return 'The server publishes the complexity policy.'
+    return t('password.policyUnknown')
   }
 
   const parts: string[] = []
 
   if (policy.requiredLength > 1) {
-    parts.push(`at least ${policy.requiredLength} characters`)
+    parts.push(t('password.part.length', { count: policy.requiredLength }))
   }
 
   if (policy.requireLowercase) {
-    parts.push('a lowercase letter')
+    parts.push(t('password.part.lowercase'))
   }
 
   if (policy.requireUppercase) {
-    parts.push('an uppercase letter')
+    parts.push(t('password.part.uppercase'))
   }
 
   if (policy.requireDigit) {
-    parts.push('a digit')
+    parts.push(t('password.part.digit'))
   }
 
   if (policy.requireNonAlphanumeric) {
-    parts.push('a symbol')
+    parts.push(t('password.part.symbol'))
   }
 
   if (policy.requiredUniqueChars > 1) {
-    parts.push(`${policy.requiredUniqueChars} different characters`)
+    parts.push(t('password.part.unique', { count: policy.requiredUniqueChars }))
   }
 
-  return parts.length === 0 ? 'The server publishes the complexity policy.' : `Requires ${joinWithAnd(parts)}.`
+  // Joined with Intl.ListFormat, so "and" is the active language's own conjunction.
+  return parts.length === 0 ? t('password.policyUnknown') : t('password.requires', { list: formatList(parts) })
 }

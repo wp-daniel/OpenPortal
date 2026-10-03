@@ -1,15 +1,18 @@
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { useI18n } from '@/i18n/useI18n'
 
 export function NotFoundPage() {
+  const { t } = useI18n()
+
   return (
     <div className="mx-auto max-w-lg py-16 text-center">
-      <h1 className="text-2xl font-semibold tracking-tight">Page not found</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{t('notFound.title')}</h1>
       <p className="text-muted-foreground mt-2 text-sm">
-        The address you followed does not match anything on this portal.
+        {t('notFound.description')}
       </p>
       <Button asChild className="mt-6">
-        <Link to="/">Back to the dashboard</Link>
+        <Link to="/">{t('notFound.back')}</Link>
       </Button>
     </div>
   )

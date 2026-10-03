@@ -14,16 +14,19 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { SESSION_QUERY_KEY, useSession } from '@/hooks/useSession'
 import { notify } from '@/hooks/useToast'
+import { formatDate, type TFunction } from '@/i18n/store'
+import { useI18n } from '@/i18n/useI18n'
 import { reportFormError, serverFieldErrors, zodFieldErrors } from '@/lib/forms'
 import { describePasswordPolicy, newPasswordSchema } from '@/lib/passwordPolicy'
 
-const profileSchema = z.object({
-  displayName: z
-    .string()
-    .trim()
-    .min(2, 'Display name must be at least 2 characters.')
-    .max(120, 'Display name must be at most 120 characters.'),
-})
+const makeProfileSchema = (t: TFunction) =>
+  z.object({
+    displayName: z
+      .string()
+      .trim()
+      .min(2, t('validation.displayNameMin', { min: 2 }))
+      .max(120, t('validation.displayNameMax', { max: 120 })),
+  })
 
 /**
  * The signed-in account's own settings.
@@ -33,6 +36,7 @@ const profileSchema = z.object({
  */
 export function AccountPage() {
   const { user, session } = useSession()
+  const { t } = useI18n()
 
   const profile = useQuery({
     queryKey: ['account-profile'],
@@ -41,7 +45,7 @@ export function AccountPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Account" description="Your profile and sign-in details." />
+      <PageHeader title={t('account.title')} description={t('account.description')} />
 
       {profile.isPending && <LoadingState />}
 
@@ -49,31 +53,31 @@ export function AccountPage() {
 
       <PasswordForm policy={session.passwordPolicy} />
 
-      <Section title="Details">
+      <Section title={t('account.details')}>
         <dl className="grid gap-4 text-sm sm:grid-cols-2">
           <div className="space-y-1">
-            <dt className="text-muted-foreground">Email</dt>
+            <dt className="text-muted-foreground">{t('common.email')}</dt>
             <dd className="font-mono text-sm break-all">{user?.email}</dd>
           </div>
           <div className="space-y-1">
-            <dt className="text-muted-foreground">Email confirmed</dt>
+            <dt className="text-muted-foreground">{t('account.emailConfirmed')}</dt>
             <dd>
               {user?.emailConfirmed ? (
-                <Badge variant="success">Confirmed</Badge>
+                <Badge variant="success">{t('account.confirmed')}</Badge>
               ) : (
-                <Badge variant="warning">Not confirmed</Badge>
+                <Badge variant="warning">{t('account.notConfirmed')}</Badge>
               )}
             </dd>
           </div>
           <div className="space-y-1">
-            <dt className="text-muted-foreground">Roles</dt>
+            <dt className="text-muted-foreground">{t('common.roles')}</dt>
             <dd className="flex flex-wrap gap-1">
               {(user?.roles.length ?? 0) === 0 ? (
-                <span className="text-muted-foreground">None</span>
+                <span className="text-muted-foreground">{t('common.none')}</span>
               ) : (
                 user!.roles.map((role) => (
                   <Badge key={role} variant="secondary">
-                    {role}
+                    {t(`role.${role}`)}
                   </Badge>
                 ))
               )}
@@ -81,8 +85,8 @@ export function AccountPage() {
           </div>
           {profile.data && (
             <div className="space-y-1">
-              <dt className="text-muted-foreground">Member since</dt>
-              <dd>{new Date(profile.data.createdAtUtc).toLocaleDateString()}</dd>
+              <dt className="text-muted-foreground">{t('account.memberSince')}</dt>
+              <dd>{formatDate(profile.data.createdAtUtc)}</dd>
             </div>
           )}
         </dl>
@@ -93,6 +97,8 @@ export function AccountPage() {
 
 function ProfileForm({ initial }: { initial: string }) {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
+  const profileSchema = useMemo(() => makeProfileSchema(t), [t])
   const [displayName, setDisplayName] = useState(initial)
   const [error, setError] = useState<string | undefined>()
 
@@ -100,13 +106,13 @@ function ProfileForm({ initial }: { initial: string }) {
     mutationFn: () => accountApi.updateProfile({ displayName }),
     meta: { handlesErrors: true },
     onSuccess: async (updated) => {
-      notify.success('Display name saved')
+      notify.success(t('account.displayNameSaved'))
       setError(undefined)
       setDisplayName(updated.displayName)
       // The session query carries the display name shown in the header, so it is stale after this write.
       await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY })
     },
-    onError: (failure) => reportFormError(failure, 'The change could not be saved'),
+    onError: (failure) => reportFormError(failure, t('account.saveFailed')),
   })
 
   function submit(event: FormEvent) {
@@ -125,10 +131,10 @@ function ProfileForm({ initial }: { initial: string }) {
   }
 
   return (
-    <Section title="Display name">
+    <Section title={t('account.displayNameSection')}>
       <form onSubmit={submit} noValidate className="grid max-w-md gap-4">
         <FormField
-          label="Display name"
+          label={t('common.displayName')}
           htmlFor="displayName"
           error={error ?? serverFieldErrors(save.error).displayName?.[0]}
         >
@@ -143,7 +149,7 @@ function ProfileForm({ initial }: { initial: string }) {
         <div>
           <Button type="submit" disabled={save.isPending}>
             {save.isPending && <Loader2 className="animate-spin" />}
-            {save.isPending ? 'Saving…' : 'Save'}
+            {save.isPending ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </form>
@@ -152,6 +158,7 @@ function ProfileForm({ initial }: { initial: string }) {
 }
 
 function PasswordForm({ policy }: { policy: PasswordPolicy }) {
+  const { t } = useI18n()
   const [values, setValues] = useState({ currentPassword: '', newPassword: '' })
   const [errors, setErrors] = useState<Partial<Record<keyof typeof values, string>>>({})
 
@@ -160,17 +167,17 @@ function PasswordForm({ policy }: { policy: PasswordPolicy }) {
   const schema = useMemo(
     () =>
       z.object({
-        currentPassword: z.string().min(1, 'Enter your current password.'),
-        newPassword: newPasswordSchema(policy, 'Enter a new password.'),
+        currentPassword: z.string().min(1, t('validation.currentPasswordRequired')),
+        newPassword: newPasswordSchema(policy, t, t('validation.newPasswordRequired')),
       }),
-    [policy],
+    [policy, t],
   )
 
   const change = useMutation({
     mutationFn: () => accountApi.changePassword(values),
     meta: { handlesErrors: true },
     onSuccess: () => {
-      notify.success('Password changed')
+      notify.success(t('account.passwordChanged'))
       setErrors({})
       // Cleared rather than kept: leaving the new password in the form after a successful change invites it
       // to be submitted again by a second click.
@@ -179,12 +186,9 @@ function PasswordForm({ policy }: { policy: PasswordPolicy }) {
     onError: (failure) => {
       // The server reports a rejected current password without saying which half failed, so neither can this.
       if (failure instanceof ApiError && failure.status === 400) {
-        notify.error(
-          'Password not changed',
-          'The change was rejected. Check the current password and the new one against the policy.',
-        )
+        notify.error(t('account.passwordRejected'), t('account.passwordRejectedDetail'))
       } else {
-        reportFormError(failure, 'The password could not be changed')
+        reportFormError(failure, t('account.passwordFailed'))
       }
     },
   })
@@ -205,9 +209,9 @@ function PasswordForm({ policy }: { policy: PasswordPolicy }) {
   }
 
   return (
-    <Section title="Change password">
+    <Section title={t('account.passwordSection')}>
       <form onSubmit={submit} noValidate className="grid max-w-md gap-4">
-        <FormField label="Current password" htmlFor="currentPassword" error={errors.currentPassword}>
+        <FormField label={t('account.currentPassword')} htmlFor="currentPassword" error={errors.currentPassword}>
           <Input
             name="currentPassword"
             type="password"
@@ -219,10 +223,10 @@ function PasswordForm({ policy }: { policy: PasswordPolicy }) {
         </FormField>
 
         <FormField
-          label="New password"
+          label={t('account.newPassword')}
           htmlFor="newPassword"
           error={errors.newPassword}
-          hint={describePasswordPolicy(policy)}
+          hint={describePasswordPolicy(policy, t)}
         >
           <Input
             name="newPassword"
@@ -237,7 +241,7 @@ function PasswordForm({ policy }: { policy: PasswordPolicy }) {
         <div>
           <Button type="submit" disabled={change.isPending}>
             {change.isPending && <Loader2 className="animate-spin" />}
-            {change.isPending ? 'Changing…' : 'Change password'}
+            {change.isPending ? t('account.changing') : t('account.passwordSection')}
           </Button>
         </div>
       </form>
