@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>OpenPortal.Identity.Domain</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\OpenPortal.SharedKernel\OpenPortal.SharedKernel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Provides IdentityUser<TKey> / IdentityRole<TKey> only. This package contains no EF Core,
+      no ASP.NET Core hosting and no UI dependency; it is the minimum required to build the user
+      aggregate on top of ASP.NET Core Identity's hashing and token-provider abstractions.
+    -->
+    <PackageReference Include="Microsoft.Extensions.Identity.Stores" />
+  </ItemGroup>
+
+</Project>

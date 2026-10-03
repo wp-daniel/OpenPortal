@@ -1,0 +1,22 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OpenPortal.SharedKernel/OpenPortal.SharedKernel.csproj" />
+    <Project Path="src/OpenPortal.Web/OpenPortal.Web.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Content/">
+    <Project Path="src/Modules/Content/OpenPortal.Content.Application/OpenPortal.Content.Application.csproj" />
+    <Project Path="src/Modules/Content/OpenPortal.Content.Domain/OpenPortal.Content.Domain.csproj" />
+    <Project Path="src/Modules/Content/OpenPortal.Content.Infrastructure/OpenPortal.Content.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Identity/">
+    <Project Path="src/Modules/Identity/OpenPortal.Identity.Application/OpenPortal.Identity.Application.csproj" />
+    <Project Path="src/Modules/Identity/OpenPortal.Identity.Domain/OpenPortal.Identity.Domain.csproj" />
+    <Project Path="src/Modules/Identity/OpenPortal.Identity.Infrastructure/OpenPortal.Identity.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OpenPortal.Tests.Architecture/OpenPortal.Tests.Architecture.csproj" />
+    <Project Path="tests/OpenPortal.Tests.Integration/OpenPortal.Tests.Integration.csproj" />
+    <Project Path="tests/OpenPortal.Tests.Unit/OpenPortal.Tests.Unit.csproj" />
+  </Folder>
+</Solution>

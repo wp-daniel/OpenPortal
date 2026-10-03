@@ -1,0 +1,49 @@
+# ---------- .NET ----------
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+publish/
+*.user
+*.suo
+*.userprefs
+*.binlog
+.vs/
+.vscode/
+.idea/
+
+# SQLite database files (created at runtime, never committed)
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Secrets
+*.env
+.env.*
+appsettings.Local.json
+appsettings.*.Local.json
+secrets.json
+
+# Test output
+TestResults/
+*.trx
+
+# ---------- Frontend ----------
+node_modules/
+ClientApp/dist/
+ClientApp/build/
+npm-debug.log*
+yarn-error.log*
+.pnpm-store/
+
+# Vite build output is emitted into wwwroot and must not be committed
+src/OpenPortal.Web/wwwroot/*
+!src/OpenPortal.Web/wwwroot/error.html
+!src/OpenPortal.Web/wwwroot/.gitkeep
+
+# ---------- OS ----------
+.DS_Store
+Thumbs.db
