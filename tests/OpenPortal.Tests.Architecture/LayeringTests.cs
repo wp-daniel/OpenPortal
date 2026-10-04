@@ -27,6 +27,12 @@ public static class Architecture
 
     public static Assembly ContentInfrastructure { get; } = typeof(Content.Infrastructure.Persistence.ContentDbContext).Assembly;
 
+    public static Assembly AccessDomain { get; } = typeof(Access.Domain.Applications.PortalApplication).Assembly;
+
+    public static Assembly AccessApplication { get; } = typeof(Access.Application.Abstractions.IApplicationRegistryService).Assembly;
+
+    public static Assembly AccessInfrastructure { get; } = typeof(Access.Infrastructure.Persistence.AccessDbContext).Assembly;
+
     public static Assembly Web { get; } = typeof(OpenPortal.Web.AntiforgeryDefaults).Assembly;
 }
 
@@ -39,7 +45,7 @@ public sealed class LayeringTests
     [Fact]
     public void Domain_projects_do_not_reference_EntityFrameworkCore()
     {
-        var offenders = new[] { Architecture.IdentityDomain, Architecture.ContentDomain }
+        var offenders = new[] { Architecture.IdentityDomain, Architecture.ContentDomain, Architecture.AccessDomain }
             .SelectMany(assembly => assembly.GetReferencedAssemblies())
             .Select(reference => reference.Name)
             .Where(name => name!.StartsWith("Microsoft.EntityFrameworkCore", StringComparison.Ordinal))
@@ -52,7 +58,7 @@ public sealed class LayeringTests
     [Fact]
     public void Domain_projects_do_not_reference_AspNetCore()
     {
-        var offenders = new[] { Architecture.IdentityDomain, Architecture.ContentDomain }
+        var offenders = new[] { Architecture.IdentityDomain, Architecture.ContentDomain, Architecture.AccessDomain }
             .SelectMany(assembly => assembly.GetReferencedAssemblies())
             .Select(reference => reference.Name!)
             .Where(name => name.StartsWith("Microsoft.AspNetCore", StringComparison.Ordinal))
@@ -65,7 +71,7 @@ public sealed class LayeringTests
     [Fact]
     public void Application_projects_do_not_reference_EntityFrameworkCore()
     {
-        var offenders = new[] { Architecture.IdentityApplication, Architecture.ContentApplication }
+        var offenders = new[] { Architecture.IdentityApplication, Architecture.ContentApplication, Architecture.AccessApplication }
             .SelectMany(assembly => assembly.GetReferencedAssemblies())
             .Select(reference => reference.Name)
             .Where(name => name!.StartsWith("Microsoft.EntityFrameworkCore", StringComparison.Ordinal))
@@ -82,6 +88,7 @@ public sealed class LayeringTests
         {
             (Architecture.IdentityApplication, Architecture.IdentityInfrastructure),
             (Architecture.ContentApplication, Architecture.ContentInfrastructure),
+            (Architecture.AccessApplication, Architecture.AccessInfrastructure),
         };
 
         foreach (var (application, infrastructure) in pairs)
@@ -106,6 +113,51 @@ public sealed class LayeringTests
             assembly.GetReferencedAssemblies().Select(reference => reference.Name)
                 .ShouldNotContain(Architecture.ContentDomain.GetName().Name);
         }
+    }
+
+    [Fact]
+    public void Access_does_not_reference_Identity_or_Content()
+    {
+        // Access stores user ids only; names come through the host's IUserDirectory adapter.
+        foreach (var assembly in new[] { Architecture.AccessDomain, Architecture.AccessApplication, Architecture.AccessInfrastructure })
+        {
+            var referenced = assembly.GetReferencedAssemblies().Select(reference => reference.Name).ToArray();
+
+            referenced.ShouldNotContain(Architecture.IdentityDomain.GetName().Name);
+            referenced.ShouldNotContain(Architecture.IdentityApplication.GetName().Name);
+            referenced.ShouldNotContain(Architecture.ContentDomain.GetName().Name);
+            referenced.ShouldNotContain(Architecture.ContentApplication.GetName().Name);
+        }
+    }
+
+    [Fact]
+    public void Identity_and_Content_do_not_reference_Access()
+    {
+        var modules = new[]
+        {
+            Architecture.IdentityDomain, Architecture.IdentityApplication, Architecture.IdentityInfrastructure,
+            Architecture.ContentDomain, Architecture.ContentApplication, Architecture.ContentInfrastructure,
+        };
+
+        foreach (var assembly in modules)
+        {
+            assembly.GetReferencedAssemblies().Select(reference => reference.Name)
+                .ShouldNotContain(Architecture.AccessDomain.GetName().Name);
+        }
+    }
+
+    [Fact]
+    public void The_client_package_stands_alone()
+    {
+        // OpenPortal.Client ships to other applications as a NuGet package. A reference to anything in the
+        // portal would drag the portal's modules, EF Core and its database provider into every consumer.
+        var referenced = typeof(OpenPortal.Client.OpenPortalClientOptions).Assembly
+            .GetReferencedAssemblies()
+            .Select(reference => reference.Name!)
+            .ToArray();
+
+        referenced.Where(name => name.StartsWith("OpenPortal.", StringComparison.Ordinal)).ShouldBeEmpty();
+        referenced.Where(name => name.StartsWith("Microsoft.EntityFrameworkCore", StringComparison.Ordinal)).ShouldBeEmpty();
     }
 
     [Fact]
@@ -134,6 +186,8 @@ public sealed class LayeringTests
             Architecture.IdentityApplication.GetName().Name,
             Architecture.ContentDomain.GetName().Name,
             Architecture.ContentApplication.GetName().Name,
+            Architecture.AccessDomain.GetName().Name,
+            Architecture.AccessApplication.GetName().Name,
         };
 
         var referenced = Architecture.SharedKernel
@@ -149,7 +203,7 @@ public sealed class LayeringTests
     {
         // Naming rule rather than a reference check: it catches a stray DbContext placed in an Application
         // project even when that project has not yet taken a package reference to make it compile.
-        var offenders = new[] { Architecture.IdentityApplication, Architecture.ContentApplication }
+        var offenders = new[] { Architecture.IdentityApplication, Architecture.ContentApplication, Architecture.AccessApplication }
             .SelectMany(assembly => assembly.GetTypes())
             .Where(type => type.Name.EndsWith("DbContext", StringComparison.Ordinal)
                 || type.Name.EndsWith("Repository", StringComparison.Ordinal))
@@ -165,7 +219,7 @@ public sealed class LayeringTests
         // Every service implementation is internal, so nothing outside its own module can name the concrete
         // type. The only way to obtain one is through the interface the Application layer published, which is
         // what makes the module substitutable and what stops the host taking a shortcut to the concrete type.
-        var implementations = new[] { Architecture.ContentInfrastructure, Architecture.IdentityInfrastructure }
+        var implementations = new[] { Architecture.ContentInfrastructure, Architecture.IdentityInfrastructure, Architecture.AccessInfrastructure }
             .SelectMany(assembly => assembly.GetTypes())
             .Where(type => type.Name.EndsWith("Service", StringComparison.Ordinal))
             .Where(type => type is { IsClass: true, IsAbstract: false })
@@ -188,7 +242,7 @@ public sealed class LayeringTests
     {
         // The host references the Infrastructure projects, so their registration surface is the seam the host
         // actually binds to. One public AddXModule per module keeps that seam discoverable.
-        var entryPoints = new[] { Architecture.ContentInfrastructure, Architecture.IdentityInfrastructure }
+        var entryPoints = new[] { Architecture.ContentInfrastructure, Architecture.IdentityInfrastructure, Architecture.AccessInfrastructure }
             .SelectMany(assembly => assembly.GetTypes())
             .Where(type => type is { IsPublic: true, IsAbstract: true, IsSealed: true })
             .Where(type => type.GetMethods(BindingFlags.Public | BindingFlags.Static)
@@ -210,12 +264,14 @@ public sealed class NamingConventionTests
         {
             Architecture.IdentityInfrastructure.GetName().Name!,
             Architecture.ContentInfrastructure.GetName().Name!,
+            Architecture.AccessInfrastructure.GetName().Name!,
         };
 
         var owningAssemblies = new[]
             {
                 Architecture.IdentityDomain, Architecture.IdentityApplication, Architecture.IdentityInfrastructure,
                 Architecture.ContentDomain, Architecture.ContentApplication, Architecture.ContentInfrastructure,
+                Architecture.AccessDomain, Architecture.AccessApplication, Architecture.AccessInfrastructure,
                 Architecture.Web,
             }
             .Where(assembly => assembly.GetTypes().Any(type => type.Name.EndsWith("DbContext", StringComparison.Ordinal)))

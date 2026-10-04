@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2 } from 'lucide-react'
+import { KeyRound, Loader2 } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { z } from 'zod'
 import type { PasswordPolicy, UserSummary } from '@/api/types'
 import { userAdminApi } from '@/api/users'
+import { UserAccessSheet } from '@/components/access/UserAccessSheet'
 import { FormField } from '@/components/FormField'
 import { PageHeader } from '@/components/PageHeader'
 import { Section } from '@/components/Section'
@@ -43,6 +44,7 @@ export function AdminUsersPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [appliedSearch, setAppliedSearch] = useState('')
+  const [accessUser, setAccessUser] = useState<UserSummary | null>(null)
   const queryClient = useQueryClient()
   const { session } = useSession()
   const { t } = useI18n()
@@ -167,6 +169,11 @@ export function AdminUsersPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => setAccessUser(user)}>
+                          <KeyRound />
+                          {t('users.access')}
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -182,6 +189,7 @@ export function AdminUsersPage() {
                         >
                           {isAdmin ? t('users.revokeAdmin') : t('users.makeAdmin')}
                         </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
@@ -207,6 +215,8 @@ export function AdminUsersPage() {
           </>
         )}
       </Section>
+
+      <UserAccessSheet user={accessUser} onClose={() => setAccessUser(null)} />
     </div>
   )
 }

@@ -17,6 +17,9 @@ publish/
 *.db
 *.db-shm
 *.db-wal
+
+# Data Protection key ring (session and antiforgery encryption keys). Never commit it.
+**/App_Data/keys/
 *.sqlite
 *.sqlite3
 

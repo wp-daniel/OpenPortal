@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Content.Application.Abstractions;
 using OpenPortal.Identity.Application.Abstractions;
 
@@ -23,6 +24,14 @@ public sealed class CompositionTests(OpenPortalFactory factory) : IClassFixture<
         typeof(IPublicContentService),
         typeof(IContentManagementService),
         typeof(ILanguageCatalog),
+        typeof(IUserLookupService),
+        typeof(IApplicationRegistryService),
+        typeof(IGroupService),
+        typeof(IAccessAdministrationService),
+        typeof(IAccessEvaluator),
+        typeof(IApplicationAnnouncementService),
+        typeof(IAccessAdminAuthorization),
+        typeof(IUserDirectory),
     };
 
     [Theory]

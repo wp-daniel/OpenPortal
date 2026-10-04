@@ -39,7 +39,19 @@ public sealed class OpenPortalFactory : WebApplicationFactory<Program>, IAsyncLi
 
         // HTTP only: TLS is not what these tests are about, and a secure cookie would never be issued.
         builder.UseSetting("IdentityModule:Cookie:RequireSecure", "false");
+        builder.UseSetting("Identity:Cookie:RequireSecure", "false");
+
+        // In-memory token keys and a throwaway key ring: nothing a test run creates should outlive it.
+        builder.UseSetting("Oidc:UseEphemeralKeys", "true");
+        builder.UseSetting("DataProtection:KeysPath", _keysPath);
+
+        builder.UseSetting("Access:ProvisioningKey", ProvisioningKey);
     }
+
+    /// <summary>The provisioning key this host accepts from announcing applications.</summary>
+    public const string ProvisioningKey = "test-provisioning-key-0123456789";
+
+    private readonly string _keysPath = Path.Combine(Path.GetTempPath(), $"openportal-keys-{Guid.NewGuid():N}");
 
     /// <summary>Registers an account and returns it, so tests can sign in as it.</summary>
     public async Task<TestUser> CreateUserAsync(
@@ -101,6 +113,15 @@ public sealed class OpenPortalFactory : WebApplicationFactory<Program>, IAsyncLi
             {
                 // Best effort: a locked file just means the operating system will clean it up later.
             }
+        }
+
+        try
+        {
+            Directory.Delete(_keysPath, recursive: true);
+        }
+        catch (IOException)
+        {
+            // Best effort, as above (this includes the folder never having been created).
         }
 
         return base.DisposeAsync();

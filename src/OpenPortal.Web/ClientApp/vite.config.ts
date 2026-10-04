@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       strictPort: true,
       proxy: Object.fromEntries(
-        ['/api', '/health', '/.well-known'].map((path) => [
+        ['/api', '/health', '/.well-known', '/connect'].map((path) => [
           path,
           {
             target: backend,

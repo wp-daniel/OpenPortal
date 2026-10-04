@@ -23,6 +23,7 @@ that reads our own theme).
 | Package | License | Copyright |
 | --- | --- | --- |
 | [Radix UI](https://www.radix-ui.com) (`radix-ui`) | MIT | © 2022 WorkOS |
+| [cmdk](https://cmdk.paco.me) | MIT | © 2022 Paco Coursey |
 | [Sonner](https://sonner.emilkowal.ski) | MIT | © 2023 Emil Kowalski |
 | [Lucide](https://lucide.dev) (`lucide-react`) | ISC | © 2026 Lucide Icons and Contributors (some icons derived from Feather, © 2013-present Cole Bemis, MIT) |
 | [class-variance-authority](https://cva.style) | Apache-2.0 | © 2022 Joe Bell |
@@ -43,6 +44,10 @@ ships. It is not copied here, only installed through npm.
 The .NET packages (ASP.NET Core, Entity Framework Core, and the test libraries listed in
 `Directory.Packages.props`) are installed from NuGet under their own licenses, mostly MIT and Apache-2.0. They
 are not copied into this repository.
+
+[OpenIddict](https://documentation.openiddict.com) (`OpenIddict.AspNetCore`, `OpenIddict.EntityFrameworkCore`),
+which provides the OpenID Connect server, is Apache-2.0 (© Kévin Chalet and contributors): if you
+redistribute it, keep its license text and any NOTICE it ships.
 
 ## Design inspiration
 

@@ -67,7 +67,8 @@ for (const file of readdirSync(resources).filter((name) => /^Messages\.[\w-]+\.r
   }
 }
 
-const serverPrefixes = ['error.', 'problem.', 'role.']
+// Keys used by the server, or built in the client from a value (`applications.status.${status}`).
+const serverPrefixes = ['error.', 'problem.', 'role.', 'applications.status.', 'applications.done.', 'applications.confirm.']
 const base = (key) => key.replace(/_(zero|one|two|few|many|other)$/, '')
 const unused = [...neutral].filter(
   (key) => !used.has(base(key)) && !serverPrefixes.some((prefix) => key.startsWith(prefix)) && !/^validation\.\w+\.\w+$/.test(key),

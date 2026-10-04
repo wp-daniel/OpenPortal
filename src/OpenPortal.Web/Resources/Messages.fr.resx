@@ -306,4 +306,204 @@
   <data name="error.persistence.conflict" xml:space="preserve"><value>La modification entre en conflit avec des données existantes.</value></data>
   <data name="error.server.unexpected_error" xml:space="preserve"><value>Une erreur inattendue s'est produite.</value></data>
   <data name="error.server.error" xml:space="preserve"><value>Le serveur n'a pas pu traiter la requête.</value></data>
+  <data name="nav.administration" xml:space="preserve"><value>Administration</value></data>
+  <data name="nav.access" xml:space="preserve"><value>Accès</value></data>
+  <data name="nav.applications" xml:space="preserve"><value>Applications</value></data>
+  <data name="nav.groups" xml:space="preserve"><value>Groupes</value></data>
+  <data name="guards.redirecting" xml:space="preserve"><value>Retour à l'application…</value></data>
+  <data name="launchpad.title" xml:space="preserve"><value>Vos applications</value></data>
+  <data name="launchpad.empty" xml:space="preserve"><value>Vous n'avez encore accès à aucune application.</value></data>
+  <data name="dashboard.access.title" xml:space="preserve"><value>Accès aux applications</value></data>
+  <data name="dashboard.access.description" xml:space="preserve"><value>Enregistrez des applications, regroupez les utilisateurs et décidez qui peut ouvrir quoi.</value></data>
+  <data name="users.access" xml:space="preserve"><value>Accès</value></data>
+  <data name="accessDenied.title" xml:space="preserve"><value>Vous n'avez pas accès à {application}</value></data>
+  <data name="accessDenied.description" xml:space="preserve"><value>Demandez à un administrateur de vous donner accès, directement ou via l'un de vos groupes.</value></data>
+  <data name="accessDenied.back" xml:space="preserve"><value>Retour au tableau de bord</value></data>
+  <data name="accessDenied.unknownApplication" xml:space="preserve"><value>cette application</value></data>
+  <data name="applications.title" xml:space="preserve"><value>Applications</value></data>
+  <data name="applications.description" xml:space="preserve"><value>Applications qui connectent leurs utilisateurs via ce portail.</value></data>
+  <data name="applications.register" xml:space="preserve"><value>Enregistrer une application</value></data>
+  <data name="applications.listTitle" xml:space="preserve"><value>Applications enregistrées</value></data>
+  <data name="applications.listDescription" xml:space="preserve"><value>Les applications s'annoncent au démarrage ; vous les approuvez ici.</value></data>
+  <data name="applications.pendingCount_one" xml:space="preserve"><value>{count} application attend une approbation.</value></data>
+  <data name="applications.pendingCount_other" xml:space="preserve"><value>{count} applications attendent une approbation.</value></data>
+  <data name="applications.empty.title" xml:space="preserve"><value>Aucune application</value></data>
+  <data name="applications.empty.description" xml:space="preserve"><value>Enregistrez-en une manuellement, ou démarrez une application qui utilise OpenPortal.Client et approuvez-la ici.</value></data>
+  <data name="applications.column.application" xml:space="preserve"><value>Application</value></data>
+  <data name="applications.column.access" xml:space="preserve"><value>Accès</value></data>
+  <data name="applications.column.lastSeen" xml:space="preserve"><value>Dernier contact</value></data>
+  <data name="applications.accessSummary" xml:space="preserve"><value>{groups} groupes · {users} utilisateurs</value></data>
+  <data name="applications.neverSeen" xml:space="preserve"><value>Jamais</value></data>
+  <data name="applications.online" xml:space="preserve"><value>En ligne</value></data>
+  <data name="applications.offline" xml:space="preserve"><value>Pas vu récemment</value></data>
+  <data name="applications.lastSeen" xml:space="preserve"><value>dernier contact {date}</value></data>
+  <data name="applications.manifestChanged" xml:space="preserve"><value>Nouvelles URI de redirection proposées</value></data>
+  <data name="applications.status.pending" xml:space="preserve"><value>En attente d'approbation</value></data>
+  <data name="applications.status.active" xml:space="preserve"><value>Active</value></data>
+  <data name="applications.status.disabled" xml:space="preserve"><value>Désactivée</value></data>
+  <data name="applications.approve" xml:space="preserve"><value>Approuver</value></data>
+  <data name="applications.reject" xml:space="preserve"><value>Refuser</value></data>
+  <data name="applications.applyManifest" xml:space="preserve"><value>Appliquer les URI proposées</value></data>
+  <data name="applications.regenerateSecret" xml:space="preserve"><value>Nouveau secret client</value></data>
+  <data name="applications.disable" xml:space="preserve"><value>Désactiver</value></data>
+  <data name="applications.enable" xml:space="preserve"><value>Activer</value></data>
+  <data name="applications.saved" xml:space="preserve"><value>Application enregistrée</value></data>
+  <data name="applications.saveFailed" xml:space="preserve"><value>Impossible d'enregistrer l'application</value></data>
+  <data name="applications.done.enable" xml:space="preserve"><value>Application activée</value></data>
+  <data name="applications.done.disable" xml:space="preserve"><value>Application désactivée</value></data>
+  <data name="applications.done.delete" xml:space="preserve"><value>Application supprimée</value></data>
+  <data name="applications.done.manifest" xml:space="preserve"><value>URI de redirection mises à jour</value></data>
+  <data name="applications.done.secret" xml:space="preserve"><value>Nouveau secret émis</value></data>
+  <data name="applications.confirm.secret.title" xml:space="preserve"><value>Émettre un nouveau secret pour {name} ?</value></data>
+  <data name="applications.confirm.secret.description" xml:space="preserve"><value>Le secret actuel cesse immédiatement de fonctionner. Chaque déploiement de l'application doit être mis à jour.</value></data>
+  <data name="applications.confirm.secret.action" xml:space="preserve"><value>Émettre le secret</value></data>
+  <data name="applications.confirm.disable.title" xml:space="preserve"><value>Désactiver {name} ?</value></data>
+  <data name="applications.confirm.disable.description" xml:space="preserve"><value>Plus personne ne pourra s'y connecter et les sessions se terminent au prochain renouvellement du jeton. Les accès sont conservés.</value></data>
+  <data name="applications.confirm.disable.action" xml:space="preserve"><value>Désactiver</value></data>
+  <data name="applications.confirm.delete.title" xml:space="preserve"><value>Supprimer {name} ?</value></data>
+  <data name="applications.confirm.delete.description" xml:space="preserve"><value>L'application, ses accès et ses jetons sont supprimés. Si elle s'annonce à nouveau, elle attendra une approbation.</value></data>
+  <data name="applications.confirm.delete.action" xml:space="preserve"><value>Supprimer</value></data>
+  <data name="applications.confirm.manifest.title" xml:space="preserve"><value>Appliquer les URI proposées par {name} ?</value></data>
+  <data name="applications.confirm.manifest.description" xml:space="preserve"><value>Les connexions seront redirigées uniquement vers les adresses proposées. Vérifiez qu'elles appartiennent à cette application.</value></data>
+  <data name="applications.confirm.manifest.action" xml:space="preserve"><value>Appliquer</value></data>
+  <data name="applications.manifest.current" xml:space="preserve"><value>En vigueur</value></data>
+  <data name="applications.manifest.announced" xml:space="preserve"><value>Proposées</value></data>
+  <data name="applications.secret.title" xml:space="preserve"><value>Secret client</value></data>
+  <data name="applications.secret.description" xml:space="preserve"><value>Configurez {name} avec ce secret pour qu'elle puisse connecter les utilisateurs.</value></data>
+  <data name="applications.secret.onceTitle" xml:space="preserve"><value>Copiez-le maintenant</value></data>
+  <data name="applications.secret.onceDescription" xml:space="preserve"><value>Le portail ne conserve qu'un hachage du secret : il ne pourra plus être affiché. En cas de perte, émettez-en un nouveau.</value></data>
+  <data name="applications.secret.label" xml:space="preserve"><value>Secret</value></data>
+  <data name="applications.secret.copy" xml:space="preserve"><value>Copier le secret</value></data>
+  <data name="applications.secret.copied" xml:space="preserve"><value>Copié dans le presse-papiers</value></data>
+  <data name="applications.secret.copyFailed" xml:space="preserve"><value>Le presse-papiers n'est pas disponible ; sélectionnez le texte et copiez-le.</value></data>
+  <data name="applications.secret.settingsHint" xml:space="preserve"><value>Paramètres de l'application (conservez le secret dans user-secrets ou l'environnement) :</value></data>
+  <data name="applications.secret.copySettings" xml:space="preserve"><value>Copier les paramètres</value></data>
+  <data name="applications.secret.done" xml:space="preserve"><value>Je l'ai copié</value></data>
+  <data name="applications.form.createTitle" xml:space="preserve"><value>Enregistrer une application</value></data>
+  <data name="applications.form.createDescription" xml:space="preserve"><value>L'application est active immédiatement et reçoit un secret client.</value></data>
+  <data name="applications.form.editTitle" xml:space="preserve"><value>Modifier l'application</value></data>
+  <data name="applications.form.editDescription" xml:space="preserve"><value>Les modifications s'appliquent à la prochaine connexion.</value></data>
+  <data name="applications.form.clientId" xml:space="preserve"><value>Identifiant client</value></data>
+  <data name="applications.form.clientIdHint" xml:space="preserve"><value>Lettres, chiffres, tirets et tirets bas. Il ne pourra plus être modifié.</value></data>
+  <data name="applications.form.clientIdLocked" xml:space="preserve"><value>Chaque déploiement est configuré avec, il ne peut donc pas changer.</value></data>
+  <data name="applications.form.clientIdRequired" xml:space="preserve"><value>Saisissez un identifiant client.</value></data>
+  <data name="applications.form.clientIdMax" xml:space="preserve"><value>Utilisez au maximum {max} caractères.</value></data>
+  <data name="applications.form.clientIdInvalid" xml:space="preserve"><value>Utilisez uniquement des lettres, chiffres, tirets et tirets bas.</value></data>
+  <data name="applications.form.name" xml:space="preserve"><value>Nom</value></data>
+  <data name="applications.form.nameRequired" xml:space="preserve"><value>Saisissez un nom.</value></data>
+  <data name="applications.form.nameMax" xml:space="preserve"><value>Utilisez au maximum {max} caractères.</value></data>
+  <data name="applications.form.description" xml:space="preserve"><value>Description</value></data>
+  <data name="applications.form.descriptionMax" xml:space="preserve"><value>Utilisez au maximum {max} caractères.</value></data>
+  <data name="applications.form.baseUrl" xml:space="preserve"><value>URL de l'application</value></data>
+  <data name="applications.form.baseUrlHint" xml:space="preserve"><value>Où les utilisateurs l'ouvrent depuis leur tableau de bord.</value></data>
+  <data name="applications.form.baseUrlInvalid" xml:space="preserve"><value>Saisissez une URL absolue http ou https.</value></data>
+  <data name="applications.form.redirectUris" xml:space="preserve"><value>URI de redirection de connexion</value></data>
+  <data name="applications.form.redirectUrisHint" xml:space="preserve"><value>Une par ligne, généralement …/signin-oidc. https uniquement (http autorisé pour localhost).</value></data>
+  <data name="applications.form.postLogoutRedirectUris" xml:space="preserve"><value>URI de redirection de déconnexion</value></data>
+  <data name="applications.form.postLogoutRedirectUrisHint" xml:space="preserve"><value>Facultatives, une par ligne, généralement …/signout-callback-oidc.</value></data>
+  <data name="applications.form.redirectRequired" xml:space="preserve"><value>Saisissez au moins une URI de redirection.</value></data>
+  <data name="applications.form.redirectInvalid" xml:space="preserve"><value>Chaque ligne doit être une URI https absolue (http uniquement pour localhost).</value></data>
+  <data name="applications.form.create" xml:space="preserve"><value>Enregistrer</value></data>
+  <data name="groups.title" xml:space="preserve"><value>Groupes</value></data>
+  <data name="groups.description" xml:space="preserve"><value>Regroupez les utilisateurs et attribuez des applications aux groupes : chaque membre en bénéficie.</value></data>
+  <data name="groups.create" xml:space="preserve"><value>Nouveau groupe</value></data>
+  <data name="groups.listTitle" xml:space="preserve"><value>Tous les groupes</value></data>
+  <data name="groups.empty.title" xml:space="preserve"><value>Aucun groupe</value></data>
+  <data name="groups.empty.description" xml:space="preserve"><value>Créez un groupe, ajoutez des membres et attribuez-lui les applications nécessaires.</value></data>
+  <data name="groups.column.name" xml:space="preserve"><value>Groupe</value></data>
+  <data name="groups.column.members" xml:space="preserve"><value>Membres</value></data>
+  <data name="groups.column.applications" xml:space="preserve"><value>Applications</value></data>
+  <data name="groups.manage" xml:space="preserve"><value>Membres et apps</value></data>
+  <data name="groups.memberCount_one" xml:space="preserve"><value>{count} membre</value></data>
+  <data name="groups.memberCount_other" xml:space="preserve"><value>{count} membres</value></data>
+  <data name="groups.created" xml:space="preserve"><value>Groupe créé</value></data>
+  <data name="groups.saved" xml:space="preserve"><value>Groupe enregistré</value></data>
+  <data name="groups.saveFailed" xml:space="preserve"><value>Impossible d'enregistrer le groupe</value></data>
+  <data name="groups.deleted" xml:space="preserve"><value>Groupe supprimé</value></data>
+  <data name="groups.deleteTitle" xml:space="preserve"><value>Supprimer {name} ?</value></data>
+  <data name="groups.deleteDescription" xml:space="preserve"><value>Les membres perdent les applications obtenues uniquement via ce groupe. Les comptes ne sont pas modifiés.</value></data>
+  <data name="groups.memberAdded" xml:space="preserve"><value>Membre ajouté</value></data>
+  <data name="groups.form.createTitle" xml:space="preserve"><value>Nouveau groupe</value></data>
+  <data name="groups.form.editTitle" xml:space="preserve"><value>Modifier le groupe</value></data>
+  <data name="groups.form.description" xml:space="preserve"><value>Un groupe est un ensemble d'utilisateurs qui partagent les mêmes applications.</value></data>
+  <data name="groups.form.name" xml:space="preserve"><value>Nom</value></data>
+  <data name="groups.form.descriptionLabel" xml:space="preserve"><value>Description</value></data>
+  <data name="groups.form.nameRequired" xml:space="preserve"><value>Saisissez un nom.</value></data>
+  <data name="groups.form.nameMax" xml:space="preserve"><value>Utilisez au maximum {max} caractères.</value></data>
+  <data name="groups.form.descriptionMax" xml:space="preserve"><value>Utilisez au maximum {max} caractères.</value></data>
+  <data name="groups.sheet.description" xml:space="preserve"><value>Les membres et les applications qu'ils obtiennent via ce groupe.</value></data>
+  <data name="groups.sheet.members_one" xml:space="preserve"><value>{count} membre</value></data>
+  <data name="groups.sheet.members_other" xml:space="preserve"><value>{count} membres</value></data>
+  <data name="groups.sheet.add" xml:space="preserve"><value>Ajouter</value></data>
+  <data name="groups.sheet.remove" xml:space="preserve"><value>Retirer {name} du groupe</value></data>
+  <data name="groups.sheet.noMembers" xml:space="preserve"><value>Aucun membre pour l'instant.</value></data>
+  <data name="groups.sheet.applications" xml:space="preserve"><value>Applications</value></data>
+  <data name="groups.sheet.applicationsHint" xml:space="preserve"><value>Activez une application pour la donner à tous les membres du groupe.</value></data>
+  <data name="access.title" xml:space="preserve"><value>Accès</value></data>
+  <data name="access.description" xml:space="preserve"><value>Qui peut ouvrir chaque application : via un groupe ou directement.</value></data>
+  <data name="access.filter" xml:space="preserve"><value>Filtrer applications, groupes ou utilisateurs</value></data>
+  <data name="access.expandAll" xml:space="preserve"><value>Tout déplier</value></data>
+  <data name="access.collapseAll" xml:space="preserve"><value>Tout replier</value></data>
+  <data name="access.empty.title" xml:space="preserve"><value>Aucune application à gérer</value></data>
+  <data name="access.empty.description" xml:space="preserve"><value>Enregistrez ou approuvez d'abord une application.</value></data>
+  <data name="access.noMatch" xml:space="preserve"><value>Aucun résultat pour ce filtre.</value></data>
+  <data name="access.branch.groups" xml:space="preserve"><value>Groupes ({count})</value></data>
+  <data name="access.branch.users" xml:space="preserve"><value>Utilisateurs directs ({count})</value></data>
+  <data name="access.branch.noGroups" xml:space="preserve"><value>Aucun groupe n'a cette application.</value></data>
+  <data name="access.branch.noUsers" xml:space="preserve"><value>Personne n'y a accès directement.</value></data>
+  <data name="access.grant" xml:space="preserve"><value>Donner l'accès</value></data>
+  <data name="access.granted" xml:space="preserve"><value>Accès accordé</value></data>
+  <data name="access.grantTitle" xml:space="preserve"><value>Donner accès à {application}</value></data>
+  <data name="access.grantDescription" xml:space="preserve"><value>Préférez les groupes : l'accès suit les personnes qui arrivent ou partent.</value></data>
+  <data name="access.tab.group" xml:space="preserve"><value>Groupe</value></data>
+  <data name="access.tab.user" xml:space="preserve"><value>Utilisateur individuel</value></data>
+  <data name="access.tab.groupHint" xml:space="preserve"><value>Chaque membre actuel et futur obtient l'application.</value></data>
+  <data name="access.tab.userHint" xml:space="preserve"><value>Seulement cette personne, indépendamment de ses groupes.</value></data>
+  <data name="access.revoke" xml:space="preserve"><value>Retirer l'accès</value></data>
+  <data name="access.revokeNamed" xml:space="preserve"><value>Retirer l'accès de {name}</value></data>
+  <data name="access.revoked" xml:space="preserve"><value>Accès retiré</value></data>
+  <data name="access.revokeTitle" xml:space="preserve"><value>Retirer {name} de {application} ?</value></data>
+  <data name="access.revokeUserDescription" xml:space="preserve"><value>Sa session dans l'application se termine au prochain renouvellement du jeton, sauf si un groupe lui donne encore accès.</value></data>
+  <data name="access.revokeGroupDescription" xml:space="preserve"><value>Les membres sans autre accès le perdent au prochain renouvellement du jeton.</value></data>
+  <data name="access.unknownUser" xml:space="preserve"><value>Compte supprimé</value></data>
+  <data name="access.picker.user" xml:space="preserve"><value>Choisir un utilisateur…</value></data>
+  <data name="access.picker.group" xml:space="preserve"><value>Choisir un groupe…</value></data>
+  <data name="access.picker.searchUsers" xml:space="preserve"><value>Rechercher par nom ou e-mail</value></data>
+  <data name="access.picker.searchGroups" xml:space="preserve"><value>Rechercher des groupes</value></data>
+  <data name="access.picker.noUsers" xml:space="preserve"><value>Aucun utilisateur trouvé.</value></data>
+  <data name="access.picker.noGroups" xml:space="preserve"><value>Aucun groupe trouvé.</value></data>
+  <data name="access.user.title" xml:space="preserve"><value>Accès de {name}</value></data>
+  <data name="access.user.groups" xml:space="preserve"><value>Groupes</value></data>
+  <data name="access.user.noGroups" xml:space="preserve"><value>Dans aucun groupe.</value></data>
+  <data name="access.user.applications" xml:space="preserve"><value>Applications</value></data>
+  <data name="access.user.applicationsHint" xml:space="preserve"><value>L'interrupteur est l'accès personnel ; les badges montrent l'accès hérité des groupes.</value></data>
+  <data name="access.user.viaGroup" xml:space="preserve"><value>via {name}</value></data>
+  <data name="access.user.noAccess" xml:space="preserve"><value>Aucun accès</value></data>
+  <data name="access.user.direct" xml:space="preserve"><value>Accès personnel</value></data>
+  <data name="error.access.administration_forbidden" xml:space="preserve"><value>La gestion des accès nécessite un compte administrateur.</value></data>
+  <data name="error.access.application_not_found" xml:space="preserve"><value>L'application n'existe pas.</value></data>
+  <data name="error.access.group_not_found" xml:space="preserve"><value>Le groupe n'existe pas.</value></data>
+  <data name="error.access.user_not_found" xml:space="preserve"><value>L'utilisateur n'existe pas.</value></data>
+  <data name="error.access.client_id_required" xml:space="preserve"><value>L'identifiant client est obligatoire.</value></data>
+  <data name="error.access.client_id_too_long" xml:space="preserve"><value>L'identifiant client est trop long.</value></data>
+  <data name="error.access.client_id_invalid" xml:space="preserve"><value>L'identifiant client ne peut contenir que des lettres, chiffres, tirets et tirets bas.</value></data>
+  <data name="error.access.client_id_in_use" xml:space="preserve"><value>Une autre application utilise déjà cet identifiant client.</value></data>
+  <data name="error.access.application_name_required" xml:space="preserve"><value>Le nom de l'application est obligatoire.</value></data>
+  <data name="error.access.application_name_too_long" xml:space="preserve"><value>Le nom de l'application est trop long.</value></data>
+  <data name="error.access.application_description_too_long" xml:space="preserve"><value>La description est trop longue.</value></data>
+  <data name="error.access.base_url_invalid" xml:space="preserve"><value>L'URL de l'application doit être une URL absolue http ou https.</value></data>
+  <data name="error.access.redirect_uri_required" xml:space="preserve"><value>Au moins une URI de redirection est requise.</value></data>
+  <data name="error.access.redirect_uri_invalid" xml:space="preserve"><value>Les URI de redirection doivent être des URI https absolues sans fragment (http uniquement pour localhost).</value></data>
+  <data name="error.access.too_many_redirect_uris" xml:space="preserve"><value>Trop d'URI de redirection.</value></data>
+  <data name="error.access.version_too_long" xml:space="preserve"><value>La version est trop longue.</value></data>
+  <data name="error.access.application_not_pending" xml:space="preserve"><value>Seule une application en attente peut être approuvée.</value></data>
+  <data name="error.access.application_not_active" xml:space="preserve"><value>Possible uniquement pour une application active.</value></data>
+  <data name="error.access.application_not_disabled" xml:space="preserve"><value>Seule une application désactivée peut être activée.</value></data>
+  <data name="error.access.no_manifest_changes" xml:space="preserve"><value>L'application n'a proposé aucune modification.</value></data>
+  <data name="error.access.group_name_required" xml:space="preserve"><value>Le nom du groupe est obligatoire.</value></data>
+  <data name="error.access.group_name_too_long" xml:space="preserve"><value>Le nom du groupe est trop long.</value></data>
+  <data name="error.access.group_description_too_long" xml:space="preserve"><value>La description est trop longue.</value></data>
+  <data name="error.access.group_name_in_use" xml:space="preserve"><value>Un autre groupe utilise déjà ce nom.</value></data>
+  <data name="error.access.provisioning_key_invalid" xml:space="preserve"><value>La clé de provisionnement est absente ou invalide.</value></data>
+  <data name="error.access.announcements_disabled" xml:space="preserve"><value>Ce portail n'accepte pas les annonces d'applications.</value></data>
 </root>

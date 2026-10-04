@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.DataProtection;
+using OpenPortal.Access.Application.Abstractions;
+using OpenPortal.Access.Infrastructure.DependencyInjection;
 using OpenPortal.Content.Application.Abstractions;
 using OpenPortal.Content.Infrastructure.DependencyInjection;
 using OpenPortal.Identity.Application.Abstractions;
@@ -12,6 +15,7 @@ using OpenPortal.Web.Authorization;
 using OpenPortal.Web.Infrastructure;
 using OpenPortal.Web.Localization;
 using OpenPortal.Web.Middleware;
+using OpenPortal.Web.Oidc;
 using OpenPortal.Web.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -84,6 +88,29 @@ builder.Services.AddIdentityModule(
 builder.Services.AddContentModule(options =>
     DatabaseProviderSelector.Configure(options, database.Provider, database.ConnectionString));
 
+// Access: which applications sign in through the portal and who may open them. The host answers "is this
+// caller an administrator" and supplies user names from Identity, so the two modules stay unaware of each
+// other.
+builder.Services.AddScoped<IAccessAdminAuthorization, AccessAdminAuthorization>();
+builder.Services.AddScoped<IUserDirectory, IdentityUserDirectory>();
+
+builder.Services.AddAccessModule(
+    builder.Configuration,
+    options => DatabaseProviderSelector.Configure(options, database.Provider, database.ConnectionString));
+
+// ---------------------------------------------------------------------------
+// Data protection.
+//
+// The session cookie, the antiforgery token and the OpenID Connect state are all encrypted with these keys.
+// Kept in memory or in a per-machine default location, a restart (or a second instance) would sign every
+// user out; persisted to one folder, sessions survive both. Several instances must share the folder.
+// ---------------------------------------------------------------------------
+builder.Services.AddDataProtection()
+    .SetApplicationName("OpenPortal")
+    .PersistKeysToFileSystem(new DirectoryInfo(
+        builder.Configuration["DataProtection:KeysPath"]
+        ?? Path.Combine(builder.Environment.ContentRootPath, "App_Data", "keys")));
+
 // ---------------------------------------------------------------------------
 // Web stack.
 //
@@ -96,7 +123,14 @@ builder.Services.AddContentModule(options =>
 builder.Services.AddSingleton<IConfigureOptions<MvcOptions>, ConfigureProblemDetailsFormatter>();
 
 builder.Services
-    .AddControllers(options => options.Filters.Add<ValidateAntiforgeryTokenFilter>())
+    .AddControllers(options =>
+    {
+        options.Filters.Add<ValidateAntiforgeryTokenFilter>();
+
+        // Keep "Async" in action names so CreatedAtAction(nameof(GetAsync), ...) resolves. With MVC's default
+        // the suffix is trimmed, the lookup finds no route, and a create that already succeeded answers 500.
+        options.SuppressAsyncSuffixInActionNames = false;
+    })
     .ConfigureApiBehaviorOptions(options =>
     {
         // An [ApiController] action rejects a malformed or incomplete body before it ever runs, and it does
@@ -153,6 +187,10 @@ builder.Services.AddAntiforgery(options =>
         : CookieSecurePolicy.SameAsRequest;
     options.HeaderName = AntiforgeryDefaults.HeaderName;
 });
+
+// OpenID Connect provider for other applications. Transport security follows the cookie setting, because the
+// development server and the tests run over plain http.
+builder.Services.AddOpenPortalOidcServer(builder.Configuration, builder.Environment, requireSecureCookies);
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<DatabaseInitializer>();
@@ -222,7 +260,10 @@ app.MapOpenApi();
 // page as JSON and report a confusing parse failure instead of a 404 it could act on.
 app.MapFallback(async context =>
 {
-    if (context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
+    // The OpenID Connect paths are machine endpoints too: an unknown one is a 404, not the SPA shell.
+    if (context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase)
+        || context.Request.Path.StartsWithSegments("/connect", StringComparison.OrdinalIgnoreCase)
+        || context.Request.Path.StartsWithSegments("/.well-known", StringComparison.OrdinalIgnoreCase))
     {
         context.Response.StatusCode = StatusCodes.Status404NotFound;
         context.Response.ContentType = ProblemResults.ProblemJson;

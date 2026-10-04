@@ -1,0 +1,404 @@
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { Loader2, Plus, Trash2, UserPlus, UserRound, X } from 'lucide-react'
+import { useMemo, useState, type FormEvent } from 'react'
+import { z } from 'zod'
+import { accessApi, accessKeys, applicationsApi, groupsApi } from '@/api/access'
+import type { GroupDetail, GroupSummary } from '@/api/types'
+import { UserPicker, type PickedPrincipal } from '@/components/access/PrincipalPicker'
+import { ApplicationStatusBadge } from '@/components/access/shared'
+import { useAccessRefresh } from '@/lib/access'
+import { FormField } from '@/components/FormField'
+import { PageHeader } from '@/components/PageHeader'
+import { Section } from '@/components/Section'
+import { EmptyState, ErrorPanel, LoadingState } from '@/components/StatePanels'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Switch } from '@/components/ui/switch'
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { notify } from '@/hooks/useToast'
+import { useI18n } from '@/i18n/useI18n'
+import { describeError, traceIdOf } from '@/lib/errors'
+import { reportFormError, zodFieldErrors } from '@/lib/forms'
+
+/**
+ * Groups of users. A group granted an application gives it to every member, so the usual way to manage
+ * access is: put people in groups, give groups applications.
+ */
+export function AdminGroupsPage() {
+  const { t } = useI18n()
+  const refresh = useAccessRefresh()
+
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<GroupSummary | null>(null)
+  const [openGroupId, setOpenGroupId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<GroupSummary | null>(null)
+
+  const groups = useQuery({
+    queryKey: accessKeys.groups,
+    queryFn: ({ signal }) => groupsApi.list(signal),
+  })
+
+  const remove = useMutation({
+    mutationFn: (group: GroupSummary) => groupsApi.remove(group.id),
+    onSuccess: async (_result, group) => {
+      setDeleting(null)
+      notify.success(t('groups.deleted'), group.name)
+      await refresh()
+    },
+  })
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title={t('groups.title')}
+        description={t('groups.description')}
+        actions={
+          <Button
+            onClick={() => {
+              setEditing(null)
+              setFormOpen(true)
+            }}
+          >
+            <Plus />
+            {t('groups.create')}
+          </Button>
+        }
+      />
+
+      <Section title={t('groups.listTitle')}>
+        {groups.isError && (
+          <ErrorPanel message={describeError(groups.error)} traceId={traceIdOf(groups.error)} onRetry={() => void groups.refetch()} />
+        )}
+
+        {groups.isPending && <LoadingState />}
+
+        {groups.data?.length === 0 && <EmptyState title={t('groups.empty.title')} description={t('groups.empty.description')} />}
+
+        {groups.data && groups.data.length > 0 && (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableCaption className="sr-only">{t('groups.listTitle')}</TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('groups.column.name')}</TableHead>
+                  <TableHead>{t('groups.column.members')}</TableHead>
+                  <TableHead>{t('groups.column.applications')}</TableHead>
+                  <TableHead className="text-right">{t('common.actions')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {groups.data.map((group) => (
+                  <TableRow key={group.id}>
+                    <TableCell>
+                      <div className="font-medium">{group.name}</div>
+                      {group.description && <div className="text-muted-foreground text-xs">{group.description}</div>}
+                    </TableCell>
+                    <TableCell>{group.memberCount}</TableCell>
+                    <TableCell>{group.applicationCount}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setOpenGroupId(group.id)}>
+                          {t('groups.manage')}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditing(group)
+                            setFormOpen(true)
+                          }}
+                        >
+                          {t('common.edit')}
+                        </Button>
+                        <Button variant="ghost" size="sm" aria-label={t('common.delete')} onClick={() => setDeleting(group)}>
+                          <Trash2 />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </Section>
+
+      <GroupFormDialog open={formOpen} group={editing} onClose={() => setFormOpen(false)} onSaved={() => void refresh()} />
+
+      <GroupSheet groupId={openGroupId} onClose={() => setOpenGroupId(null)} />
+
+      <AlertDialog open={deleting !== null} onOpenChange={(open) => !open && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('groups.deleteTitle', { name: deleting?.name ?? '' })}</AlertDialogTitle>
+            <AlertDialogDescription>{t('groups.deleteDescription')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90 text-white"
+              disabled={remove.isPending}
+              onClick={(event) => {
+                event.preventDefault()
+                if (deleting) {
+                  remove.mutate(deleting)
+                }
+              }}
+            >
+              {t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  )
+}
+
+function GroupFormDialog({
+  open,
+  group,
+  onClose,
+  onSaved,
+}: {
+  open: boolean
+  group: GroupSummary | null
+  onClose: () => void
+  onSaved: () => void
+}) {
+  // The content unmounts while closed, so the form starts from fresh state on every opening.
+  return (
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent>
+        <GroupForm group={group} onClose={onClose} onSaved={onSaved} />
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function GroupForm({ group, onClose, onSaved }: { group: GroupSummary | null; onClose: () => void; onSaved: () => void }) {
+  const { t } = useI18n()
+  const [name, setName] = useState(group?.name ?? '')
+  const [description, setDescription] = useState(group?.description ?? '')
+  const [errors, setErrors] = useState<Partial<Record<'name' | 'description', string>>>({})
+
+  const schema = useMemo(
+    () =>
+      z.object({
+        name: z.string().trim().min(1, t('groups.form.nameRequired')).max(80, t('groups.form.nameMax', { max: 80 })),
+        description: z.string().trim().max(500, t('groups.form.descriptionMax', { max: 500 })),
+      }),
+    [t],
+  )
+
+  const save = useMutation({
+    mutationFn: () => {
+      const body = { name: name.trim(), description: description.trim() === '' ? null : description.trim() }
+      return group ? groupsApi.update(group.id, body) : groupsApi.create(body)
+    },
+    meta: { handlesErrors: true },
+    onSuccess: (saved) => {
+      notify.success(group ? t('groups.saved') : t('groups.created'), saved.name)
+      onSaved()
+      onClose()
+    },
+    onError: (failure) => reportFormError(failure, t('groups.saveFailed')),
+  })
+
+  function submit(event: FormEvent) {
+    event.preventDefault()
+    const parsed = schema.safeParse({ name, description })
+
+    if (!parsed.success) {
+      setErrors(zodFieldErrors(parsed.error))
+      return
+    }
+
+    setErrors({})
+    save.mutate()
+  }
+
+  return (
+    <>
+        <DialogHeader>
+          <DialogTitle>{group ? t('groups.form.editTitle') : t('groups.form.createTitle')}</DialogTitle>
+          <DialogDescription>{t('groups.form.description')}</DialogDescription>
+        </DialogHeader>
+
+        <form id="group-form" onSubmit={submit} noValidate className="grid items-start gap-5">
+          <FormField label={t('groups.form.name')} htmlFor="group-name" error={errors.name}>
+            <Input value={name} onChange={(event) => setName(event.target.value)} />
+          </FormField>
+          <FormField label={t('groups.form.descriptionLabel')} htmlFor="group-description" error={errors.description}>
+            <Input value={description} onChange={(event) => setDescription(event.target.value)} />
+          </FormField>
+        </form>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            {t('common.cancel')}
+          </Button>
+          <Button type="submit" form="group-form" disabled={save.isPending}>
+            {save.isPending && <Loader2 className="animate-spin" />}
+            {t('common.save')}
+          </Button>
+        </DialogFooter>
+    </>
+  )
+}
+
+/** One group's members and applications, edited in place. */
+function GroupSheet({ groupId, onClose }: { groupId: string | null; onClose: () => void }) {
+  const { t } = useI18n()
+  const refresh = useAccessRefresh()
+  const [picked, setPicked] = useState<PickedPrincipal | null>(null)
+
+  const group = useQuery({
+    queryKey: accessKeys.group(groupId ?? ''),
+    queryFn: ({ signal }) => groupsApi.get(groupId!, signal),
+    enabled: groupId !== null,
+  })
+
+  const applications = useQuery({
+    queryKey: accessKeys.applications,
+    queryFn: ({ signal }) => applicationsApi.list(signal),
+    enabled: groupId !== null,
+  })
+
+  const addMember = useMutation({
+    mutationFn: (userId: string) => groupsApi.addMember(groupId!, userId),
+    onSuccess: async (updated: GroupDetail) => {
+      setPicked(null)
+      notify.success(t('groups.memberAdded'), updated.name)
+      await refresh()
+    },
+  })
+
+  const removeMember = useMutation({
+    mutationFn: (userId: string) => groupsApi.removeMember(groupId!, userId),
+    onSuccess: () => refresh(),
+  })
+
+  const toggleApplication = useMutation({
+    mutationFn: ({ applicationId, granted }: { applicationId: string; granted: boolean }) =>
+      granted ? accessApi.grantGroup(applicationId, groupId!) : accessApi.revokeGroup(applicationId, groupId!),
+    onSuccess: () => refresh(),
+  })
+
+  const grantedIds = new Set(group.data?.applications.map((application) => application.id))
+
+  return (
+    <Sheet open={groupId !== null} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="w-full gap-0 sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle>{group.data?.name ?? t('common.loading')}</SheetTitle>
+          <SheetDescription>{group.data?.description ?? t('groups.sheet.description')}</SheetDescription>
+        </SheetHeader>
+
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="grid gap-6 px-4 pb-6">
+            {group.isError && <ErrorPanel message={describeError(group.error)} onRetry={() => void group.refetch()} />}
+            {group.isPending && <LoadingState />}
+
+            {group.data && (
+              <>
+                <section className="grid gap-3">
+                  <h3 className="text-sm font-medium">{t('groups.sheet.members', { count: group.data.members.length })}</h3>
+
+                  <div className="flex gap-2">
+                    <div className="min-w-0 flex-1">
+                      <UserPicker value={picked} onChange={setPicked} exclude={group.data.members.map((member) => member.id)} />
+                    </div>
+                    <Button disabled={!picked || addMember.isPending} onClick={() => picked && addMember.mutate(picked.id)}>
+                      <UserPlus />
+                      {t('groups.sheet.add')}
+                    </Button>
+                  </div>
+
+                  {group.data.members.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">{t('groups.sheet.noMembers')}</p>
+                  ) : (
+                    <ul className="divide-y rounded-md border">
+                      {group.data.members.map((member) => (
+                        <li key={member.id} className="flex items-center gap-3 px-3 py-2">
+                          <UserRound className="text-muted-foreground size-4 shrink-0" />
+                          <div className="grid min-w-0 flex-1">
+                            <span className="truncate text-sm">{member.isKnown ? member.displayName : t('access.unknownUser')}</span>
+                            <span className="text-muted-foreground truncate font-mono text-xs">{member.email}</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            aria-label={t('groups.sheet.remove', { name: member.displayName })}
+                            disabled={removeMember.isPending}
+                            onClick={() => removeMember.mutate(member.id)}
+                          >
+                            <X />
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+
+                <Separator />
+
+                <section className="grid gap-3">
+                  <h3 className="text-sm font-medium">{t('groups.sheet.applications')}</h3>
+                  <p className="text-muted-foreground text-xs">{t('groups.sheet.applicationsHint')}</p>
+
+                  {applications.data?.length === 0 && <p className="text-muted-foreground text-sm">{t('applications.empty.title')}</p>}
+
+                  <ul className="divide-y rounded-md border">
+                    {applications.data?.map((application) => {
+                      const switchId = `group-app-${application.id}`
+
+                      return (
+                        <li key={application.id} className="flex items-center gap-3 px-3 py-2">
+                          <div className="grid min-w-0 flex-1 gap-0.5">
+                            <Label htmlFor={switchId} className="truncate">
+                              {application.displayName}
+                            </Label>
+                            <span className="text-muted-foreground font-mono text-xs">{application.clientId}</span>
+                          </div>
+                          {application.status !== 'active' && <ApplicationStatusBadge status={application.status} />}
+                          <Switch
+                            id={switchId}
+                            checked={grantedIds.has(application.id)}
+                            disabled={toggleApplication.isPending}
+                            onCheckedChange={(granted) => toggleApplication.mutate({ applicationId: application.id, granted })}
+                          />
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </section>
+              </>
+            )}
+          </div>
+        </ScrollArea>
+      </SheetContent>
+    </Sheet>
+  )
+}

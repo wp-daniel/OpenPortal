@@ -1,9 +1,15 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/OpenPortal.Client/OpenPortal.Client.csproj" />
     <Project Path="src/OpenPortal.SharedKernel/OpenPortal.SharedKernel.csproj" />
     <Project Path="src/OpenPortal.Web/OpenPortal.Web.csproj" />
   </Folder>
   <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Access/">
+    <Project Path="src/Modules/Access/OpenPortal.Access.Application/OpenPortal.Access.Application.csproj" />
+    <Project Path="src/Modules/Access/OpenPortal.Access.Domain/OpenPortal.Access.Domain.csproj" />
+    <Project Path="src/Modules/Access/OpenPortal.Access.Infrastructure/OpenPortal.Access.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/Content/">
     <Project Path="src/Modules/Content/OpenPortal.Content.Application/OpenPortal.Content.Application.csproj" />
     <Project Path="src/Modules/Content/OpenPortal.Content.Domain/OpenPortal.Content.Domain.csproj" />

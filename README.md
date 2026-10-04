@@ -88,6 +88,9 @@ The client is built as part of this, so `publish/wwwroot` contains the SPA. In p
 | `src/OpenPortal.SharedKernel` | `Result`, `Error`, `IClock`, `TextRules` |
 | `src/Modules/Identity` | accounts, sessions, roles — Domain / Application / Infrastructure |
 | `src/Modules/Content` | profile and projects — Domain / Application / Infrastructure |
+| `src/Modules/Access` | applications, groups and access grants, plus the OpenID Connect client store |
+| `src/OpenPortal.Client` | NuGet package an application references to sign in through the portal |
+| `samples/OpenPortal.SampleApp` | a minimal application that uses `OpenPortal.Client` |
 | `src/OpenPortal.Web` | composition root, controllers, middleware, migrations, the client |
 | `tests` | unit, architecture and integration suites |
 
@@ -110,6 +113,25 @@ header. The token is bound to the signed-in identity, so the client discards it 
 addressed, no ids, no draft flags. `ManagedProjectDto` is what the editor gets. Merging them would either
 expose draft work or break the editor.
 
+## Connecting another application
+
+The portal is an OpenID Connect provider (OpenIddict). Another ASP.NET Core application signs its users in
+through it, and the portal decides who may:
+
+1. Reference `src/OpenPortal.Client` and call `builder.Services.AddOpenPortalAuthentication(builder.Configuration)`
+   plus `app.MapOpenPortalSignOut()`. Configure the `OpenPortal` section (`Authority`, `ClientId`, `BaseUrl`,
+   and in user secrets `ProvisioningKey`).
+2. On start-up the application announces itself and appears under **Administration → Applications** as
+   *waiting for approval*. (Or register it by hand there.)
+3. Approve it: the portal shows the client secret once. Put it in the application's `OpenPortal:ClientSecret`.
+4. Under **Groups** put users in groups and switch the application on for the group, or give it to single
+   users under **Access**, which shows the whole tree: application → groups → members, application → direct
+   users.
+
+A user without access is stopped at the portal ("you do not have access"). Withdrawing access revokes the
+application's tokens, and the token endpoint re-checks access on every refresh, so the session ends within the
+access token lifetime (10 minutes by default). `samples/OpenPortal.SampleApp` shows the whole thing.
+
 ## Configuration
 
 | Section | Purpose |
@@ -122,6 +144,9 @@ expose draft work or break the editor.
 | `Identity:SignIn` | cookie name, lifetime, whether confirmation is required |
 | `Identity:Cookie:RequireSecure` | `false` only for the plain-http localhost dev server |
 | `BootstrapAdmin` | one-time first administrator |
+| `Access:ProvisioningKey` | shared key applications present when they announce themselves (user secrets); blank disables announcements |
+| `Oidc` | token signing/encryption certificates (`SigningCertificatePath`, `EncryptionCertificatePath` + passwords), token lifetimes; required outside Development |
+| `DataProtection:KeysPath` | where the key ring lives (default `App_Data/keys`); share it between instances |
 
 The password policy is served through `/api/auth/session` rather than duplicated in the client, so a form
 can never disagree with what the server enforces.

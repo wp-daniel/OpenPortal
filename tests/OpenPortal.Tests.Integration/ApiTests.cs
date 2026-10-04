@@ -316,6 +316,23 @@ public sealed class ApiTests : IClassFixture<OpenPortalFactory>
     }
 
     [Fact]
+    public async Task Admin_can_create_a_user_and_gets_201_with_its_location()
+    {
+        // Guards CreatedAtAction(nameof(GetAsync)): with MVC's default async-suffix trimming the route lookup
+        // fails after the account was already created, and the client sees an error for a successful create.
+        var admin = await _factory.CreateUserAsync("creator@example.com", Passwords.Valid, "Administrator");
+        using var client = await ApiClient.CreateAsync(_factory);
+        await client.SignInAsync(admin.Email, admin.Password);
+
+        using var response = await client.PostAsync(
+            "/api/admin/users",
+            new { email = "created@example.com", password = Passwords.Valid, displayName = "Created", roles = new[] { "User" } });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+        response.Headers.Location.ShouldNotBeNull();
+    }
+
+    [Fact]
     public async Task Admin_can_list_users_and_the_listing_hides_credential_fields()
     {
         var admin = await _factory.CreateUserAsync("boss@example.com", Passwords.Valid, "Administrator");

@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Modules\Access\OpenPortal.Access.Domain\OpenPortal.Access.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Content\OpenPortal.Content.Domain\OpenPortal.Content.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Identity\OpenPortal.Identity.Domain\OpenPortal.Identity.Domain.csproj" />
     <ProjectReference Include="..\..\src\OpenPortal.SharedKernel\OpenPortal.SharedKernel.csproj" />

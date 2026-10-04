@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { LogOut, Menu, User } from 'lucide-react'
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { ChevronDown, LogOut, Menu, User } from 'lucide-react'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { authApi } from '@/api/auth'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -26,11 +26,47 @@ interface NavEntry {
 
 const userLinks: readonly NavEntry[] = [{ to: '/', labelKey: 'nav.dashboard', end: true }]
 
+/** Administration pages, grouped under one menu so the header stays short as the portal grows. */
 const adminLinks: readonly NavEntry[] = [
   { to: '/admin/users', labelKey: 'nav.users' },
+  { to: '/admin/access', labelKey: 'nav.access' },
+  { to: '/admin/applications', labelKey: 'nav.applications' },
+  { to: '/admin/groups', labelKey: 'nav.groups' },
   { to: '/admin/content/profile', labelKey: 'nav.profile' },
   { to: '/admin/content/projects', labelKey: 'nav.projects' },
 ]
+
+/** The desktop "Administration" menu; highlighted while any admin page is open. */
+function AdminMenu() {
+  const { t } = useI18n()
+  const { pathname } = useLocation()
+  const active = pathname.startsWith('/admin')
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn(
+            'font-normal',
+            active ? 'bg-accent text-accent-foreground font-medium' : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          {t('nav.administration')}
+          <ChevronDown className="opacity-60" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        {adminLinks.map((link) => (
+          <DropdownMenuItem key={link.to} asChild className={cn(pathname.startsWith(link.to) && 'font-medium')}>
+            <Link to={link.to}>{t(link.labelKey)}</Link>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
 
 function NavItem({ to, labelKey, end }: NavEntry) {
   const { t } = useI18n()
@@ -65,7 +101,6 @@ export function AppLayout() {
   const { t } = useI18n()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const links = isAdministrator ? [...userLinks, ...adminLinks] : userLinks
 
   const signOut = useMutation({
     mutationFn: () => authApi.logout(),
@@ -94,9 +129,10 @@ export function AppLayout() {
           </Link>
 
           <nav aria-label={t('nav.main')} className="hidden flex-1 items-center gap-1 md:flex">
-            {links.map((link) => (
+            {userLinks.map((link) => (
               <NavItem key={link.to} {...link} />
             ))}
+            {isAdministrator && <AdminMenu />}
           </nav>
 
           <div className="ml-auto flex items-center gap-1">
@@ -110,11 +146,24 @@ export function AppLayout() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="md:hidden">
-                {links.map((link) => (
+                {userLinks.map((link) => (
                   <DropdownMenuItem key={link.to} asChild>
                     <Link to={link.to}>{t(link.labelKey)}</Link>
                   </DropdownMenuItem>
                 ))}
+                {isAdministrator && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
+                      {t('nav.administration')}
+                    </DropdownMenuLabel>
+                    {adminLinks.map((link) => (
+                      <DropdownMenuItem key={link.to} asChild>
+                        <Link to={link.to}>{t(link.labelKey)}</Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace OpenPortal.Web.Middleware;
@@ -12,7 +13,7 @@ namespace OpenPortal.Web.Middleware;
 /// <c>[ValidateAntiForgeryToken]</c> away from that.
 /// </para>
 /// <para>
-/// Safe methods are exempt, as is the antiforgery endpoint itself.
+/// Safe methods are exempt, as are controllers marked <c>[IgnoreAntiforgeryToken]</c>.
 /// </para>
 /// </summary>
 public sealed class ValidateAntiforgeryTokenFilter : IAsyncAuthorizationFilter, IOrderedFilter
@@ -39,6 +40,14 @@ public sealed class ValidateAntiforgeryTokenFilter : IAsyncAuthorizationFilter, 
         ArgumentNullException.ThrowIfNull(context);
 
         if (SafeMethods.Contains(context.HttpContext.Request.Method))
+        {
+            return;
+        }
+
+        // An explicit [IgnoreAntiforgeryToken] opts a controller out: the OpenID Connect endpoints and the
+        // application announcement endpoint are called by other servers or reached by cross-site redirect,
+        // and authenticate each request through their own protocol instead of the session cookie.
+        if (context.Filters.OfType<IgnoreAntiforgeryTokenAttribute>().Any())
         {
             return;
         }

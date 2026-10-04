@@ -1,7 +1,9 @@
+import { useEffect } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { ErrorPanel, LoadingState } from '@/components/StatePanels'
 import { useSession } from '@/hooks/useSession'
 import { useI18n } from '@/i18n/useI18n'
+import { serverReturnUrl } from '@/lib/returnUrl'
 
 /** Where the user was heading before being sent to sign in, so sign-in can return them there. */
 export interface RedirectState {
@@ -72,10 +74,31 @@ export function PublicOnlyRoute() {
   }
 
   if (session.isAuthenticated) {
+    // Another application sent the user here through the portal's OpenID Connect endpoint: go back there.
+    const returnUrl = serverReturnUrl(location.search)
+    if (returnUrl) {
+      return <ServerRedirect to={returnUrl} />
+    }
+
     const from = (location.state as RedirectState | null)?.from
 
     return <Navigate to={from && from !== '/sign-in' ? from : '/'} replace />
   }
 
   return <Outlet />
+}
+
+/** A full page load to a server route, with a placeholder while the browser leaves. */
+function ServerRedirect({ to }: { to: string }) {
+  const { t } = useI18n()
+
+  useEffect(() => {
+    window.location.replace(to)
+  }, [to])
+
+  return (
+    <FullPage>
+      <LoadingState label={t('guards.redirecting')} />
+    </FullPage>
+  )
 }

@@ -1,7 +1,8 @@
 # Architecture
 
-OpenPortal is a modular monolith: one deployable ASP.NET Core host, a React client, and two business modules
-that are isolated by convention and enforced by tests.
+OpenPortal is a modular monolith: one deployable ASP.NET Core host, a React client, and three business modules
+(Identity, Content, Access) that are isolated by convention and enforced by tests. It is also an OpenID Connect
+provider, so other applications can sign their users in through it.
 
 The shape exists to make two specific promises cheap to keep:
 
@@ -29,7 +30,15 @@ src/
       OpenPortal.Content.Domain/           Profile, Project, Technology
       OpenPortal.Content.Application/      IPublicContentService, IContentManagementService, DTOs
       OpenPortal.Content.Infrastructure/   ContentDbContext, services, AddContentModule
-  OpenPortal.Web/                       composition root: controllers, middleware, migrations, ClientApp
+    Access/
+      OpenPortal.Access.Domain/            PortalApplication, Group, ApplicationUserGrant, ApplicationGroupGrant
+      OpenPortal.Access.Application/       IApplicationRegistryService, IGroupService, IAccessAdministrationService,
+                                           IAccessEvaluator, IApplicationAnnouncementService, host ports
+      OpenPortal.Access.Infrastructure/    AccessDbContext (+ OpenIddict tables), services, AddAccessModule
+  OpenPortal.Client/                    NuGet package for applications: OIDC sign-in + announcement
+  OpenPortal.Web/                       composition root: controllers, middleware, migrations, ClientApp, Oidc/
+samples/
+  OpenPortal.SampleApp/                 minimal application signing in through the portal
 tests/
   OpenPortal.Tests.Unit/                domain rules
   OpenPortal.Tests.Architecture/        dependency rules
@@ -52,6 +61,8 @@ Web  ──────────────►  *.Infrastructure  ──► 
 | Application never references EF Core | `Application_projects_do_not_reference_EntityFrameworkCore` |
 | Application never references its own Infrastructure | `Application_projects_do_not_reference_their_own_infrastructure` |
 | Identity never references Content, and vice versa | `Identity_does_not_reference_Content`, `Content_does_not_reference_Identity` |
+| Access references neither Identity nor Content, and neither references Access | `Access_does_not_reference_Identity_or_Content`, `Identity_and_Content_do_not_reference_Access` |
+| The client package references nothing of the portal | `The_client_package_stands_alone` |
 | SharedKernel references no framework and no module | `SharedKernel_references_no_framework_or_module_assembly` |
 | DbContexts and repositories live only in Infrastructure | `Only_the_web_host_and_infrastructure_projects_use_EntityFrameworkCore`, `DbContexts_live_only_in_infrastructure_projects` |
 | Service implementations are `internal` | `Module_services_are_hidden_behind_their_application_interfaces` |
@@ -128,6 +139,54 @@ Two consequences are load-bearing:
   reference. Until the session loads, the forms skip complexity checks entirely rather than enforcing a
   guess. A permissive-looking default would have been worse than no default: indistinguishable from a real
   configuration, and it would reject passwords the server accepts.
+
+---
+
+## Single sign-on for other applications (Access module)
+
+The portal is an OpenID Connect provider built on OpenIddict. Only the authorization-code flow with PKCE and
+refresh tokens is enabled; clients are confidential.
+
+**Who owns what.** `OpenPortal.Access` owns applications, groups and grants, and the OpenIddict client
+store (its tables live in `AccessDbContext`, so a client and its `PortalApplication` commit together). The
+host owns the OpenIddict *server*: endpoints, keys and `Oidc/ConnectController`, because they depend on the
+authentication stack and the environment. Access stores user ids only; names come through the host's
+`IUserDirectory` adapter (backed by Identity's `IUserLookupService`), and "is the caller an administrator"
+through `IAccessAdminAuthorization` — the same seam as Content's `IContentEditAuthorization`.
+
+**The access rule** lives in one place (`AccessQueries`): a user may open an application when it is
+*active* and the user holds a direct grant or belongs to a group that holds one. Groups are flat. The rule is
+applied
+
+- in `/connect/authorize`: a user without access is sent to the SPA's `/access-denied` page and no code is
+  issued;
+- in `/connect/token`, on the code exchange **and every refresh**: withdrawn access yields `invalid_grant`,
+  so an application loses the session within the access-token lifetime even if nothing else happens;
+- when a grant, membership, group or application goes away, the affected users' OpenIddict authorizations and
+  tokens are revoked as well.
+
+**Sign-in from another application.** `/connect/authorize` authenticates with the Identity cookie. When there
+is none, the cookie handler's `OnRedirectToLogin` redirects *only for `/connect/*`* to
+`/sign-in?returnUrl=…` (every `/api` path still gets a bare 401). After sign-in, `PublicOnlyRoute` does a
+full page load back to the return URL, which `lib/returnUrl.ts` restricts to a local `/connect/authorize`
+path so it cannot be used as an open redirect.
+
+**Antiforgery** does not apply to `ConnectController` and to `POST /api/apps/announce`: they are reached by
+cross-site redirect or called server-to-server and authenticate through their own protocol (PKCE and client
+secret; the provisioning key). Both carry `[IgnoreAntiforgeryToken]`, which the global filter honours; every
+other unsafe endpoint still requires the token (an integration test guards that).
+
+**Discovery of deployed applications.** An application using `OpenPortal.Client` announces itself at start-up
+and every few minutes with the provisioning key. A new client id becomes a *pending* application with no
+OpenIddict client, so it cannot sign anyone in until an administrator approves it; approval creates the
+client and returns its secret once (only a hash is stored). Later announcements are a heartbeat ("last seen")
+and may *propose* new redirect URIs, which an administrator must apply: accepting them on the application's
+word would let whoever holds the shared provisioning key redirect sign-ins anywhere.
+
+**Keys.** Data Protection keys are persisted to `DataProtection:KeysPath` so sessions survive restarts and
+can be shared between instances (protect them at rest in production, e.g. `ProtectKeysWithCertificate`).
+Token signing and encryption use development certificates in Development, ephemeral keys in tests
+(`Oidc:UseEphemeralKeys`), and configured PKCS#12 certificates everywhere else; startup fails without them.
 
 ---
 

@@ -8,12 +8,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Modules\Access\OpenPortal.Access.Application\OpenPortal.Access.Application.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Access\OpenPortal.Access.Domain\OpenPortal.Access.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Access\OpenPortal.Access.Infrastructure\OpenPortal.Access.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Content\OpenPortal.Content.Application\OpenPortal.Content.Application.csproj" />
     <ProjectReference Include="..\..\src\Modules\Content\OpenPortal.Content.Domain\OpenPortal.Content.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Content\OpenPortal.Content.Infrastructure\OpenPortal.Content.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Identity\OpenPortal.Identity.Application\OpenPortal.Identity.Application.csproj" />
     <ProjectReference Include="..\..\src\Modules\Identity\OpenPortal.Identity.Domain\OpenPortal.Identity.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Identity\OpenPortal.Identity.Infrastructure\OpenPortal.Identity.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\OpenPortal.Client\OpenPortal.Client.csproj" />
     <ProjectReference Include="..\..\src\OpenPortal.SharedKernel\OpenPortal.SharedKernel.csproj" />
     <ProjectReference Include="..\..\src\OpenPortal.Web\OpenPortal.Web.csproj" />
   </ItemGroup>

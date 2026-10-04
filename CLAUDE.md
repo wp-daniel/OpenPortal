@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-OpenPortal is a reusable application shell (user management, sessions, role-gated admin area) meant as the base for any ASP.NET Core app such as a CRM: ASP.NET Core 10 API + React 19 client (Vite, Tailwind 4, shadcn/ui), ASP.NET Core Identity, SQLite by default. `README.md` and `ARCHITECTURE.md` are accurate and detailed (they still describe the original portfolio framing); read `ARCHITECTURE.md` before structural changes.
+OpenPortal is a reusable application shell (user management, sessions, role-gated admin area, and an OpenID Connect provider that other apps sign in through, with per-app access for users and groups) meant as the base for any ASP.NET Core app such as a CRM: ASP.NET Core 10 API + React 19 client (Vite, Tailwind 4, shadcn/ui), ASP.NET Core Identity, SQLite by default. `README.md` and `ARCHITECTURE.md` are accurate and detailed (they still describe the original portfolio framing); read `ARCHITECTURE.md` before structural changes.
 
 ## Commands
 
@@ -25,11 +25,11 @@ Add shadcn components with `npx shadcn@latest add <name>` from `ClientApp`. In t
 
 ## Architecture
 
-Modular monolith. `src/Modules/{Identity,Content}` each have Domain / Application / Infrastructure projects; `src/OpenPortal.Web` is the composition root (controllers, middleware, migrations, `ClientApp`); `OpenPortal.SharedKernel` holds `Result`, `Error`, `IClock`, `TextRules`.
+Modular monolith. `src/Modules/{Identity,Content,Access}` each have Domain / Application / Infrastructure projects; `src/OpenPortal.Web` is the composition root (controllers, middleware, migrations, `ClientApp`); `OpenPortal.SharedKernel` holds `Result`, `Error`, `IClock`, `TextRules`. `src/OpenPortal.Client` is the standalone NuGet package other apps reference; `samples/OpenPortal.SampleApp` uses it.
 
 Rules enforced by `tests/OpenPortal.Tests.Architecture` (NetArchTest) — a violation fails the build, so respect them:
 - Domain references no EF Core / ASP.NET Core; Application references no EF Core and not its own Infrastructure.
-- Identity and Content never reference each other.
+- Identity, Content and Access never reference each other (Access gets user names through the host's `IUserDirectory` adapter and the admin check through `IAccessAdminAuthorization`). `OpenPortal.Client` references nothing of the portal.
 - Only Infrastructure and Web use EF Core; DbContexts live only in Infrastructure. DB provider choice lives only in `Web/Persistence/DatabaseProviderSelector`.
 - Module service implementations are `internal sealed`; the host resolves Application interfaces only. Each module exposes one public `AddXModule`. Because a missing registration is invisible until first call, `CompositionTests` resolves every module contract — add new contracts there.
 - Controllers are `sealed`.
@@ -42,15 +42,18 @@ Conventions that span many files:
 - **Password policy is served via `/api/auth/session`** and the client builds validation from it; don't duplicate the rules in the client.
 - Each module has its own DbContext, schema and migrations under `Web/Persistence/Migrations/{Identity,Content}`. Migrate on startup only when `Database:MigrateOnStartup` is true (dev); production applies migrations as a separate step. SQLite can't order `DateTimeOffset`, hence the per-module `SqliteDateTimeOffsetCompatibility` converter.
 - Integration tests use `WebApplicationFactory<Program>` on a temp SQLite file; don't add port-binding smoke tests.
+- **SSO (Access module + `Web/Oidc`)**: OpenIddict, code flow + PKCE + refresh only. The access rule (app *active* and a direct or group grant; groups are flat) lives in `AccessQueries` and is enforced in `ConnectController` on authorize **and on every token request**; removing a grant/membership also revokes tokens. `ConnectController` and `POST /api/apps/announce` carry `[IgnoreAntiforgeryToken]`, which the global filter honours. The Identity cookie redirects to `/sign-in?returnUrl=` only for `/connect/*` (API paths stay 401). Apps announce themselves with `Access:ProvisioningKey` and stay *pending* (no OpenIddict client) until approved; approval returns the client secret once. Announced redirect URIs are only *proposed* for an approved app. Keys: Data Protection persisted to `DataProtection:KeysPath`; token keys from `Oidc:*` certificates (dev certs in Development, `Oidc:UseEphemeralKeys` in tests).
+- `CreatedAtAction(nameof(GetAsync))` works because `SuppressAsyncSuffixInActionNames = false` in `Program.cs`.
+- New migrations for Access: `dotnet ef migrations add <Name> --project src/OpenPortal.Web --context AccessDbContext --output-dir Persistence/Migrations/Access`. If a running instance locks `bin/Debug`, add `--configuration <other>`.
 
 ## Client (`src/OpenPortal.Web/ClientApp`)
 
 React 19, Vite, Tailwind 4, **shadcn/ui** (new-york, neutral). Path alias `@/` → `src/` (tsconfig `paths` + Vite `resolve.alias`). The `BuildClientApp` csproj target builds it and copies `dist` into `wwwroot` (preserving `error.html`); `MapFallback` serves `index.html` but refuses `/api/*` so typos stay 404s. TanStack Query: the session query (`SESSION_QUERY_KEY`) has `staleTime: 0`; GETs retry twice, writes never retry.
 
 ### Component library: shadcn/ui only
-- All primitives (Button, Input, Textarea, Checkbox, Label, Card, Table, Badge, Alert, AlertDialog, DropdownMenu, Sheet, Skeleton, Sonner) live in `src/components/ui` and come from the shadcn CLI. Never hand-roll an input/button/table/dialog or paste input class strings; import from `@/components/ui/*`.
+- All primitives (Button, Input, Textarea, Checkbox, Label, Card, Table, Badge, Alert, AlertDialog, Dialog, DropdownMenu, Sheet, Tabs, Collapsible, Command (cmdk), Popover, Switch, Tooltip, ScrollArea, Separator, Skeleton, Sonner) live in `src/components/ui` and come from the shadcn CLI. Never hand-roll an input/button/table/dialog or paste input class strings; import from `@/components/ui/*`.
 - Local edits to generated files are deliberate and small: `Button` defaults to `type="button"` (pass `type="submit"` explicitly; with `asChild` no type is set), `Badge` has extra `success` / `warning` variants, and `sonner.tsx` reads the theme from our own `useTheme` (no `next-themes`).
-- Composites built only from those primitives: `FormField` (label + control + hint/error; injects `id`, `aria-invalid`, `aria-describedby` into its single child), `Section` (titled Card), `PageHeader`, `StatePanels` (`LoadingState`, `ErrorPanel`, `EmptyState`). Icons come from `lucide-react`.
+- Composites built only from those primitives: `FormField` (label + control + hint/error; injects `id`, `aria-invalid`, `aria-describedby` into its single child), `Section` (titled Card), `PageHeader`, `StatePanels` (`LoadingState`, `ErrorPanel`, `EmptyState`). Icons come from `lucide-react`. Access screens share `components/access/*` (`UserPicker`/`GroupPicker` comboboxes, `ApplicationStatusBadge`, `OnlineIndicator`, `SecretDialog`, `ApplicationFormDialog`, `UserAccessSheet`) and `lib/access.ts` (`useAccessRefresh` invalidates every access query after a change). `TooltipProvider` wraps the router in `App.tsx`. Dialog forms live in an inner component rendered inside `DialogContent`, so they start fresh on every opening (no reset effects).
 - Tables: shadcn `Table`, actions column `text-right`, `size="sm"` buttons, wrapped by the component's own scroll container. Forms: `grid items-start gap-5` so rows stay aligned whether or not a field shows a hint or error. Form state is local `useState` + zod (`zodFieldErrors` in `lib/forms.ts`); react-hook-form was removed.
 
 ### Toast notifications
@@ -70,7 +73,8 @@ toast.fromError(err, 'Could not save')        // shows the server's problem+json
 ### Authentication flow and routing
 There are **no anonymous pages** except `/sign-in`. The route tree is in `App.tsx`; guards are in `routes/guards.tsx`:
 - `PublicOnlyRoute` → `AuthLayout` → `/sign-in`. A signed-in user is redirected to `location.state.from` or `/`.
-- `ProtectedRoute` → `AppLayout` → `/` (dashboard), `/account`, and `AdminRoute` (non-admins go to `/`) → `/admin/users`, `/admin/content/*`.
+- `ProtectedRoute` → `AppLayout` → `/` (dashboard + launchpad of the user's apps), `/account`, `/access-denied`, and `AdminRoute` (non-admins go to `/`) → `/admin/users`, `/admin/access` (tree: app → groups → members, app → direct users), `/admin/applications`, `/admin/groups`, `/admin/content/*`. Admin links sit in one "Administration" dropdown in the header.
+- `PublicOnlyRoute` sends a signed-in user to `?returnUrl=` with a full page load when `lib/returnUrl.ts` accepts it (local `/connect/authorize` only); that is how sign-in started by another app returns to the OIDC endpoint. Vite proxies `/connect` too.
 - While `useSession().isPending` the guards show a skeleton (never treat "not loaded" as "signed out"); a failed session fetch shows a retry panel; an anonymous visitor is redirected to `/sign-in` with the original URL saved.
 - Sign-in does not navigate itself: it invalidates the session and `PublicOnlyRoute` redirects. Sign-out clears the query cache and goes to `/sign-in`.
 - Client guards are UX only; the server still authorizes every endpoint.

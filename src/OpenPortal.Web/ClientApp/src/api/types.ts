@@ -214,3 +214,133 @@ export interface ProjectRequest {
   readonly completedOn: string | null
   readonly technologies: readonly string[]
 }
+// ---------------------------------------------------------------------------
+// Applications, groups and access.
+// ---------------------------------------------------------------------------
+
+export type ApplicationStatus = 'pending' | 'active' | 'disabled'
+
+export interface ApplicationSummary {
+  readonly id: string
+  readonly clientId: string
+  readonly displayName: string
+  readonly description: string | null
+  readonly baseUrl: string
+  readonly redirectUris: readonly string[]
+  readonly postLogoutRedirectUris: readonly string[]
+  readonly status: ApplicationStatus
+  readonly source: 'manual' | 'announced'
+  readonly version: string | null
+  readonly announcedRedirectUris: readonly string[]
+  readonly announcedPostLogoutRedirectUris: readonly string[]
+  readonly hasManifestChanges: boolean
+  readonly createdAtUtc: string
+  readonly updatedAtUtc: string | null
+  readonly lastSeenAtUtc: string | null
+  readonly userCount: number
+  readonly groupCount: number
+}
+
+/** Returned when a client secret is issued. The secret cannot be read again afterwards. */
+export interface ApplicationSecret {
+  readonly application: ApplicationSummary
+  readonly clientSecret: string
+}
+
+export interface UpdateApplicationRequest {
+  readonly displayName: string
+  readonly description: string | null
+  readonly baseUrl: string
+  readonly redirectUris: readonly string[]
+  readonly postLogoutRedirectUris: readonly string[]
+}
+
+export interface CreateApplicationRequest extends UpdateApplicationRequest {
+  readonly clientId: string
+}
+
+export interface UserReference {
+  readonly id: string
+  readonly email: string
+  readonly displayName: string
+  /** False when the account no longer exists. */
+  readonly isKnown: boolean
+}
+
+export interface ApplicationReference {
+  readonly id: string
+  readonly clientId: string
+  readonly displayName: string
+  readonly status: ApplicationStatus
+}
+
+export interface GroupReference {
+  readonly id: string
+  readonly name: string
+}
+
+export interface GroupSummary {
+  readonly id: string
+  readonly name: string
+  readonly description: string | null
+  readonly memberCount: number
+  readonly applicationCount: number
+  readonly createdAtUtc: string
+}
+
+export interface GroupDetail {
+  readonly id: string
+  readonly name: string
+  readonly description: string | null
+  readonly members: readonly UserReference[]
+  readonly applications: readonly ApplicationReference[]
+  readonly createdAtUtc: string
+}
+
+export interface SaveGroupRequest {
+  readonly name: string
+  readonly description: string | null
+}
+
+export interface AccessTreeGroup {
+  readonly id: string
+  readonly name: string
+  readonly members: readonly UserReference[]
+}
+
+export interface AccessTreeApplication {
+  readonly id: string
+  readonly clientId: string
+  readonly displayName: string
+  readonly status: ApplicationStatus
+  readonly lastSeenAtUtc: string | null
+  readonly groups: readonly AccessTreeGroup[]
+  readonly users: readonly UserReference[]
+}
+
+export interface AccessTree {
+  readonly applications: readonly AccessTreeApplication[]
+}
+
+export interface UserApplicationAccess {
+  readonly applicationId: string
+  readonly clientId: string
+  readonly displayName: string
+  readonly status: ApplicationStatus
+  readonly direct: boolean
+  readonly viaGroups: readonly GroupReference[]
+}
+
+export interface UserAccess {
+  readonly userId: string
+  readonly groups: readonly GroupReference[]
+  readonly applications: readonly UserApplicationAccess[]
+}
+
+export interface LaunchpadItem {
+  readonly id: string
+  readonly clientId: string
+  readonly displayName: string
+  readonly description: string | null
+  readonly baseUrl: string
+}

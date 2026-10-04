@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>OpenPortal.Client</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <PackageId>OpenPortal.Client</PackageId>
+    <Description>Signs an ASP.NET Core application's users in through an OpenPortal instance (OpenID Connect) and announces the application to the portal.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Deliberately standalone: an application references this package, never the portal's modules. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
+  </ItemGroup>
+
+</Project>

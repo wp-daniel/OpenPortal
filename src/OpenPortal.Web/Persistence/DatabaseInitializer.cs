@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OpenPortal.Access.Infrastructure.Persistence;
 using OpenPortal.Content.Infrastructure.Persistence;
 using OpenPortal.Identity.Domain.Users;
 using OpenPortal.Identity.Infrastructure.Bootstrap;
@@ -63,6 +64,7 @@ public sealed class DatabaseInitializer
 {
     private readonly IdentityDbContext _identityContext;
     private readonly ContentDbContext _contentContext;
+    private readonly AccessDbContext _accessContext;
     private readonly IdentityDataSeeder _roleSeeder;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IOptions<DatabaseOptions> _databaseOptions;
@@ -73,6 +75,7 @@ public sealed class DatabaseInitializer
     public DatabaseInitializer(
         IdentityDbContext identityContext,
         ContentDbContext contentContext,
+        AccessDbContext accessContext,
         IdentityDataSeeder roleSeeder,
         UserManager<ApplicationUser> userManager,
         IOptions<DatabaseOptions> databaseOptions,
@@ -82,6 +85,7 @@ public sealed class DatabaseInitializer
     {
         _identityContext = identityContext;
         _contentContext = contentContext;
+        _accessContext = accessContext;
         _roleSeeder = roleSeeder;
         _userManager = userManager;
         _databaseOptions = databaseOptions;
@@ -112,6 +116,7 @@ public sealed class DatabaseInitializer
 
         await _identityContext.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
         await _contentContext.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
+        await _accessContext.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Database migrations applied.");
     }

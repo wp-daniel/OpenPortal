@@ -6,9 +6,14 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { I18nProvider, LanguageSync } from '@/i18n/I18nProvider'
 import { translate } from '@/i18n/store'
 import { Toaster } from '@/components/ui/sonner'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { notify } from '@/hooks/useToast'
 import { SESSION_QUERY_KEY } from '@/hooks/useSession'
+import { AccessDeniedPage } from '@/pages/AccessDeniedPage'
 import { AccountPage } from '@/pages/AccountPage'
+import { AdminAccessPage } from '@/pages/AdminAccessPage'
+import { AdminApplicationsPage } from '@/pages/AdminApplicationsPage'
+import { AdminGroupsPage } from '@/pages/AdminGroupsPage'
 import { AdminUsersPage } from '@/pages/AdminUsersPage'
 import { ContentProfilePage } from '@/pages/ContentProfilePage'
 import { ContentProjectPage } from '@/pages/ContentProjectPage'
@@ -84,10 +89,14 @@ const router = createBrowserRouter([
             children: [
               { index: true, element: <DashboardPage /> },
               { path: 'account', element: <AccountPage /> },
+              { path: 'access-denied', element: <AccessDeniedPage /> },
               {
                 element: <AdminRoute />,
                 children: [
                   { path: 'admin/users', element: <AdminUsersPage /> },
+                  { path: 'admin/access', element: <AdminAccessPage /> },
+                  { path: 'admin/applications', element: <AdminApplicationsPage /> },
+                  { path: 'admin/groups', element: <AdminGroupsPage /> },
                   { path: 'admin/content/profile', element: <ContentProfilePage /> },
                   { path: 'admin/content/projects', element: <ContentProjectPage /> },
                   { path: 'admin/content/projects/:projectId', element: <ContentProjectPage /> },
@@ -108,7 +117,9 @@ export function App() {
       <I18nProvider>
         <QueryClientProvider client={queryClient}>
           <LanguageSync />
-          <RouterProvider router={router} />
+          <TooltipProvider>
+            <RouterProvider router={router} />
+          </TooltipProvider>
           <Toaster />
         </QueryClientProvider>
       </I18nProvider>

@@ -56,6 +56,7 @@ public static class IdentityModuleServiceCollectionExtensions
         services.AddScoped<IAuthenticationService, IdentityAuthenticationService>();
         services.AddScoped<IAccountService, IdentityAccountService>();
         services.AddScoped<IUserAdministrationService, IdentityUserAdministrationService>();
+        services.AddScoped<IUserLookupService, IdentityUserLookupService>();
         services.AddScoped<IdentityDataSeeder>();
 
         if (!services.Any(descriptor => descriptor.ServiceType == typeof(IClock)))
@@ -124,10 +125,24 @@ public static class IdentityModuleServiceCollectionExtensions
         cookie.ExpireTimeSpan = TimeSpan.FromHours(module.SignIn.CookieLifetimeHours);
         cookie.SlidingExpiration = true;
 
+        // The SPA's sign-in route, used only by the OpenID Connect endpoints below.
+        cookie.LoginPath = "/sign-in";
+        cookie.ReturnUrlParameter = "returnUrl";
+
         // This host serves a JSON API consumed by a SPA. A missing or insufficient session must produce a
-        // status code, not a redirect to an HTML login page that does not exist in this application.
+        // status code, not a redirect to an HTML login page.
+        //
+        // The exception is the OpenID Connect authorization endpoint: another application sent the browser
+        // there, so a real page has to be shown. It is redirected to the SPA's sign-in route, which returns
+        // to the endpoint once the user has signed in.
         cookie.Events.OnRedirectToLogin = context =>
         {
+            if (context.Request.Path.StartsWithSegments("/connect", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Response.Redirect(context.RedirectUri);
+                return Task.CompletedTask;
+            }
+
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             return Task.CompletedTask;
         };
