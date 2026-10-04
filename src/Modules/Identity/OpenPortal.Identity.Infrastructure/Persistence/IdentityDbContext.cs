@@ -23,6 +23,8 @@ public sealed class IdentityDbContext : IdentityDbContext<ApplicationUser, Ident
     {
     }
 
+    public DbSet<UserAvatar> UserAvatars => Set<UserAvatar>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -30,6 +32,7 @@ public sealed class IdentityDbContext : IdentityDbContext<ApplicationUser, Ident
         base.OnModelCreating(builder);
 
         builder.ApplyConfiguration(new ApplicationUserConfiguration());
+        builder.ApplyConfiguration(new UserAvatarConfiguration());
 
         builder.Entity<IdentityRole<Guid>>().ToTable("Roles");
         builder.Entity<IdentityUserRole<Guid>>().ToTable("UserRoles");

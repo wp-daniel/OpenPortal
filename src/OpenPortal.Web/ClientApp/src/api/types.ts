@@ -34,6 +34,8 @@ export interface SessionUser {
   readonly emailConfirmed: boolean
   readonly roles: readonly string[]
   readonly language: string | null
+  /** When the profile picture last changed; null when there is none. Versions the avatar URL. */
+  readonly avatarUpdatedAtUtc: string | null
 }
 
 /**
@@ -66,6 +68,7 @@ export interface AccountProfile extends UserDetails {
   readonly updatedAtUtc: string | null
   readonly roles: readonly string[]
   readonly language: string | null
+  readonly avatarUpdatedAtUtc: string | null
 }
 
 /** Personal, work and address details, shared by every request that creates or edits an account. */
@@ -107,6 +110,7 @@ export interface UserSummary extends UserDetails {
   readonly lockoutEndUtc: string | null
   readonly createdAtUtc: string
   readonly roles: readonly string[]
+  readonly avatarUpdatedAtUtc: string | null
 }
 
 export interface PagedResult<T> {

@@ -24,4 +24,26 @@ export const userAdminApi = {
 
   resetPassword: (userId: string, newPassword: string) =>
     api.post<void>(`/api/admin/users/${userId}/reset-password`, { newPassword }),
+
+  uploadAvatar: (userId: string, image: Blob) => api.put<void>(`/api/admin/users/${userId}/avatar`, avatarForm(image)),
+
+  removeAvatar: (userId: string) => api.delete<void>(`/api/admin/users/${userId}/avatar`),
+}
+
+/** The multipart body every avatar upload sends: one `file` part, judged by its bytes on the server. */
+export function avatarForm(image: Blob): FormData {
+  const form = new FormData()
+  form.append('file', image, 'avatar')
+
+  return form
+}
+
+/**
+ * Where a user's picture is served, or null when they have none. The change stamp is part of the URL, so
+ * the browser may cache it and still sees a new picture the moment it is replaced.
+ */
+export function avatarUrl(user: { readonly id: string; readonly avatarUpdatedAtUtc: string | null }): string | null {
+  return user.avatarUpdatedAtUtc
+    ? `/api/users/${user.id}/avatar?v=${encodeURIComponent(user.avatarUpdatedAtUtc)}`
+    : null
 }

@@ -1,6 +1,7 @@
 import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider, createBrowserRouter } from 'react-router-dom'
 import { ApiError } from '@/api/client'
+import type { Crumb, RouteHandle } from '@/components/AppBreadcrumbs'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ThemeProvider } from '@/components/theme-provider'
 import { I18nProvider, LanguageSync } from '@/i18n/I18nProvider'
@@ -73,6 +74,8 @@ const queryClient = new QueryClient({
   },
 })
 
+const crumbs = (...steps: Crumb[]): RouteHandle => ({ crumbs: steps })
+
 const router = createBrowserRouter([
   {
     errorElement: <ErrorBoundary />,
@@ -86,23 +89,51 @@ const router = createBrowserRouter([
         children: [
           {
             element: <AppLayout />,
+            // Each `handle.crumbs` adds steps to the header breadcrumb trail (see AppBreadcrumbs).
             children: [
-              { index: true, element: <DashboardPage /> },
-              { path: 'account', element: <AccountPage /> },
-              { path: 'access-denied', element: <AccessDeniedPage /> },
+              { index: true, element: <DashboardPage />, handle: crumbs({ labelKey: 'nav.dashboard', to: '/' }) },
+              { path: 'account', element: <AccountPage />, handle: crumbs({ labelKey: 'nav.account' }) },
+              { path: 'access-denied', element: <AccessDeniedPage />, handle: crumbs({ labelKey: 'nav.accessDenied' }) },
               {
                 element: <AdminRoute />,
+                handle: crumbs({ labelKey: 'nav.administration' }),
                 children: [
-                  { path: 'admin/users', element: <AdminUsersPage /> },
-                  { path: 'admin/access', element: <AdminAccessPage /> },
-                  { path: 'admin/applications', element: <AdminApplicationsPage /> },
-                  { path: 'admin/groups', element: <AdminGroupsPage /> },
-                  { path: 'admin/content/profile', element: <ContentProfilePage /> },
-                  { path: 'admin/content/projects', element: <ContentProjectPage /> },
-                  { path: 'admin/content/projects/:projectId', element: <ContentProjectPage /> },
+                  {
+                    handle: crumbs({ labelKey: 'nav.identity' }),
+                    children: [
+                      { path: 'admin/users', element: <AdminUsersPage />, handle: crumbs({ labelKey: 'nav.users' }) },
+                      { path: 'admin/groups', element: <AdminGroupsPage />, handle: crumbs({ labelKey: 'nav.groups' }) },
+                      { path: 'admin/access', element: <AdminAccessPage />, handle: crumbs({ labelKey: 'nav.access' }) },
+                    ],
+                  },
+                  {
+                    path: 'admin/applications',
+                    element: <AdminApplicationsPage />,
+                    handle: crumbs({ labelKey: 'nav.applications' }),
+                  },
+                  {
+                    handle: crumbs({ labelKey: 'nav.content' }),
+                    children: [
+                      {
+                        path: 'admin/content/profile',
+                        element: <ContentProfilePage />,
+                        handle: crumbs({ labelKey: 'nav.profile' }),
+                      },
+                      {
+                        path: 'admin/content/projects',
+                        element: <ContentProjectPage />,
+                        handle: crumbs({ labelKey: 'nav.projects' }),
+                      },
+                      {
+                        path: 'admin/content/projects/:projectId',
+                        element: <ContentProjectPage />,
+                        handle: crumbs({ labelKey: 'nav.projects', to: '/admin/content/projects' }, { labelKey: 'common.edit' }),
+                      },
+                    ],
+                  },
                 ],
               },
-              { path: '*', element: <NotFoundPage /> },
+              { path: '*', element: <NotFoundPage />, handle: crumbs({ labelKey: 'nav.notFound' }) },
             ],
           },
         ],

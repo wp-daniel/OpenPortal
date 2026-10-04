@@ -24,9 +24,7 @@
   <resheader name="version"><value>2.0</value></resheader>
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
-  <data name="nav.main" xml:space="preserve"><value>Main</value></data>
   <data name="nav.skip" xml:space="preserve"><value>Skip to content</value></data>
-  <data name="nav.openMenu" xml:space="preserve"><value>Open menu</value></data>
   <data name="nav.dashboard" xml:space="preserve"><value>Dashboard</value></data>
   <data name="nav.users" xml:space="preserve"><value>Users</value></data>
   <data name="nav.profile" xml:space="preserve"><value>Profile</value></data>
@@ -546,4 +544,56 @@
   <data name="error.identity.name_too_long" xml:space="preserve"><value>First and last names cannot exceed 60 characters.</value></data>
   <data name="error.identity.invalid_phone_number" xml:space="preserve"><value>The phone number is not valid.</value></data>
   <data name="error.identity.detail_too_long" xml:space="preserve"><value>Work and address fields cannot exceed 100 characters.</value></data>
+  <data name="nav.portal" xml:space="preserve"><value>Portal</value></data>
+  <data name="nav.tagline" xml:space="preserve"><value>Identity &amp; access</value></data>
+  <data name="nav.identity" xml:space="preserve"><value>Identity &amp; access</value></data>
+  <data name="nav.content" xml:space="preserve"><value>Content</value></data>
+  <data name="nav.userMenu" xml:space="preserve"><value>Account menu</value></data>
+  <data name="nav.toggleSidebar" xml:space="preserve"><value>Show or hide the sidebar</value></data>
+  <data name="nav.accessDenied" xml:space="preserve"><value>Access denied</value></data>
+  <data name="nav.notFound" xml:space="preserve"><value>Not found</value></data>
+  <data name="account.tab.profile" xml:space="preserve"><value>Profile</value></data>
+  <data name="account.tab.security" xml:space="preserve"><value>Security</value></data>
+  <data name="account.tab.details" xml:space="preserve"><value>Account</value></data>
+  <data name="account.avatarDescription" xml:space="preserve"><value>Shown next to your name across the portal.</value></data>
+  <data name="avatar.title" xml:space="preserve"><value>Profile picture</value></data>
+  <data name="avatar.hint" xml:space="preserve"><value>PNG, JPEG or WebP. Drop it here or choose a file; it is cropped to a square.</value></data>
+  <data name="avatar.choose" xml:space="preserve"><value>Upload picture</value></data>
+  <data name="avatar.replace" xml:space="preserve"><value>Change picture</value></data>
+  <data name="avatar.remove" xml:space="preserve"><value>Remove</value></data>
+  <data name="avatar.uploading" xml:space="preserve"><value>Uploading…</value></data>
+  <data name="avatar.saved" xml:space="preserve"><value>Profile picture updated</value></data>
+  <data name="avatar.removed" xml:space="preserve"><value>Profile picture removed</value></data>
+  <data name="avatar.failed" xml:space="preserve"><value>Could not update the profile picture</value></data>
+  <data name="avatar.error.type" xml:space="preserve"><value>Choose a PNG, JPEG or WebP image.</value></data>
+  <data name="avatar.error.size" xml:space="preserve"><value>The image is too large.</value></data>
+  <data name="avatar.error.decode" xml:space="preserve"><value>The image could not be read.</value></data>
+  <data name="users.tab.account" xml:space="preserve"><value>Account</value></data>
+  <data name="users.tab.profile" xml:space="preserve"><value>Personal &amp; work</value></data>
+  <data name="users.tab.address" xml:space="preserve"><value>Address</value></data>
+  <data name="users.avatarAfterCreate" xml:space="preserve"><value>A profile picture can be added once the account exists.</value></data>
+  <data name="error.identity.avatar_required" xml:space="preserve"><value>An image file is required.</value></data>
+  <data name="error.identity.avatar_too_large" xml:space="preserve"><value>The image must not exceed 256 KB.</value></data>
+  <data name="error.identity.avatar_unsupported_type" xml:space="preserve"><value>The image must be a PNG, JPEG or WebP file.</value></data>
+  <data name="error.identity.avatar_not_found" xml:space="preserve"><value>The user has no profile picture.</value></data>
+  <data name="address.country.placeholder" xml:space="preserve"><value>Select a country</value></data>
+  <data name="address.country.search" xml:space="preserve"><value>Search a country…</value></data>
+  <data name="address.country.none" xml:space="preserve"><value>No country found.</value></data>
+  <data name="address.city.placeholder" xml:space="preserve"><value>Choose or type the city</value></data>
+  <data name="address.city.search" xml:space="preserve"><value>Search a city…</value></data>
+  <data name="address.city.pickCountry" xml:space="preserve"><value>Choose the country first to get suggestions.</value></data>
+  <data name="address.city.none" xml:space="preserve"><value>No place found.</value></data>
+  <data name="address.city.forPostalCode" xml:space="preserve"><value>Postal code {code}</value></data>
+  <data name="address.city.results" xml:space="preserve"><value>Results</value></data>
+  <data name="address.city.useTyped" xml:space="preserve"><value>Use “{text}”</value></data>
+  <data name="address.city.clear" xml:space="preserve"><value>Clear the city</value></data>
+  <data name="address.unavailable" xml:space="preserve"><value>Suggestions are not available right now.</value></data>
+  <data name="address.postalCode.looking" xml:space="preserve"><value>Looking up the postal code…</value></data>
+  <data name="address.postalCode.many_one" xml:space="preserve"><value>{count} place has this postal code</value></data>
+  <data name="address.postalCode.many_other" xml:space="preserve"><value>{count} places share this postal code: pick the city</value></data>
+  <data name="address.postalCode.unknown" xml:space="preserve"><value>Postal code not found for this country</value></data>
+  <data name="error.geo.invalid_country" xml:space="preserve"><value>The country must be a two-letter ISO 3166 code.</value></data>
+  <data name="error.geo.invalid_postal_code" xml:space="preserve"><value>The postal code is not valid.</value></data>
+  <data name="error.geo.invalid_query" xml:space="preserve"><value>Type between 2 and 80 characters to search.</value></data>
+  <data name="address.city.typeToSearch" xml:space="preserve"><value>Type at least 2 letters of the city, or enter the postal code first.</value></data>
 </root>

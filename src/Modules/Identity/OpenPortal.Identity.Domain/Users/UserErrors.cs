@@ -73,6 +73,18 @@ public static class UserErrors
     public static Error DetailTooLong { get; } =
         Error.Validation(Prefix + "detail_too_long", $"Work and address fields must not exceed {ApplicationUser.DetailMaxLength} characters.");
 
+    public static Error AvatarRequired { get; } =
+        Error.Validation(Prefix + "avatar_required", "An image file is required.");
+
+    public static Error AvatarTooLarge { get; } =
+        Error.Validation(Prefix + "avatar_too_large", $"The image must not exceed {UserAvatar.MaxBytes / 1024} KB.");
+
+    public static Error AvatarUnsupportedType { get; } =
+        Error.Validation(Prefix + "avatar_unsupported_type", "The image must be a PNG, JPEG or WebP file.");
+
+    public static Error AvatarNotFound { get; } =
+        Error.NotFound(Prefix + "avatar_not_found", "The user has no profile picture.");
+
     public static Error EmailRequired { get; } =
         Error.Validation(Prefix + "email_required", "An email address is required.");
 }

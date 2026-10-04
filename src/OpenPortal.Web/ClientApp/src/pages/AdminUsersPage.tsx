@@ -5,11 +5,13 @@ import { z } from 'zod'
 import type { PasswordPolicy, UserSummary } from '@/api/types'
 import { userAdminApi } from '@/api/users'
 import { UserAccessSheet } from '@/components/access/UserAccessSheet'
+import { AvatarUpload } from '@/components/AvatarUpload'
 import { FormField } from '@/components/FormField'
 import { PageHeader } from '@/components/PageHeader'
 import { Section } from '@/components/Section'
 import { ErrorPanel, LoadingState } from '@/components/StatePanels'
 import { FilterSelect, TableToolbar } from '@/components/TableToolbar'
+import { UserAvatar } from '@/components/UserAvatar'
 import { UserDetailsFields } from '@/components/UserDetailsFields'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -17,6 +19,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
 import {
   Table,
   TableBody,
@@ -26,6 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useDebounced } from '@/hooks/useDebounced'
 import { useSession } from '@/hooks/useSession'
 import { notify } from '@/hooks/useToast'
@@ -37,6 +41,7 @@ import {
   detailsToForm,
   EMPTY_DETAILS,
   formToDetails,
+  USER_DETAILS_GROUP_OF,
   userDetailsShape,
   type UserDetailsField,
   type UserDetailsForm,
@@ -171,8 +176,13 @@ export function AdminUsersPage() {
                   return (
                     <TableRow key={user.id}>
                       <TableCell>
-                        <div className="font-medium">{user.displayName}</div>
-                        <div className="text-muted-foreground font-mono text-xs">{user.email}</div>
+                        <div className="flex items-center gap-3">
+                          <UserAvatar user={user} />
+                          <div className="min-w-0">
+                            <div className="font-medium">{user.displayName}</div>
+                            <div className="text-muted-foreground font-mono text-xs">{user.email}</div>
+                          </div>
+                        </div>
                       </TableCell>
                       <TableCell>{user.phoneNumber ?? <span className="text-muted-foreground">—</span>}</TableCell>
                       <TableCell>
@@ -300,6 +310,21 @@ function UserFormDialog({
 
 type AccountField = 'email' | 'password'
 
+const USER_FORM_TABS = ['account', 'profile', 'address'] as const
+
+type UserFormTab = (typeof USER_FORM_TABS)[number]
+
+/** The dialog tab a field is on. Server field names arrive camelCased, like the form's own. */
+function tabOfField(field: string): UserFormTab {
+  const group = USER_DETAILS_GROUP_OF[field as UserDetailsField]
+
+  if (group === undefined) {
+    return 'account'
+  }
+
+  return group === 'address' ? 'address' : 'profile'
+}
+
 function UserForm({
   user,
   policy,
@@ -318,6 +343,7 @@ function UserForm({
   const [details, setDetails] = useState<UserDetailsForm>(user ? detailsToForm(user) : EMPTY_DETAILS)
   const [roles, setRoles] = useState<string[]>(user ? [...user.roles] : [])
   const [errors, setErrors] = useState<Partial<Record<AccountField | UserDetailsField, string>>>({})
+  const [tab, setTab] = useState<UserFormTab>('account')
 
   // Built from the policy the server published, so this form cannot quietly disagree with what the user
   // store will accept.
@@ -345,8 +371,21 @@ function UserForm({
       onSaved()
       onClose()
     },
-    onError: (failure) => reportFormError(failure, editing ? t('users.edit.failed') : t('users.create.failed')),
+    onError: (failure) => {
+      showFirstInvalidTab(Object.keys(serverFieldErrors(failure)))
+      reportFormError(failure, editing ? t('users.edit.failed') : t('users.create.failed'))
+    },
   })
+
+  /** Errors can sit on a tab that is not showing; open the first tab that has one so it is seen. */
+  function showFirstInvalidTab(fields: readonly string[]) {
+    const invalid = new Set(fields.map((field) => tabOfField(field)))
+    const first = USER_FORM_TABS.find((entry) => invalid.has(entry))
+
+    if (first) {
+      setTab(first)
+    }
+  }
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -354,7 +393,9 @@ function UserForm({
     const parsed = schema.safeParse({ email, password, ...details })
 
     if (!parsed.success) {
-      setErrors(zodFieldErrors(parsed.error))
+      const found = zodFieldErrors<AccountField | UserDetailsField>(parsed.error)
+      setErrors(found)
+      showFirstInvalidTab(Object.keys(found))
 
       return
     }
@@ -365,6 +406,9 @@ function UserForm({
 
   const serverErrors = serverFieldErrors(save.error)
   const errorFor = (field: AccountField | UserDetailsField) => errors[field] ?? serverErrors[field]?.[0]
+  const detailErrors = Object.fromEntries(
+    Object.keys(USER_DETAILS_GROUP_OF).map((field) => [field, errorFor(field as UserDetailsField)]),
+  )
 
   return (
     <>
@@ -373,75 +417,102 @@ function UserForm({
         <DialogDescription>{editing ? t('users.edit.description') : t('users.create.description')}</DialogDescription>
       </DialogHeader>
 
-      <form id="user-form" onSubmit={submit} noValidate className="grid gap-6">
-        <fieldset className="grid gap-3">
-          <legend className="text-sm font-medium">{t('profile.section.account')}</legend>
-          <div className="grid items-start gap-5 sm:grid-cols-2">
-            <FormField label={t('common.email')} htmlFor="user-email" error={errorFor('email')}>
-              <Input
-                type="email"
-                autoComplete="off"
-                disabled={editing}
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-            </FormField>
+      <form id="user-form" onSubmit={submit} noValidate>
+        <Tabs value={tab} onValueChange={(value) => setTab(value as UserFormTab)}>
+          <TabsList variant="line" className="max-w-full flex-wrap justify-start group-data-[orientation=horizontal]/tabs:h-auto">
+            <TabsTrigger value="account">{t('users.tab.account')}</TabsTrigger>
+            <TabsTrigger value="profile">{t('users.tab.profile')}</TabsTrigger>
+            <TabsTrigger value="address">{t('users.tab.address')}</TabsTrigger>
+          </TabsList>
+          <Separator className="-mt-2" />
 
-            {!editing && (
-              <FormField
-                label={t('common.password')}
-                htmlFor="user-password"
-                error={errorFor('password')}
-                hint={describePasswordPolicy(policy, t)}
-              >
-                <Input
-                  type="password"
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                />
-              </FormField>
-            )}
-          </div>
-
-          <div className="grid gap-2">
-            <span className="text-sm">{t('common.roles')}</span>
-            <div className="flex gap-6">
-              {ROLES.map((entry) => (
-                <div key={entry} className="flex items-center gap-2">
-                  <Checkbox
-                    id={`role-${entry}`}
-                    checked={roles.includes(entry)}
-                    onCheckedChange={(checked) =>
-                      setRoles(checked === true ? [...roles, entry] : roles.filter((value) => value !== entry))
-                    }
+          <TabsContent value="account" className="grid gap-6 pt-4">
+            <fieldset className="grid gap-3">
+              {/* The tab already says "Account"; the legend stays for screen readers. */}
+              <legend className="sr-only">{t('profile.section.account')}</legend>
+              <div className="grid items-start gap-5 sm:grid-cols-2">
+                <FormField label={t('common.email')} htmlFor="user-email" error={errorFor('email')}>
+                  <Input
+                    type="email"
+                    autoComplete="off"
+                    disabled={editing}
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
                   />
-                  <Label htmlFor={`role-${entry}`} className="font-normal">
-                    {t(`role.${entry}`)}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </div>
-        </fieldset>
+                </FormField>
 
-        <UserDetailsFields
-          idPrefix="user"
-          values={details}
-          onChange={(field, value) => setDetails((current) => ({ ...current, [field]: value }))}
-          errors={{
-            firstName: errorFor('firstName'),
-            lastName: errorFor('lastName'),
-            phoneNumber: errorFor('phoneNumber'),
-            jobTitle: errorFor('jobTitle'),
-            company: errorFor('company'),
-            department: errorFor('department'),
-            addressLine: errorFor('addressLine'),
-            city: errorFor('city'),
-            postalCode: errorFor('postalCode'),
-            country: errorFor('country'),
-          }}
-        />
+                {!editing && (
+                  <FormField
+                    label={t('common.password')}
+                    htmlFor="user-password"
+                    error={errorFor('password')}
+                    hint={describePasswordPolicy(policy, t)}
+                  >
+                    <Input
+                      type="password"
+                      autoComplete="new-password"
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                    />
+                  </FormField>
+                )}
+              </div>
+
+              <div className="grid gap-2">
+                <span className="text-sm">{t('common.roles')}</span>
+                <div className="flex gap-6">
+                  {ROLES.map((entry) => (
+                    <div key={entry} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`role-${entry}`}
+                        checked={roles.includes(entry)}
+                        onCheckedChange={(checked) =>
+                          setRoles(checked === true ? [...roles, entry] : roles.filter((value) => value !== entry))
+                        }
+                      />
+                      <Label htmlFor={`role-${entry}`} className="font-normal">
+                        {t(`role.${entry}`)}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </fieldset>
+
+            <Separator />
+
+            {user ? (
+              <AvatarUpload
+                user={user}
+                upload={(image) => userAdminApi.uploadAvatar(user.id, image)}
+                remove={() => userAdminApi.removeAvatar(user.id)}
+                onChanged={onSaved}
+              />
+            ) : (
+              <p className="text-muted-foreground text-sm">{t('users.avatarAfterCreate')}</p>
+            )}
+          </TabsContent>
+
+          <TabsContent value="profile" className="grid gap-6 pt-4">
+            <UserDetailsFields
+              idPrefix="user"
+              groups={['personal', 'work']}
+              values={details}
+              onChange={(field, value) => setDetails((current) => ({ ...current, [field]: value }))}
+              errors={detailErrors}
+            />
+          </TabsContent>
+
+          <TabsContent value="address" className="grid gap-6 pt-4">
+            <UserDetailsFields
+              idPrefix="user"
+              groups={['address']}
+              values={details}
+              onChange={(field, value) => setDetails((current) => ({ ...current, [field]: value }))}
+              errors={detailErrors}
+            />
+          </TabsContent>
+        </Tabs>
       </form>
 
       <DialogFooter>

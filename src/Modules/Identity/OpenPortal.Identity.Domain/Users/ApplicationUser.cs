@@ -60,6 +60,18 @@ public sealed class ApplicationUser : IdentityUser<Guid>
     public DateTimeOffset? UpdatedAtUtc { get; private set; }
 
     /// <summary>
+    /// When the profile picture (<see cref="UserAvatar"/>) last changed, or <see langword="null"/> when there
+    /// is none. Lets the UI decide whether to request an image and version its URL without loading it.
+    /// </summary>
+    public DateTimeOffset? AvatarUpdatedAtUtc { get; private set; }
+
+    /// <summary>Records that the picture was replaced (a timestamp) or removed (<see langword="null"/>).</summary>
+    public void MarkAvatarChanged(DateTimeOffset? changedAtUtc)
+    {
+        AvatarUpdatedAtUtc = changedAtUtc;
+    }
+
+    /// <summary>
     /// Renames the account, rejecting names the UI could not render meaningfully.
     /// </summary>
     public SharedKernel.Results.Result UpdateDisplayName(string displayName, DateTimeOffset now)

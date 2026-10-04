@@ -12,6 +12,7 @@ using OpenPortal.Identity.Infrastructure.DependencyInjection;
 using OpenPortal.Web;
 using OpenPortal.Web.Authentication;
 using OpenPortal.Web.Authorization;
+using OpenPortal.Web.Geo;
 using OpenPortal.Web.Infrastructure;
 using OpenPortal.Web.Localization;
 using OpenPortal.Web.Middleware;
@@ -191,6 +192,9 @@ builder.Services.AddAntiforgery(options =>
 // OpenID Connect provider for other applications. Transport security follows the cookie setting, because the
 // development server and the tests run over plain http.
 builder.Services.AddOpenPortalOidcServer(builder.Configuration, builder.Environment, requireSecureCookies);
+
+// Address suggestions (postal code -> places, city search) proxied from free public providers.
+builder.Services.AddOpenPortalGeo(builder.Configuration);
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<DatabaseInitializer>();

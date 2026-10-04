@@ -57,6 +57,7 @@ public static class IdentityModuleServiceCollectionExtensions
         services.AddScoped<IAccountService, IdentityAccountService>();
         services.AddScoped<IUserAdministrationService, IdentityUserAdministrationService>();
         services.AddScoped<IUserLookupService, IdentityUserLookupService>();
+        services.AddScoped<IUserAvatarService, IdentityUserAvatarService>();
         services.AddScoped<IdentityDataSeeder>();
 
         if (!services.Any(descriptor => descriptor.ServiceType == typeof(IClock)))

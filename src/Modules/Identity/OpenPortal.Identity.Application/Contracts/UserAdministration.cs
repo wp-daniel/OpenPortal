@@ -21,7 +21,8 @@ public sealed record UserSummaryDto(
     string? AddressLine,
     string? City,
     string? PostalCode,
-    string? Country);
+    string? Country,
+    DateTimeOffset? AvatarUpdatedAtUtc);
 
 /// <summary>Filter and paging parameters for the administration user list.</summary>
 public sealed class UserListQuery

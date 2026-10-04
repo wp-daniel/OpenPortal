@@ -3,6 +3,7 @@ import { Users } from 'lucide-react'
 import { accessApi, accessKeys, applicationsApi } from '@/api/access'
 import type { UserSummary } from '@/api/types'
 import { ErrorPanel, LoadingState } from '@/components/StatePanels'
+import { UserAvatar } from '@/components/UserAvatar'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -45,9 +46,12 @@ export function UserAccessSheet({ user, onClose }: { user: UserSummary | null; o
   return (
     <Sheet open={user !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full gap-0 sm:max-w-md">
-        <SheetHeader>
-          <SheetTitle>{t('access.user.title', { name: user?.displayName ?? '' })}</SheetTitle>
-          <SheetDescription>{user?.email}</SheetDescription>
+        <SheetHeader className="flex-row items-center gap-3">
+          {user && <UserAvatar user={user} className="size-10" />}
+          <div className="grid min-w-0 gap-1.5">
+            <SheetTitle>{t('access.user.title', { name: user?.displayName ?? '' })}</SheetTitle>
+            <SheetDescription className="truncate">{user?.email}</SheetDescription>
+          </div>
         </SheetHeader>
 
         <ScrollArea className="min-h-0 flex-1">

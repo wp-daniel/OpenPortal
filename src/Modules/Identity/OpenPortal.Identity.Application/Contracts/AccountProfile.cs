@@ -22,7 +22,8 @@ public sealed record AccountProfileDto(
     string? AddressLine,
     string? City,
     string? PostalCode,
-    string? Country);
+    string? Country,
+    DateTimeOffset? AvatarUpdatedAtUtc);
 
 /// <summary>Mutable fields of the signed-in account's profile.</summary>
 /// <para>

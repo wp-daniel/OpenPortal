@@ -23,6 +23,22 @@ export interface UserDetailsForm {
 
 export type UserDetailsField = keyof UserDetailsForm
 
+export type UserDetailsGroup = 'personal' | 'work' | 'address'
+
+/** Which group each field is rendered in, so a tabbed form can tell which tab holds an error. */
+export const USER_DETAILS_GROUP_OF: Record<UserDetailsField, UserDetailsGroup> = {
+  firstName: 'personal',
+  lastName: 'personal',
+  phoneNumber: 'personal',
+  company: 'work',
+  department: 'work',
+  jobTitle: 'work',
+  addressLine: 'address',
+  city: 'address',
+  postalCode: 'address',
+  country: 'address',
+}
+
 export const EMPTY_DETAILS: UserDetailsForm = {
   firstName: '',
   lastName: '',

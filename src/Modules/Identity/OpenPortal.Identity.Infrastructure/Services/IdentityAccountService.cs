@@ -144,6 +144,7 @@ internal sealed class IdentityAccountService : IAccountService
             AddressLine: user.AddressLine,
             City: user.City,
             PostalCode: user.PostalCode,
-            Country: user.Country));
+            Country: user.Country,
+            AvatarUpdatedAtUtc: user.AvatarUpdatedAtUtc));
     }
 }

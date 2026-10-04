@@ -14,7 +14,8 @@ public sealed record SessionUserDto(
     string DisplayName,
     bool EmailConfirmed,
     IReadOnlyList<string> Roles,
-    string? Language);
+    string? Language,
+    DateTimeOffset? AvatarUpdatedAtUtc);
 
 /// <summary>Current session state as observed by the client.</summary>
 /// <param name="IsAuthenticated">Whether a valid session cookie was presented.</param>

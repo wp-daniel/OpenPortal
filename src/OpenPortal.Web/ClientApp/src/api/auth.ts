@@ -1,5 +1,6 @@
 import { api, invalidateAntiforgeryToken } from './client'
 import type { AccountProfile, ChangePasswordRequest, Session, UpdateProfileRequest } from './types'
+import { avatarForm } from './users'
 
 export const authApi = {
   session: (signal?: AbortSignal) => api.get<Session>('/api/auth/session', signal),
@@ -31,4 +32,6 @@ export const accountApi = {
   /** Saves the preferred UI language (null clears it). */
   updateLanguage: (language: string | null) => api.put<AccountProfile>('/api/account/language', { language }),
   changePassword: (body: ChangePasswordRequest) => api.post<void>('/api/account/change-password', body),
+  uploadAvatar: (image: Blob) => api.put<void>('/api/account/avatar', avatarForm(image)),
+  removeAvatar: () => api.delete<void>('/api/account/avatar'),
 }

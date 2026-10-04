@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2 } from 'lucide-react'
+import { Info, Loader2, LockKeyhole, UserRound } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { z } from 'zod'
 import { accountApi } from '@/api/auth'
 import { ApiError } from '@/api/client'
-import type { AccountProfile, PasswordPolicy } from '@/api/types'
+import type { AccountProfile, PasswordPolicy, SessionUser } from '@/api/types'
+import { AvatarUpload } from '@/components/AvatarUpload'
 import { FormField } from '@/components/FormField'
 import { PageHeader } from '@/components/PageHeader'
 import { Section } from '@/components/Section'
@@ -13,7 +14,10 @@ import { UserDetailsFields } from '@/components/UserDetailsFields'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SESSION_QUERY_KEY, useSession } from '@/hooks/useSession'
+import { useTabParam } from '@/hooks/useTabParam'
 import { notify } from '@/hooks/useToast'
 import { formatDate } from '@/i18n/store'
 import { useI18n } from '@/i18n/useI18n'
@@ -37,6 +41,8 @@ import {
 export function AccountPage() {
   const { user, session } = useSession()
   const { t } = useI18n()
+  const queryClient = useQueryClient()
+  const [tab, setTab] = useTabParam(ACCOUNT_TABS)
 
   const profile = useQuery({
     queryKey: ['account-profile'],
@@ -47,51 +53,102 @@ export function AccountPage() {
     <div className="space-y-6">
       <PageHeader title={t('account.title')} description={t('account.description')} />
 
-      {profile.isPending && <LoadingState />}
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList variant="line" className="max-w-full flex-wrap justify-start group-data-[orientation=horizontal]/tabs:h-auto">
+          <TabsTrigger value="profile">
+            <UserRound />
+            {t('account.tab.profile')}
+          </TabsTrigger>
+          <TabsTrigger value="security">
+            <LockKeyhole />
+            {t('account.tab.security')}
+          </TabsTrigger>
+          <TabsTrigger value="details">
+            <Info />
+            {t('account.tab.details')}
+          </TabsTrigger>
+        </TabsList>
+        <Separator className="-mt-2" />
 
-      {profile.data && <ProfileForm initial={profile.data} />}
+        <TabsContent value="profile" className="space-y-6 pt-4">
+          {profile.isPending && <LoadingState />}
 
-      <PasswordForm policy={session.passwordPolicy} />
-
-      <Section title={t('account.details')}>
-        <dl className="grid gap-4 text-sm sm:grid-cols-2">
-          <div className="space-y-1">
-            <dt className="text-muted-foreground">{t('common.email')}</dt>
-            <dd className="font-mono text-sm break-all">{user?.email}</dd>
-          </div>
-          <div className="space-y-1">
-            <dt className="text-muted-foreground">{t('account.emailConfirmed')}</dt>
-            <dd>
-              {user?.emailConfirmed ? (
-                <Badge variant="success">{t('account.confirmed')}</Badge>
-              ) : (
-                <Badge variant="warning">{t('account.notConfirmed')}</Badge>
-              )}
-            </dd>
-          </div>
-          <div className="space-y-1">
-            <dt className="text-muted-foreground">{t('common.roles')}</dt>
-            <dd className="flex flex-wrap gap-1">
-              {(user?.roles.length ?? 0) === 0 ? (
-                <span className="text-muted-foreground">{t('common.none')}</span>
-              ) : (
-                user!.roles.map((role) => (
-                  <Badge key={role} variant="secondary">
-                    {t(`role.${role}`)}
-                  </Badge>
-                ))
-              )}
-            </dd>
-          </div>
           {profile.data && (
-            <div className="space-y-1">
-              <dt className="text-muted-foreground">{t('account.memberSince')}</dt>
-              <dd>{formatDate(profile.data.createdAtUtc)}</dd>
-            </div>
+            <>
+              <Section title={t('avatar.title')} description={t('account.avatarDescription')}>
+                <AvatarUpload
+                  user={profile.data}
+                  upload={accountApi.uploadAvatar}
+                  remove={accountApi.removeAvatar}
+                  // The session carries the stamp the sidebar's picture is versioned by.
+                  onChanged={() => {
+                    void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY })
+                    void queryClient.invalidateQueries({ queryKey: ['account-profile'] })
+                  }}
+                />
+              </Section>
+              <ProfileForm initial={profile.data} />
+            </>
           )}
-        </dl>
-      </Section>
+        </TabsContent>
+
+        <TabsContent value="security" className="pt-4">
+          <PasswordForm policy={session.passwordPolicy} />
+        </TabsContent>
+
+        <TabsContent value="details" className="pt-4">
+          <AccountDetails user={user} profile={profile.data} />
+        </TabsContent>
+      </Tabs>
     </div>
+  )
+}
+
+const ACCOUNT_TABS = ['profile', 'security', 'details'] as const
+
+/** Read-only facts about the account that the user cannot edit here. */
+function AccountDetails({ user, profile }: { user: SessionUser | null; profile: AccountProfile | undefined }) {
+  const { t } = useI18n()
+
+  return (
+    <Section title={t('account.details')}>
+      <dl className="grid gap-4 text-sm sm:grid-cols-2">
+        <div className="space-y-1">
+          <dt className="text-muted-foreground">{t('common.email')}</dt>
+          <dd className="font-mono text-sm break-all">{user?.email}</dd>
+        </div>
+        <div className="space-y-1">
+          <dt className="text-muted-foreground">{t('account.emailConfirmed')}</dt>
+          <dd>
+            {user?.emailConfirmed ? (
+              <Badge variant="success">{t('account.confirmed')}</Badge>
+            ) : (
+              <Badge variant="warning">{t('account.notConfirmed')}</Badge>
+            )}
+          </dd>
+        </div>
+        <div className="space-y-1">
+          <dt className="text-muted-foreground">{t('common.roles')}</dt>
+          <dd className="flex flex-wrap gap-1">
+            {(user?.roles.length ?? 0) === 0 ? (
+              <span className="text-muted-foreground">{t('common.none')}</span>
+            ) : (
+              user!.roles.map((role) => (
+                <Badge key={role} variant="secondary">
+                  {t(`role.${role}`)}
+                </Badge>
+              ))
+            )}
+          </dd>
+        </div>
+        {profile && (
+          <div className="space-y-1">
+            <dt className="text-muted-foreground">{t('account.memberSince')}</dt>
+            <dd>{formatDate(profile.createdAtUtc)}</dd>
+          </div>
+        )}
+      </dl>
+    </Section>
   )
 }
 

@@ -165,7 +165,11 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     'Accept-Language': currentLanguage(),
   }
 
-  if (options.body !== undefined) {
+  // A FormData body (file uploads) is sent as-is: the browser writes the multipart Content-Type itself,
+  // boundary included, so setting the header here would break it.
+  const isForm = options.body instanceof FormData
+
+  if (options.body !== undefined && !isForm) {
     headers['Content-Type'] = 'application/json'
   }
 
@@ -177,7 +181,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     method,
     headers,
     credentials: 'same-origin',
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    body: options.body === undefined ? undefined : isForm ? (options.body as FormData) : JSON.stringify(options.body),
     signal: options.signal,
   })
 
