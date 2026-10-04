@@ -588,6 +588,7 @@
   <data name="address.city.useTyped" xml:space="preserve"><value>Usar «{text}»</value></data>
   <data name="address.city.clear" xml:space="preserve"><value>Quitar la ciudad</value></data>
   <data name="address.unavailable" xml:space="preserve"><value>Las sugerencias no están disponibles ahora.</value></data>
+  <data name="address.attribution" xml:space="preserve"><value>Datos de direcciones:</value></data>
   <data name="address.postalCode.looking" xml:space="preserve"><value>Buscando el código postal…</value></data>
   <data name="address.postalCode.many_one" xml:space="preserve"><value>{count} localidad con este código postal</value></data>
   <data name="address.postalCode.many_other" xml:space="preserve"><value>{count} localidades con este código postal: elige la ciudad</value></data>

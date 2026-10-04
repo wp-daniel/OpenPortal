@@ -9,9 +9,15 @@ import { cn } from '@/lib/utils'
 
 /** A small flag; decorative, since the country's name is always written next to it. */
 export function CountryFlag({ code, className }: { code: string; className?: string }) {
+  const src = flagUrl(code)
+
+  if (!src) {
+    return <Globe className={cn('text-muted-foreground', className)} />
+  }
+
   return (
     <img
-      src={flagUrl(code)}
+      src={src}
       alt=""
       loading="lazy"
       className={cn('h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-black/10', className)}

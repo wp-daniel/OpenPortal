@@ -42,9 +42,20 @@ export function countryName(code: string, language: string): string {
 }
 
 /**
- * Flag image from flagcdn.com (free, no key). An image rather than the emoji flag, because Windows renders
- * flag emoji as two letters.
+ * The flags of the `flag-icons` package (MIT), bundled as assets and served by the portal itself, so the
+ * browser never asks a third party for them. `no-inline` keeps every flag a file of its own: only the URLs
+ * end up in the bundle, and a flag is downloaded when it is first shown.
  */
-export function flagUrl(code: string): string {
-  return `https://flagcdn.com/${code.toLowerCase()}.svg`
+const flags = import.meta.glob<string>('/node_modules/flag-icons/flags/4x3/??.svg', {
+  query: '?no-inline',
+  import: 'default',
+  eager: true,
+})
+
+/**
+ * Flag image for a country code. An image rather than the emoji flag, because Windows renders flag emoji as
+ * two letters.
+ */
+export function flagUrl(code: string): string | undefined {
+  return flags[`/node_modules/flag-icons/flags/4x3/${code.toLowerCase()}.svg`]
 }

@@ -588,6 +588,7 @@
   <data name="address.city.useTyped" xml:space="preserve"><value>Usa «{text}»</value></data>
   <data name="address.city.clear" xml:space="preserve"><value>Rimuovi la città</value></data>
   <data name="address.unavailable" xml:space="preserve"><value>Suggerimenti non disponibili al momento.</value></data>
+  <data name="address.attribution" xml:space="preserve"><value>Dati degli indirizzi:</value></data>
   <data name="address.postalCode.looking" xml:space="preserve"><value>Ricerca del CAP…</value></data>
   <data name="address.postalCode.many_one" xml:space="preserve"><value>{count} località con questo CAP</value></data>
   <data name="address.postalCode.many_other" xml:space="preserve"><value>{count} località con questo CAP: scegli la città</value></data>

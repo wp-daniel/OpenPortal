@@ -1,12 +1,14 @@
 # Third-party notices
 
-OpenPortal is released under the [MIT License](LICENSE). It builds on the open-source projects below. Each
-keeps its own license and copyright; this file records the ones whose code is **copied into this repository**
-or **shipped in the client bundle**. Packages that are only installed (not committed) carry their own license
-file inside `node_modules` and in their npm package.
+OpenPortal is released under the [MIT License](LICENSE). It builds on the open-source projects and open data
+below. Each keeps its own license and copyright. Every dependency is under a permissive license (MIT, ISC,
+BSD, 0BSD, Apache-2.0); nothing is GPL/AGPL or restricted to non-commercial use, so OpenPortal can be used,
+changed and redistributed, commercially or not, under its MIT license.
 
-The versions are those resolved in `src/OpenPortal.Web/ClientApp/package-lock.json` when this file was
-written. Re-check the license of anything you add or upgrade.
+Packages that are only installed (not committed) carry their own license file inside `node_modules` and the
+NuGet cache. The versions are those resolved in `src/OpenPortal.Web/ClientApp/package-lock.json` and
+`Directory.Packages.props` when this file was written. **Re-check the license of anything you add or upgrade,
+and add it here.**
 
 ## Code copied into this repository
 
@@ -18,10 +20,13 @@ The shadcn/ui components are copied rather than installed, so their source is pa
 local edits are listed in `CLAUDE.md` (the `Button` default type, extra `Badge` variants, and a `Toaster`
 that reads our own theme).
 
-## Client dependencies
+## Shipped in the client bundle
+
+These end up in the files the portal serves to browsers (`wwwroot`).
 
 | Package | License | Copyright |
 | --- | --- | --- |
+| [flag-icons](https://github.com/lipis/flag-icons) (country flag SVGs, served by the portal itself) | MIT | © 2013 Panayiotis Lipiridis |
 | [Radix UI](https://www.radix-ui.com) (`radix-ui`) | MIT | © 2022 WorkOS |
 | [cmdk](https://cmdk.paco.me) | MIT | © 2022 Paco Coursey |
 | [Sonner](https://sonner.emilkowal.ski) | MIT | © 2023 Emil Kowalski |
@@ -35,19 +40,72 @@ that reads our own theme).
 | [React](https://react.dev) / React DOM | MIT | © Meta Platforms, Inc. and affiliates |
 | [React Router](https://reactrouter.com) | MIT | © React Training LLC 2015-2019, Remix Software Inc. 2020-2021, Shopify Inc. 2022-2023 |
 | [Zod](https://zod.dev) | MIT | © 2025 Colin McDonnell |
+| [tslib](https://github.com/microsoft/tslib) (through Radix UI's `react-remove-scroll` and `aria-hidden`) | 0BSD | © Microsoft Corporation |
+
+The remaining transitive packages of the bundle are MIT.
 
 class-variance-authority is Apache-2.0: if you redistribute it, keep its license text and any NOTICE it
-ships. It is not copied here, only installed through npm.
+ships.
+
+## Build tools (not shipped)
+
+Used to type-check, lint and build the client; none of their code reaches the served files.
+
+| Package | License |
+| --- | --- |
+| [Vite](https://vite.dev), [Rolldown](https://rolldown.rs), `@vitejs/plugin-react`, `@tailwindcss/vite`, [oxlint](https://oxc.rs) | MIT |
+| [TypeScript](https://www.typescriptlang.org) | Apache-2.0 |
+| [source-map-js](https://github.com/7rulnik/source-map-js) (through Tailwind CSS) | BSD-3-Clause |
+| [Lightning CSS](https://lightningcss.dev) (`lightningcss`, through Vite and Tailwind CSS) | MPL-2.0 |
+
+Lightning CSS is MPL-2.0, a file-level copyleft: it would only oblige you to publish changes made to *its own
+files*. It is used unmodified as a build tool and is not part of the output, so it places no obligation on
+OpenPortal or on applications built with it.
 
 ## Server dependencies
 
-The .NET packages (ASP.NET Core, Entity Framework Core, and the test libraries listed in
-`Directory.Packages.props`) are installed from NuGet under their own licenses, mostly MIT and Apache-2.0. They
-are not copied into this repository.
+Installed from NuGet, not copied into this repository.
 
-[OpenIddict](https://documentation.openiddict.com) (`OpenIddict.AspNetCore`, `OpenIddict.EntityFrameworkCore`),
-which provides the OpenID Connect server, is Apache-2.0 (© Kévin Chalet and contributors): if you
-redistribute it, keep its license text and any NOTICE it ships.
+| Package | License | Copyright |
+| --- | --- | --- |
+| ASP.NET Core, Entity Framework Core, `Microsoft.Extensions.*` | MIT | © .NET Foundation and Contributors; © Microsoft Corporation |
+| [OpenIddict](https://documentation.openiddict.com) (`OpenIddict.AspNetCore`, `OpenIddict.EntityFrameworkCore` and their dependencies) | Apache-2.0 | © Kévin Chalet and contributors |
+| [Polly](https://www.thepollyproject.org) (through OpenIddict's HTTP client) | BSD-3-Clause | © App vNext |
+| [SQLitePCLRaw](https://github.com/ericsink/SQLitePCL.raw) (through `Microsoft.EntityFrameworkCore.Sqlite`) | Apache-2.0 | © SourceGear, LLC |
+| [SQLite](https://sqlite.org) (native library bundled by SQLitePCLRaw) | Public domain | — |
+
+OpenIddict and SQLitePCLRaw are Apache-2.0: if you redistribute them (for example in a published build), keep
+their license texts and any NOTICE they ship. `OpenPortal.Client`, the NuGet package for connecting other
+applications, depends only on Microsoft packages (MIT).
+
+### Test-only
+
+| Package | License |
+| --- | --- |
+| [xUnit.net v3](https://xunit.net) | Apache-2.0 |
+| [Shouldly](https://github.com/shouldly/shouldly) | BSD-3-Clause |
+| [NetArchTest](https://github.com/BenMorris/NetArchTest) (and Mono.Cecil, which it uses) | MIT |
+| `Microsoft.NET.Test.Sdk`, `Microsoft.AspNetCore.Mvc.Testing`, coverlet | MIT |
+
+## Address data and online services
+
+The address suggestions (`Geo:*` in `appsettings.json`) call two free, keyless public services from the
+**server**; browsers never contact them directly. They can be turned off (`Geo:Enabled = false`) or pointed at
+a self-hosted instance (`Geo:PostalCodeBaseUrl`, `Geo:PlacesBaseUrl`).
+
+| Service | Used for | Data and license | Required credit |
+| --- | --- | --- | --- |
+| [Photon](https://photon.komoot.io) by komoot | towns matching a name | [OpenStreetMap](https://www.openstreetmap.org/copyright) data, [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) | © OpenStreetMap contributors |
+| [Zippopotam.us](https://zippopotam.us) | places behind a postal code | [GeoNames](https://www.geonames.org) data ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)), served under ODbL 1.0 | GeoNames |
+
+- **Attribution.** The portal shows the credits next to the suggestions whenever they are on screen
+  (`GeoAttribution`). Keep it if you change those components.
+- **Fair use.** The public Photon instance accepts "a reasonable number of requests" and throttles or bans
+  heavy use; neither service guarantees availability. The portal caches answers (12 hours by default) and
+  gives up quickly on a slow provider, but for a busy installation run your own
+  [Photon](https://github.com/komoot/photon) instance.
+- **Privacy.** What the user types in the city and postal-code fields (plus the country) is sent to these
+  services by the portal's server, without any user identifier.
 
 ## Design inspiration
 

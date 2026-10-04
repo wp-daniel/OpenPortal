@@ -4,6 +4,7 @@ import { geoApi, geoKeys } from '@/api/geo'
 import { CityCombobox } from '@/components/CityCombobox'
 import { CountryCombobox } from '@/components/CountryCombobox'
 import { FormField } from '@/components/FormField'
+import { GeoAttribution } from '@/components/GeoAttribution'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { useDebounced } from '@/hooks/useDebounced'
@@ -174,6 +175,8 @@ function AddressFields({
           }}
         />
       </FormField>
+
+      <GeoAttribution sources={places.length > 0 ? ['geonames'] : []} className="-mt-2 sm:col-span-2" />
     </>
   )
 }

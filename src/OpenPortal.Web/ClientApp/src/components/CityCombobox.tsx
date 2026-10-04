@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Check, ChevronsUpDown, Loader2, MapPin, PenLine, X } from 'lucide-react'
 import { useState, type ComponentProps } from 'react'
 import { geoApi, geoKeys, type GeoPlace } from '@/api/geo'
+import { GeoAttribution } from '@/components/GeoAttribution'
 import { Button } from '@/components/ui/button'
 import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -144,6 +145,13 @@ export function CityCombobox({
               </CommandGroup>
             )}
           </CommandList>
+          <GeoAttribution
+            sources={[
+              ...(fromPostalCode.length > 0 ? (['geonames'] as const) : []),
+              ...(fromSearch.length > 0 ? (['osm'] as const) : []),
+            ]}
+            className="border-t px-3 py-2"
+          />
         </Command>
       </PopoverContent>
     </Popover>

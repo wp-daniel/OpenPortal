@@ -202,6 +202,13 @@ every code exchange and refresh, so taking access away takes effect without wait
 | `Access:ProvisioningKey` | shared key applications present when they announce themselves (user secrets); blank disables announcements |
 | `Oidc` | token signing/encryption certificates (`SigningCertificatePath`, `EncryptionCertificatePath` + passwords), token lifetimes; required outside Development |
 | `DataProtection:KeysPath` | where the key ring lives (default `App_Data/keys`); share it between instances |
+| `Geo` | address suggestions: `Enabled`, `PostalCodeBaseUrl` ([Zippopotam.us](https://zippopotam.us)), `PlacesBaseUrl` ([Photon](https://photon.komoot.io)) |
+
+Address suggestions use two free public services by default, called from the server and credited in the UI
+(OpenStreetMap and GeoNames data). They are meant for fair use with no guaranteed availability: for a busy
+installation point `Geo:PlacesBaseUrl` at your own [Photon](https://github.com/komoot/photon) instance, or
+turn the lookups off with `Geo:Enabled = false`. Country flags are bundled with the client, so browsers never
+contact a third party. See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md#address-data-and-online-services).
 
 ## Documentation
 
