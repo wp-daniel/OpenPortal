@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom'
+import { BrandMark } from '@/components/BrandMark'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { MagneticCursor } from '@/components/MagneticCursor'
 import { StarField } from '@/components/StarField'
@@ -18,7 +19,7 @@ export function AuthLayout() {
 
       <header className="relative z-10 flex items-center justify-between px-6 py-5">
         <div className="flex items-center gap-2.5">
-          <img src="/favicon.svg" alt="" className="size-6" />
+          <BrandMark className="size-6" />
           <span className="text-xs font-medium tracking-[0.25em] uppercase">OpenPortal</span>
         </div>
         <div className="flex items-center gap-1">

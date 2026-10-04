@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/openportal-logo-white.svg">
+    <img src="docs/brand/openportal-logo.svg" alt="OpenPortal" width="280">
+  </picture>
+</p>
+
 # Architecture
 
 OpenPortal is a modular monolith: one deployable ASP.NET Core host, a React client, and three business modules
@@ -6,7 +13,8 @@ provider, so other applications can sign their users in through it.
 
 The shape exists to make two specific promises cheap to keep:
 
-1. **Content and identity do not know about each other.** Either could be extracted, replaced or tested alone.
+1. **The modules do not know about each other.** Identity, Content and Access could each be extracted, replaced
+   or tested alone; where one needs something from another, the host supplies it through a port.
 2. **The database engine is a host-level decision.** No domain, application or module-infrastructure project
    references a provider, so moving from SQLite to PostgreSQL touches one file.
 
@@ -208,8 +216,8 @@ unpublished work. `Public_project_payload_does_not_leak_editor_fields` guards th
 
 ## Persistence
 
-Two `DbContext` instances, one per module. Each module owns its schema and its migrations; the Content
-context has no idea Identity exists.
+Three `DbContext` instances, one per module (Identity, Content, Access). Each module owns its schema and its
+migrations; no context knows the others exist, and the Access context also holds the OpenIddict tables.
 
 **Provider selection** lives only in `DatabaseProviderSelector.Configure`. Modules register their contexts
 through a callback that receives a provider-agnostic `DbContextOptionsBuilder`:
@@ -221,11 +229,11 @@ services.AddContentModule(options => DatabaseProviderSelector.Configure(options,
 Setting `Database:Provider` to `PostgreSql` currently throws at startup with an instruction to add Npgsql,
 rather than failing at the first query.
 
-**SQLite compatibility.** SQLite cannot order by `DateTimeOffset`, so both contexts apply a value converter
+**SQLite compatibility.** SQLite cannot order by `DateTimeOffset`, so every context applies a value converter
 that maps to UTC ticks. This is provider-specific and lives in the Infrastructure layer, which is the only
 layer allowed to know the provider.
 
-**Migrations** are checked in under `src/OpenPortal.Web/Persistence/Migrations/{Identity,Content}`. They run
+**Migrations** are checked in under `src/OpenPortal.Web/Persistence/Migrations/{Identity,Content,Access}`. They run
 at startup only when `Database:MigrateOnStartup` is true (development); in production they belong in a
 separate, ordered deployment step, because several instances migrating concurrently is a race.
 
