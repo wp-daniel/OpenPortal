@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using OpenPortal.Identity.Domain.Users;
 
 namespace OpenPortal.Identity.Application.Contracts;
 
@@ -12,7 +11,17 @@ public sealed record UserSummaryDto(
     bool IsLockedOut,
     DateTimeOffset? LockoutEndUtc,
     DateTimeOffset CreatedAtUtc,
-    IReadOnlyList<string> Roles);
+    IReadOnlyList<string> Roles,
+    string FirstName,
+    string LastName,
+    string? PhoneNumber,
+    string? JobTitle,
+    string? Company,
+    string? Department,
+    string? AddressLine,
+    string? City,
+    string? PostalCode,
+    string? Country);
 
 /// <summary>Filter and paging parameters for the administration user list.</summary>
 public sealed class UserListQuery
@@ -25,13 +34,29 @@ public sealed class UserListQuery
     [Range(1, MaxPageSize, ErrorMessage = "validation.pageSize.range")]
     public int PageSize { get; init; } = 20;
 
-    /// <summary>Free-text filter matched against email and display name.</summary>
+    /// <summary>Free-text filter matched against email, name, phone and company.</summary>
     [StringLength(256, ErrorMessage = "validation.search.max")]
     public string? Search { get; init; }
+
+    /// <summary>Only accounts holding this role.</summary>
+    [StringLength(64, ErrorMessage = "validation.search.max")]
+    public string? Role { get; init; }
+
+    /// <summary>One of <see cref="UserStatusFilter"/>; anything else is ignored.</summary>
+    [StringLength(32, ErrorMessage = "validation.search.max")]
+    public string? Status { get; init; }
+}
+
+/// <summary>Account states offered as a filter in the user list.</summary>
+public static class UserStatusFilter
+{
+    public const string Active = "active";
+    public const string Locked = "locked";
+    public const string Unconfirmed = "unconfirmed";
 }
 
 /// <summary>A new account created by an administrator.</summary>
-public sealed class CreateUserRequest
+public sealed class CreateUserRequest : UserDetailsRequest
 {
     [Required(AllowEmptyStrings = false, ErrorMessage = "validation.email.required")]
     [EmailAddress(ErrorMessage = "validation.email.invalid")]
@@ -42,13 +67,6 @@ public sealed class CreateUserRequest
     [StringLength(256, ErrorMessage = "validation.password.max")]
     public string Password { get; init; } = string.Empty;
 
-    /// <summary>Optional; defaults to the local part of the email address when omitted.</summary>
-    [StringLength(
-        ApplicationUser.DisplayNameMaxLength,
-        MinimumLength = ApplicationUser.DisplayNameMinLength,
-        ErrorMessage = "validation.displayName.length")]
-    public string? DisplayName { get; init; }
-
     /// <summary>
     /// Requested roles. Filtered against <see cref="Roles.All"/> on the server; unknown names are rejected
     /// rather than silently dropped.
@@ -57,15 +75,8 @@ public sealed class CreateUserRequest
 }
 
 /// <summary>Editable fields and role membership of an existing account.</summary>
-public sealed class UpdateUserRequest
+public sealed class UpdateUserRequest : UserDetailsRequest
 {
-    [Required(AllowEmptyStrings = false, ErrorMessage = "validation.displayName.required")]
-    [StringLength(
-        ApplicationUser.DisplayNameMaxLength,
-        MinimumLength = ApplicationUser.DisplayNameMinLength,
-        ErrorMessage = "validation.displayName.length")]
-    public string DisplayName { get; init; } = string.Empty;
-
     public IReadOnlyList<string> Roles { get; init; } = [];
 }
 

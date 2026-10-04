@@ -20,6 +20,22 @@ internal sealed class ApplicationUserConfiguration : IEntityTypeConfiguration<Ap
             .HasMaxLength(ApplicationUser.DisplayNameMaxLength)
             .IsRequired();
 
+        builder.Property(user => user.FirstName)
+            .HasMaxLength(ApplicationUser.NameMaxLength)
+            .IsRequired();
+
+        builder.Property(user => user.LastName)
+            .HasMaxLength(ApplicationUser.NameMaxLength)
+            .IsRequired();
+
+        builder.Property(user => user.JobTitle).HasMaxLength(ApplicationUser.DetailMaxLength);
+        builder.Property(user => user.Company).HasMaxLength(ApplicationUser.DetailMaxLength);
+        builder.Property(user => user.Department).HasMaxLength(ApplicationUser.DetailMaxLength);
+        builder.Property(user => user.AddressLine).HasMaxLength(ApplicationUser.DetailMaxLength);
+        builder.Property(user => user.City).HasMaxLength(ApplicationUser.DetailMaxLength);
+        builder.Property(user => user.PostalCode).HasMaxLength(ApplicationUser.DetailMaxLength);
+        builder.Property(user => user.Country).HasMaxLength(ApplicationUser.DetailMaxLength);
+
         builder.Property(user => user.Language)
             .HasMaxLength(ApplicationUser.LanguageMaxLength);
 

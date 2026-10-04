@@ -12,21 +12,25 @@ public sealed record AccountProfileDto(
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset? UpdatedAtUtc,
     IReadOnlyList<string> Roles,
-    string? Language);
+    string? Language,
+    string FirstName,
+    string LastName,
+    string? PhoneNumber,
+    string? JobTitle,
+    string? Company,
+    string? Department,
+    string? AddressLine,
+    string? City,
+    string? PostalCode,
+    string? Country);
 
 /// <summary>Mutable fields of the signed-in account's profile.</summary>
 /// <para>
 /// Email is intentionally absent. The email address is the login identifier, so changing it requires a
 /// confirmation flow; exposing the field here without that flow would let an account lock itself out.
 /// </para>
-public sealed class UpdateProfileRequest
+public sealed class UpdateProfileRequest : UserDetailsRequest
 {
-    [Required(AllowEmptyStrings = false, ErrorMessage = "validation.displayName.required")]
-    [StringLength(
-        ApplicationUser.DisplayNameMaxLength,
-        MinimumLength = ApplicationUser.DisplayNameMinLength,
-        ErrorMessage = "validation.displayName.length")]
-    public string DisplayName { get; init; } = string.Empty;
 }
 
 /// <summary>A password change for the signed-in account.</summary>

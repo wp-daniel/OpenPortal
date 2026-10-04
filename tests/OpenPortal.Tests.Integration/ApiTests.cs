@@ -326,10 +326,93 @@ public sealed class ApiTests : IClassFixture<OpenPortalFactory>
 
         using var response = await client.PostAsync(
             "/api/admin/users",
-            new { email = "created@example.com", password = Passwords.Valid, displayName = "Created", roles = new[] { "User" } });
+            new
+            {
+                email = "created@example.com",
+                password = Passwords.Valid,
+                firstName = "Grace",
+                lastName = "Hopper",
+                phoneNumber = "+1 202 555 0143",
+                company = "Navy",
+                jobTitle = "Rear Admiral",
+                city = "Arlington",
+                roles = new[] { "User" },
+            });
 
         response.StatusCode.ShouldBe(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
         response.Headers.Location.ShouldNotBeNull();
+
+        var created = await response.Content.ReadFromJsonAsync<JsonElement>();
+        created.GetProperty("displayName").GetString().ShouldBe("Grace Hopper");
+        created.GetProperty("phoneNumber").GetString().ShouldBe("+1 202 555 0143");
+        created.GetProperty("company").GetString().ShouldBe("Navy");
+    }
+
+    [Fact]
+    public async Task Creating_a_user_without_a_last_name_or_with_a_bad_phone_is_a_400()
+    {
+        var admin = await _factory.CreateUserAsync("strict@example.com", Passwords.Valid, "Administrator");
+        using var client = await ApiClient.CreateAsync(_factory);
+        await client.SignInAsync(admin.Email, admin.Password);
+
+        using var noLastName = await client.PostAsync(
+            "/api/admin/users",
+            new { email = "a@example.com", password = Passwords.Valid, firstName = "Ada", roles = new[] { "User" } });
+        using var badPhone = await client.PostAsync(
+            "/api/admin/users",
+            new
+            {
+                email = "b@example.com",
+                password = Passwords.Valid,
+                firstName = "Ada",
+                lastName = "Lovelace",
+                phoneNumber = "call me maybe",
+                roles = new[] { "User" },
+            });
+
+        noLastName.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        badPhone.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        badPhone.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
+    }
+
+    [Fact]
+    public async Task Admin_can_filter_users_by_role_status_and_search()
+    {
+        var admin = await _factory.CreateUserAsync("filter-admin@example.com", Passwords.Valid, "Administrator");
+        using var client = await ApiClient.CreateAsync(_factory);
+        await client.SignInAsync(admin.Email, admin.Password);
+
+        using var created = await client.PostAsync(
+            "/api/admin/users",
+            new
+            {
+                email = "filter-target@example.com",
+                password = Passwords.Valid,
+                firstName = "Zed",
+                lastName = "Zimmermann",
+                phoneNumber = "+39 333 123 4567",
+                company = "Acme Spa",
+                roles = new[] { "User" },
+            });
+        created.StatusCode.ShouldBe(HttpStatusCode.Created);
+
+        async Task<string[]> EmailsAsync(string query)
+        {
+            using var response = await client.GetAsync("/api/admin/users" + query);
+            response.StatusCode.ShouldBe(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+            var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+            return payload.GetProperty("items").EnumerateArray()
+                .Select(item => item.GetProperty("email").GetString()!)
+                .ToArray();
+        }
+
+        (await EmailsAsync("?search=acme")).ShouldBe(["filter-target@example.com"]);
+        (await EmailsAsync("?search=333%20123")).ShouldBe(["filter-target@example.com"]);
+        (await EmailsAsync("?role=Administrator")).ShouldContain("filter-admin@example.com");
+        (await EmailsAsync("?role=Administrator")).ShouldNotContain("filter-target@example.com");
+        (await EmailsAsync("?status=active")).ShouldContain("filter-target@example.com");
+        (await EmailsAsync("?status=locked")).ShouldBeEmpty();
     }
 
     [Fact]
@@ -364,10 +447,13 @@ public sealed class ApiTests : IClassFixture<OpenPortalFactory>
 
         using (var update = await client.PutAsync("/api/account/profile", new
         {
-            displayName = "Renamed Person",
+            firstName = "Renamed",
+            lastName = "Person",
+            phoneNumber = "+39 06 1234 5678",
+            city = "Roma",
         }))
         {
-            update.StatusCode.ShouldBe(HttpStatusCode.OK);
+            update.StatusCode.ShouldBe(HttpStatusCode.OK, await update.Content.ReadAsStringAsync());
         }
 
         using var read = await client.GetAsync("/api/account/profile");
@@ -375,6 +461,8 @@ public sealed class ApiTests : IClassFixture<OpenPortalFactory>
 
         read.StatusCode.ShouldBe(HttpStatusCode.OK);
         payload.GetProperty("displayName").GetString().ShouldBe("Renamed Person");
+        payload.GetProperty("firstName").GetString().ShouldBe("Renamed");
+        payload.GetProperty("city").GetString().ShouldBe("Roma");
     }
 
     [Fact]

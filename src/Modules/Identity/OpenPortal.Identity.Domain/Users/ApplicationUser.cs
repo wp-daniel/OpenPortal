@@ -15,6 +15,9 @@ public sealed class ApplicationUser : IdentityUser<Guid>
     public const int DisplayNameMinLength = 2;
     public const int DisplayNameMaxLength = 120;
     public const int LanguageMaxLength = 10;
+    public const int NameMaxLength = 60;
+    public const int DetailMaxLength = 100;
+    public const int PhoneMaxLength = 30;
 
     /// <summary>Required by Entity Framework Core materialisation.</summary>
     private ApplicationUser()
@@ -83,6 +86,121 @@ public sealed class ApplicationUser : IdentityUser<Guid>
 
         return SharedKernel.Results.Result.Success();
     }
+
+    public string FirstName { get; private set; } = string.Empty;
+
+    public string LastName { get; private set; } = string.Empty;
+
+    public string? JobTitle { get; private set; }
+
+    public string? Company { get; private set; }
+
+    public string? Department { get; private set; }
+
+    public string? AddressLine { get; private set; }
+
+    public string? City { get; private set; }
+
+    public string? PostalCode { get; private set; }
+
+    public string? Country { get; private set; }
+
+    /// <summary>
+    /// Replaces the personal, work and address details. The phone number is Identity's own
+    /// <see cref="IdentityUser{TKey}.PhoneNumber"/>. The display name is derived from the first and last
+    /// name so every screen that shows it keeps working.
+    /// </summary>
+    public SharedKernel.Results.Result UpdateDetails(UserDetails details, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(details);
+
+        var first = details.FirstName?.Trim() ?? string.Empty;
+        var last = details.LastName?.Trim() ?? string.Empty;
+
+        if (first.Length == 0)
+        {
+            return SharedKernel.Results.Result.Failure(UserErrors.FirstNameRequired);
+        }
+
+        if (last.Length == 0)
+        {
+            return SharedKernel.Results.Result.Failure(UserErrors.LastNameRequired);
+        }
+
+        if (first.Length > NameMaxLength || last.Length > NameMaxLength)
+        {
+            return SharedKernel.Results.Result.Failure(UserErrors.NameTooLong);
+        }
+
+        var displayName = $"{first} {last}";
+        if (displayName.Length < DisplayNameMinLength)
+        {
+            return SharedKernel.Results.Result.Failure(UserErrors.DisplayNameTooShort);
+        }
+
+        var phone = Clean(details.PhoneNumber);
+        if (phone is not null && !IsWellFormedPhoneNumber(phone))
+        {
+            return SharedKernel.Results.Result.Failure(UserErrors.InvalidPhoneNumber);
+        }
+
+        var jobTitle = Clean(details.JobTitle);
+        var company = Clean(details.Company);
+        var department = Clean(details.Department);
+        var addressLine = Clean(details.AddressLine);
+        var city = Clean(details.City);
+        var postalCode = Clean(details.PostalCode);
+        var country = Clean(details.Country);
+
+        if (new[] { jobTitle, company, department, addressLine, city, postalCode, country }
+            .Any(value => value is not null && value.Length > DetailMaxLength))
+        {
+            return SharedKernel.Results.Result.Failure(UserErrors.DetailTooLong);
+        }
+
+        FirstName = first;
+        LastName = last;
+        DisplayName = displayName;
+        PhoneNumber = phone;
+        JobTitle = jobTitle;
+        Company = company;
+        Department = department;
+        AddressLine = addressLine;
+        City = city;
+        PostalCode = postalCode;
+        Country = country;
+        UpdatedAtUtc = now;
+
+        return SharedKernel.Results.Result.Success();
+    }
+
+    /// <summary>Digits with an optional leading <c>+</c>; spaces, dots, dashes and brackets are tolerated.</summary>
+    public static bool IsWellFormedPhoneNumber(string phone)
+    {
+        if (phone.Length > PhoneMaxLength)
+        {
+            return false;
+        }
+
+        var digits = 0;
+        for (var i = 0; i < phone.Length; i++)
+        {
+            var c = phone[i];
+            if (char.IsAsciiDigit(c))
+            {
+                digits++;
+            }
+            else if (!(c == '+' && i == 0) && c is not (' ' or '-' or '.' or '(' or ')'))
+            {
+                return false;
+            }
+        }
+
+        return digits is >= 6 and <= 15;
+    }
+
+    private static string? Clean(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     /// <summary>Stores the preferred UI language. <see langword="null"/> clears the preference.</summary>
     public SharedKernel.Results.Result SetLanguage(string? language, DateTimeOffset now)

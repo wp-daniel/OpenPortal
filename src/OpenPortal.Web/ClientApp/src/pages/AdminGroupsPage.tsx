@@ -30,6 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { TableToolbar } from '@/components/TableToolbar'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -38,6 +39,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { notify } from '@/hooks/useToast'
+import { matchesSearch } from '@/lib/tableFilter'
 import { useI18n } from '@/i18n/useI18n'
 import { describeError, traceIdOf } from '@/lib/errors'
 import { reportFormError, zodFieldErrors } from '@/lib/forms'
@@ -59,6 +61,12 @@ export function AdminGroupsPage() {
     queryKey: accessKeys.groups,
     queryFn: ({ signal }) => groupsApi.list(signal),
   })
+
+  const [search, setSearch] = useState('')
+  const visibleGroups = useMemo(
+    () => (groups.data ?? []).filter((group) => matchesSearch(search, group.name, group.description)),
+    [groups.data, search],
+  )
 
   const remove = useMutation({
     mutationFn: (group: GroupSummary) => groupsApi.remove(group.id),
@@ -97,6 +105,18 @@ export function AdminGroupsPage() {
         {groups.data?.length === 0 && <EmptyState title={t('groups.empty.title')} description={t('groups.empty.description')} />}
 
         {groups.data && groups.data.length > 0 && (
+          <>
+          <TableToolbar
+            search={search}
+            onSearchChange={setSearch}
+            searchPlaceholder={t('groups.searchPlaceholder')}
+            filtersActive={search !== ''}
+            onReset={() => setSearch('')}
+            resultCount={visibleGroups.length}
+          />
+          {visibleGroups.length === 0 ? (
+            <p className="text-muted-foreground py-6 text-center text-sm">{t('table.noResults')}</p>
+          ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableCaption className="sr-only">{t('groups.listTitle')}</TableCaption>
@@ -109,7 +129,7 @@ export function AdminGroupsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {groups.data.map((group) => (
+                {visibleGroups.map((group) => (
                   <TableRow key={group.id}>
                     <TableCell>
                       <div className="font-medium">{group.name}</div>
@@ -142,6 +162,8 @@ export function AdminGroupsPage() {
               </TableBody>
             </Table>
           </div>
+          )}
+          </>
         )}
       </Section>
 

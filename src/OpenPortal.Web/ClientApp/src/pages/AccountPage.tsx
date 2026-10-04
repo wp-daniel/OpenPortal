@@ -4,29 +4,29 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { z } from 'zod'
 import { accountApi } from '@/api/auth'
 import { ApiError } from '@/api/client'
-import type { PasswordPolicy } from '@/api/types'
+import type { AccountProfile, PasswordPolicy } from '@/api/types'
 import { FormField } from '@/components/FormField'
 import { PageHeader } from '@/components/PageHeader'
 import { Section } from '@/components/Section'
 import { LoadingState } from '@/components/StatePanels'
+import { UserDetailsFields } from '@/components/UserDetailsFields'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { SESSION_QUERY_KEY, useSession } from '@/hooks/useSession'
 import { notify } from '@/hooks/useToast'
-import { formatDate, type TFunction } from '@/i18n/store'
+import { formatDate } from '@/i18n/store'
 import { useI18n } from '@/i18n/useI18n'
 import { reportFormError, serverFieldErrors, zodFieldErrors } from '@/lib/forms'
 import { describePasswordPolicy, newPasswordSchema } from '@/lib/passwordPolicy'
+import {
+  detailsToForm,
+  formToDetails,
+  userDetailsShape,
+  type UserDetailsField,
+  type UserDetailsForm,
+} from '@/lib/userDetails'
 
-const makeProfileSchema = (t: TFunction) =>
-  z.object({
-    displayName: z
-      .string()
-      .trim()
-      .min(2, t('validation.displayNameMin', { min: 2 }))
-      .max(120, t('validation.displayNameMax', { max: 120 })),
-  })
 
 /**
  * The signed-in account's own settings.
@@ -49,7 +49,7 @@ export function AccountPage() {
 
       {profile.isPending && <LoadingState />}
 
-      {profile.data && <ProfileForm initial={profile.data.displayName} />}
+      {profile.data && <ProfileForm initial={profile.data} />}
 
       <PasswordForm policy={session.passwordPolicy} />
 
@@ -95,22 +95,25 @@ export function AccountPage() {
   )
 }
 
-function ProfileForm({ initial }: { initial: string }) {
+function ProfileForm({ initial }: { initial: AccountProfile }) {
   const queryClient = useQueryClient()
   const { t } = useI18n()
-  const profileSchema = useMemo(() => makeProfileSchema(t), [t])
-  const [displayName, setDisplayName] = useState(initial)
-  const [error, setError] = useState<string | undefined>()
+  const profileSchema = useMemo(() => z.object(userDetailsShape(t)), [t])
+  const [details, setDetails] = useState<UserDetailsForm>(detailsToForm(initial))
+  const [errors, setErrors] = useState<Partial<Record<UserDetailsField, string>>>({})
 
   const save = useMutation({
-    mutationFn: () => accountApi.updateProfile({ displayName }),
+    mutationFn: () => accountApi.updateProfile(formToDetails(details)),
     meta: { handlesErrors: true },
     onSuccess: async (updated) => {
-      notify.success(t('account.displayNameSaved'))
-      setError(undefined)
-      setDisplayName(updated.displayName)
+      notify.success(t('account.profileSaved'))
+      setErrors({})
+      setDetails(detailsToForm(updated))
       // The session query carries the display name shown in the header, so it is stale after this write.
-      await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: ['account-profile'] }),
+      ])
     },
     onError: (failure) => reportFormError(failure, t('account.saveFailed')),
   })
@@ -118,33 +121,41 @@ function ProfileForm({ initial }: { initial: string }) {
   function submit(event: FormEvent) {
     event.preventDefault()
 
-    const parsed = profileSchema.safeParse({ displayName })
+    const parsed = profileSchema.safeParse(details)
 
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message)
+      setErrors(zodFieldErrors(parsed.error))
 
       return
     }
 
-    setError(undefined)
+    setErrors({})
     save.mutate()
   }
 
+  const serverErrors = serverFieldErrors(save.error)
+  const errorFor = (field: UserDetailsField) => errors[field] ?? serverErrors[field]?.[0]
+
   return (
-    <Section title={t('account.displayNameSection')}>
-      <form onSubmit={submit} noValidate className="grid max-w-md gap-4">
-        <FormField
-          label={t('common.displayName')}
-          htmlFor="displayName"
-          error={error ?? serverFieldErrors(save.error).displayName?.[0]}
-        >
-          <Input
-            name="displayName"
-            required
-            value={displayName}
-            onChange={(event) => setDisplayName(event.target.value)}
-          />
-        </FormField>
+    <Section title={t('account.profileSection')} description={t('account.profileDescription')}>
+      <form onSubmit={submit} noValidate className="grid gap-6">
+        <UserDetailsFields
+          idPrefix="profile"
+          values={details}
+          onChange={(field, value) => setDetails((current) => ({ ...current, [field]: value }))}
+          errors={{
+            firstName: errorFor('firstName'),
+            lastName: errorFor('lastName'),
+            phoneNumber: errorFor('phoneNumber'),
+            jobTitle: errorFor('jobTitle'),
+            company: errorFor('company'),
+            department: errorFor('department'),
+            addressLine: errorFor('addressLine'),
+            city: errorFor('city'),
+            postalCode: errorFor('postalCode'),
+            country: errorFor('country'),
+          }}
+        />
 
         <div>
           <Button type="submit" disabled={save.isPending}>

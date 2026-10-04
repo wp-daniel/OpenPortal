@@ -13,6 +13,7 @@ import type { ManagedProject } from '@/api/types'
 import { FormField } from '@/components/FormField'
 import { PageHeader } from '@/components/PageHeader'
 import { Section } from '@/components/Section'
+import { FilterSelect, TableToolbar } from '@/components/TableToolbar'
 import { EmptyState, ErrorPanel, LoadingState } from '@/components/StatePanels'
 import {
   AlertDialog,
@@ -35,6 +36,7 @@ import type { TFunction } from '@/i18n/store'
 import { useI18n } from '@/i18n/useI18n'
 import { describeError, traceIdOf } from '@/lib/errors'
 import { notify } from '@/hooks/useToast'
+import { matchesSearch } from '@/lib/tableFilter'
 import { reportFormError, serverFieldErrors, zodFieldErrors } from '@/lib/forms'
 
 const makeSchema = (t: TFunction) =>
@@ -76,6 +78,18 @@ export function ContentProjectPage() {
     queryKey: ['manage-projects'],
     queryFn: ({ signal }) => contentAdminApi.listProjects(signal),
   })
+
+  const [search, setSearch] = useState('')
+  const [publication, setPublication] = useState('')
+  const visibleProjects = useMemo(
+    () =>
+      (projects.data ?? []).filter(
+        (project) =>
+          (publication === '' || (publication === 'published') === project.isPublished) &&
+          matchesSearch(search, project.name, project.slug, project.summary),
+      ),
+    [projects.data, search, publication],
+  )
 
   // Failures on both mutations are toasted by the global MutationCache handler.
   const setPublished = useMutation({
@@ -129,6 +143,31 @@ export function ContentProjectPage() {
       ) : (projects.data?.length ?? 0) === 0 ? (
         <EmptyState title={t('projects.emptyTitle')} description={t('projects.emptyDescription')} />
       ) : (
+        <div>
+        <TableToolbar
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder={t('projects.searchPlaceholder')}
+          filtersActive={search !== '' || publication !== ''}
+          onReset={() => {
+            setSearch('')
+            setPublication('')
+          }}
+          resultCount={visibleProjects.length}
+        >
+          <FilterSelect
+            label={t('common.status')}
+            value={publication}
+            onChange={setPublication}
+            options={[
+              { value: 'published', label: t('projects.published') },
+              { value: 'draft', label: t('projects.draft') },
+            ]}
+          />
+        </TableToolbar>
+        {visibleProjects.length === 0 ? (
+          <p className="text-muted-foreground py-6 text-center text-sm">{t('table.noResults')}</p>
+        ) : (
         <Table>
           <TableHeader>
             <TableRow>
@@ -139,7 +178,7 @@ export function ContentProjectPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {projects.data!.map((project) => (
+            {visibleProjects.map((project) => (
               <TableRow key={project.id}>
                 <TableCell className="font-medium">{project.name}</TableCell>
                 <TableCell className="text-muted-foreground font-mono text-xs">/{project.slug}</TableCell>
@@ -170,6 +209,8 @@ export function ContentProjectPage() {
             ))}
           </TableBody>
         </Table>
+        )}
+        </div>
       )}
 
       {/*

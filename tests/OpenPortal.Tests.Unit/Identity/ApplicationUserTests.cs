@@ -149,4 +149,74 @@ public sealed class ApplicationUserTests
 
         user.UpdatedAtUtc.ShouldBe(Now);
     }
+
+    private static UserDetails Details(
+        string? first = "Grace",
+        string? last = "Hopper",
+        string? phone = "+1 202 555 0143") =>
+        new(first, last, phone, " Rear Admiral ", "", null, "1 Navy Way", "Arlington", "22202", "USA");
+
+    [Fact]
+    public void UpdateDetails_stores_the_details_trims_them_and_derives_the_display_name()
+    {
+        var user = NewUser();
+
+        var result = user.UpdateDetails(Details(), Now.AddHours(1));
+
+        result.IsSuccess.ShouldBeTrue();
+        user.FirstName.ShouldBe("Grace");
+        user.LastName.ShouldBe("Hopper");
+        user.DisplayName.ShouldBe("Grace Hopper");
+        user.PhoneNumber.ShouldBe("+1 202 555 0143");
+        user.JobTitle.ShouldBe("Rear Admiral");
+        user.Company.ShouldBeNull();
+        user.UpdatedAtUtc.ShouldBe(Now.AddHours(1));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("   ")]
+    public void UpdateDetails_requires_a_first_name(string? first)
+    {
+        var user = NewUser();
+
+        var result = user.UpdateDetails(Details(first: first), Now);
+
+        result.Error.ShouldBe(UserErrors.FirstNameRequired);
+        user.DisplayName.ShouldBe("Ada Lovelace");
+    }
+
+    [Fact]
+    public void UpdateDetails_requires_a_last_name()
+    {
+        NewUser().UpdateDetails(Details(last: ""), Now).Error.ShouldBe(UserErrors.LastNameRequired);
+    }
+
+    [Theory]
+    [InlineData("call me")]
+    [InlineData("123")]
+    [InlineData("+39 333 abc 4567")]
+    public void UpdateDetails_rejects_a_malformed_phone_number(string phone)
+    {
+        NewUser().UpdateDetails(Details(phone: phone), Now).Error.ShouldBe(UserErrors.InvalidPhoneNumber);
+    }
+
+    [Fact]
+    public void UpdateDetails_rejects_over_long_names()
+    {
+        var tooLong = new string('x', ApplicationUser.NameMaxLength + 1);
+
+        NewUser().UpdateDetails(Details(first: tooLong), Now).Error.ShouldBe(UserErrors.NameTooLong);
+    }
+
+    [Fact]
+    public void UpdateDetails_clears_the_phone_number_when_blank()
+    {
+        var user = NewUser();
+        user.UpdateDetails(Details(), Now);
+
+        user.UpdateDetails(Details(phone: "  "), Now).IsSuccess.ShouldBeTrue();
+
+        user.PhoneNumber.ShouldBeNull();
+    }
 }

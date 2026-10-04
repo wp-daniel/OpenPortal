@@ -57,7 +57,7 @@ export interface Session {
   readonly passwordPolicy: PasswordPolicy
 }
 
-export interface AccountProfile {
+export interface AccountProfile extends UserDetails {
   readonly id: string
   readonly email: string
   readonly displayName: string
@@ -68,9 +68,21 @@ export interface AccountProfile {
   readonly language: string | null
 }
 
-export interface UpdateProfileRequest {
-  readonly displayName: string
+/** Personal, work and address details, shared by every request that creates or edits an account. */
+export interface UserDetails {
+  readonly firstName: string
+  readonly lastName: string
+  readonly phoneNumber: string | null
+  readonly jobTitle: string | null
+  readonly company: string | null
+  readonly department: string | null
+  readonly addressLine: string | null
+  readonly city: string | null
+  readonly postalCode: string | null
+  readonly country: string | null
 }
+
+export type UpdateProfileRequest = UserDetails
 
 export interface ChangePasswordRequest {
   readonly currentPassword: string
@@ -86,7 +98,7 @@ export interface AntiforgeryToken {
 // User administration.
 // ---------------------------------------------------------------------------
 
-export interface UserSummary {
+export interface UserSummary extends UserDetails {
   readonly id: string
   readonly email: string
   readonly displayName: string
@@ -107,15 +119,13 @@ export interface PagedResult<T> {
   readonly hasNext: boolean
 }
 
-export interface CreateUserRequest {
+export interface CreateUserRequest extends UserDetails {
   readonly email: string
   readonly password: string
-  readonly displayName?: string | null
   readonly roles: readonly string[]
 }
 
-export interface UpdateUserRequest {
-  readonly displayName: string
+export interface UpdateUserRequest extends UserDetails {
   readonly roles: readonly string[]
 }
 

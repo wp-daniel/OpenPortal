@@ -78,14 +78,11 @@
   <data name="validation.emailInvalid" xml:space="preserve"><value>Inserisci un indirizzo email valido.</value></data>
   <data name="validation.passwordRequired" xml:space="preserve"><value>La password è obbligatoria.</value></data>
   <data name="validation.displayNameMin" xml:space="preserve"><value>Il nome visualizzato deve avere almeno {min} caratteri.</value></data>
-  <data name="validation.displayNameMax" xml:space="preserve"><value>Il nome visualizzato può avere al massimo {max} caratteri.</value></data>
   <data name="validation.maxLength" xml:space="preserve"><value>Usa meno di {max} caratteri.</value></data>
   <data name="validation.currentPasswordRequired" xml:space="preserve"><value>Inserisci la password attuale.</value></data>
   <data name="validation.newPasswordRequired" xml:space="preserve"><value>Inserisci una nuova password.</value></data>
   <data name="validation.passwordRequiredNew" xml:space="preserve"><value>La password è obbligatoria.</value></data>
   <data name="validation.emailRequiredNew" xml:space="preserve"><value>L'email è obbligatoria.</value></data>
-  <data name="validation.searchMax" xml:space="preserve"><value>Usa meno di {max} caratteri per la ricerca.</value></data>
-  <data name="validation.invalidSearch" xml:space="preserve"><value>Ricerca non valida</value></data>
   <data name="validation.nameRequired" xml:space="preserve"><value>Il nome è obbligatorio.</value></data>
   <data name="validation.slugRequired" xml:space="preserve"><value>Lo slug è obbligatorio.</value></data>
   <data name="validation.slugFormat" xml:space="preserve"><value>Usa lettere, numeri e trattini singoli.</value></data>
@@ -130,8 +127,6 @@
   <data name="dashboard.content.description" xml:space="preserve"><value>Modulo di esempio: profilo e progetti.</value></data>
   <data name="account.title" xml:space="preserve"><value>Account</value></data>
   <data name="account.description" xml:space="preserve"><value>Il tuo profilo e i dati di accesso.</value></data>
-  <data name="account.displayNameSection" xml:space="preserve"><value>Nome visualizzato</value></data>
-  <data name="account.displayNameSaved" xml:space="preserve"><value>Nome visualizzato salvato</value></data>
   <data name="account.saveFailed" xml:space="preserve"><value>Non è stato possibile salvare la modifica</value></data>
   <data name="account.passwordSection" xml:space="preserve"><value>Cambia password</value></data>
   <data name="account.currentPassword" xml:space="preserve"><value>Password attuale</value></data>
@@ -163,9 +158,7 @@
   <data name="users.pageOf_other" xml:space="preserve"><value>Pagina {page} di {total} ({count} account)</value></data>
   <data name="users.create.title" xml:space="preserve"><value>Crea un account</value></data>
   <data name="users.create.description" xml:space="preserve"><value>La password deve rispettare la policy del server.</value></data>
-  <data name="users.create.displayNameHint" xml:space="preserve"><value>Per impostazione predefinita è la parte locale dell’email.</value></data>
   <data name="users.create.submit" xml:space="preserve"><value>Crea account</value></data>
-  <data name="users.create.submitting" xml:space="preserve"><value>Creazione…</value></data>
   <data name="users.create.created" xml:space="preserve"><value>Account creato</value></data>
   <data name="users.create.failed" xml:space="preserve"><value>Non è stato possibile creare l’account</value></data>
   <data name="profile.title" xml:space="preserve"><value>Profilo</value></data>
@@ -506,4 +499,51 @@
   <data name="error.access.group_name_in_use" xml:space="preserve"><value>Un altro gruppo usa già questo nome.</value></data>
   <data name="error.access.provisioning_key_invalid" xml:space="preserve"><value>La chiave di provisioning manca o non è valida.</value></data>
   <data name="error.access.announcements_disabled" xml:space="preserve"><value>Questo portale non accetta annunci dalle applicazioni.</value></data>
+  <data name="common.all" xml:space="preserve"><value>Tutti</value></data>
+  <data name="common.firstName" xml:space="preserve"><value>Nome</value></data>
+  <data name="common.lastName" xml:space="preserve"><value>Cognome</value></data>
+  <data name="common.phone" xml:space="preserve"><value>Telefono</value></data>
+  <data name="common.company" xml:space="preserve"><value>Azienda</value></data>
+  <data name="common.department" xml:space="preserve"><value>Reparto</value></data>
+  <data name="common.jobTitle" xml:space="preserve"><value>Mansione</value></data>
+  <data name="common.address" xml:space="preserve"><value>Indirizzo</value></data>
+  <data name="common.city" xml:space="preserve"><value>Città</value></data>
+  <data name="common.postalCode" xml:space="preserve"><value>CAP</value></data>
+  <data name="common.country" xml:space="preserve"><value>Paese</value></data>
+  <data name="validation.firstNameRequired" xml:space="preserve"><value>Il nome è obbligatorio.</value></data>
+  <data name="validation.lastNameRequired" xml:space="preserve"><value>Il cognome è obbligatorio.</value></data>
+  <data name="validation.phoneInvalid" xml:space="preserve"><value>Inserisci un numero di telefono valido, ad es. +39 333 123 4567.</value></data>
+  <data name="profile.section.account" xml:space="preserve"><value>Account</value></data>
+  <data name="profile.section.personal" xml:space="preserve"><value>Dati personali</value></data>
+  <data name="profile.section.work" xml:space="preserve"><value>Lavoro</value></data>
+  <data name="profile.section.address" xml:space="preserve"><value>Indirizzo</value></data>
+  <data name="users.create.open" xml:space="preserve"><value>Crea utente</value></data>
+  <data name="users.edit.title" xml:space="preserve"><value>Modifica utente</value></data>
+  <data name="users.edit.description" xml:space="preserve"><value>L’email è il nome di accesso e non può essere cambiata.</value></data>
+  <data name="users.edit.saved" xml:space="preserve"><value>Utente aggiornato</value></data>
+  <data name="users.edit.failed" xml:space="preserve"><value>Non è stato possibile aggiornare l’utente</value></data>
+  <data name="users.status.active" xml:space="preserve"><value>Attivo</value></data>
+  <data name="users.status.locked" xml:space="preserve"><value>Bloccato</value></data>
+  <data name="users.status.unconfirmed" xml:space="preserve"><value>Non confermato</value></data>
+  <data name="account.profileSection" xml:space="preserve"><value>Profilo</value></data>
+  <data name="account.profileDescription" xml:space="preserve"><value>I tuoi dati personali, di lavoro e di indirizzo. L’email non può essere modificata.</value></data>
+  <data name="account.profileSaved" xml:space="preserve"><value>Profilo salvato</value></data>
+  <data name="table.searchPlaceholder" xml:space="preserve"><value>Cerca…</value></data>
+  <data name="table.resetFilters" xml:space="preserve"><value>Azzera filtri</value></data>
+  <data name="table.noResults" xml:space="preserve"><value>Nessun risultato per i filtri attuali.</value></data>
+  <data name="table.results_one" xml:space="preserve"><value>{count} risultato</value></data>
+  <data name="table.results_other" xml:space="preserve"><value>{count} risultati</value></data>
+  <data name="groups.searchPlaceholder" xml:space="preserve"><value>Cerca gruppi…</value></data>
+  <data name="applications.searchPlaceholder" xml:space="preserve"><value>Cerca applicazioni…</value></data>
+  <data name="projects.searchPlaceholder" xml:space="preserve"><value>Cerca progetti…</value></data>
+  <data name="validation.firstName.required" xml:space="preserve"><value>Il nome è obbligatorio.</value></data>
+  <data name="validation.lastName.required" xml:space="preserve"><value>Il cognome è obbligatorio.</value></data>
+  <data name="validation.name.max" xml:space="preserve"><value>Nome e cognome non possono superare i 60 caratteri.</value></data>
+  <data name="validation.phone.invalid" xml:space="preserve"><value>Il numero di telefono non è valido.</value></data>
+  <data name="validation.detail.max" xml:space="preserve"><value>Questo campo non può superare i 100 caratteri.</value></data>
+  <data name="error.identity.first_name_required" xml:space="preserve"><value>Il nome è obbligatorio.</value></data>
+  <data name="error.identity.last_name_required" xml:space="preserve"><value>Il cognome è obbligatorio.</value></data>
+  <data name="error.identity.name_too_long" xml:space="preserve"><value>Nome e cognome non possono superare i 60 caratteri.</value></data>
+  <data name="error.identity.invalid_phone_number" xml:space="preserve"><value>Il numero di telefono non è valido.</value></data>
+  <data name="error.identity.detail_too_long" xml:space="preserve"><value>I campi di lavoro e indirizzo non possono superare i 100 caratteri.</value></data>
 </root>

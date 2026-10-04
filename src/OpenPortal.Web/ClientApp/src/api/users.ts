@@ -3,7 +3,7 @@ import type { CreateUserRequest, PagedResult, UpdateUserRequest, UserSummary } f
 
 export const userAdminApi = {
   list: (
-    params: { page: number; pageSize: number; search?: string },
+    params: { page: number; pageSize: number; search?: string; role?: string; status?: string },
     signal?: AbortSignal,
   ): Promise<PagedResult<UserSummary>> =>
     api.get<PagedResult<UserSummary>>(
@@ -11,6 +11,8 @@ export const userAdminApi = {
         page: params.page,
         pageSize: params.pageSize,
         search: params.search,
+        role: params.role,
+        status: params.status,
       }),
       signal,
     ),

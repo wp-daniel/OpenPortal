@@ -58,6 +58,21 @@ public static class UserErrors
     public static Error DisplayNameTooLong { get; } =
         Error.Validation(Prefix + "display_name_too_long", $"The display name must not exceed {ApplicationUser.DisplayNameMaxLength} characters.");
 
+    public static Error FirstNameRequired { get; } =
+        Error.Validation(Prefix + "first_name_required", "A first name is required.");
+
+    public static Error LastNameRequired { get; } =
+        Error.Validation(Prefix + "last_name_required", "A last name is required.");
+
+    public static Error NameTooLong { get; } =
+        Error.Validation(Prefix + "name_too_long", $"First and last names must not exceed {ApplicationUser.NameMaxLength} characters.");
+
+    public static Error InvalidPhoneNumber { get; } =
+        Error.Validation(Prefix + "invalid_phone_number", "The phone number is not valid.");
+
+    public static Error DetailTooLong { get; } =
+        Error.Validation(Prefix + "detail_too_long", $"Work and address fields must not exceed {ApplicationUser.DetailMaxLength} characters.");
+
     public static Error EmailRequired { get; } =
         Error.Validation(Prefix + "email_required", "An email address is required.");
 }

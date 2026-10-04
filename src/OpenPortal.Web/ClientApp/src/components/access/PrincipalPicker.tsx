@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { Check, ChevronsUpDown, Loader2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { accessKeys, groupsApi } from '@/api/access'
 import { userAdminApi } from '@/api/users'
 import { Button } from '@/components/ui/button'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { useDebounced } from '@/hooks/useDebounced'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 
@@ -20,18 +21,6 @@ interface PickerProps {
   readonly onChange: (value: PickedPrincipal | null) => void
   /** Ids that are already granted or already members, shown as unavailable. */
   readonly exclude?: readonly string[]
-}
-
-/** Waits for typing to pause, so the user search does not query on every keystroke. */
-function useDebounced<T>(value: T, delayMs = 250): T {
-  const [debounced, setDebounced] = useState(value)
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setDebounced(value), delayMs)
-    return () => window.clearTimeout(timer)
-  }, [value, delayMs])
-
-  return debounced
 }
 
 /**

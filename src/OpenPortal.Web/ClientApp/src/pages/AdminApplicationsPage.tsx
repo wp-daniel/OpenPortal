@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Ban, CheckCircle2, FileDiff, KeyRound, MoreHorizontal, Pencil, Play, Plus, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { accessKeys, applicationsApi } from '@/api/access'
 import type { ApplicationSecret, ApplicationSummary } from '@/api/types'
 import { ApplicationFormDialog } from '@/components/access/ApplicationFormDialog'
@@ -9,6 +9,7 @@ import { ApplicationStatusBadge, OnlineIndicator } from '@/components/access/sha
 import { useAccessRefresh } from '@/lib/access'
 import { PageHeader } from '@/components/PageHeader'
 import { Section } from '@/components/Section'
+import { FilterSelect, TableToolbar } from '@/components/TableToolbar'
 import { EmptyState, ErrorPanel, LoadingState } from '@/components/StatePanels'
 import {
   AlertDialog,
@@ -31,6 +32,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { notify } from '@/hooks/useToast'
+import { matchesSearch } from '@/lib/tableFilter'
 import { formatDate } from '@/i18n/store'
 import { useI18n } from '@/i18n/useI18n'
 import { describeError, traceIdOf } from '@/lib/errors'
@@ -105,6 +107,18 @@ export function AdminApplicationsPage() {
     },
   })
 
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const visibleApplications = useMemo(
+    () =>
+      (applications.data ?? []).filter(
+        (application) =>
+          (statusFilter === '' || application.status === statusFilter) &&
+          matchesSearch(search, application.displayName, application.clientId),
+      ),
+    [applications.data, search, statusFilter],
+  )
+
   const pendingCount = applications.data?.filter((application) => application.status === 'pending').length ?? 0
 
   return (
@@ -144,6 +158,31 @@ export function AdminApplicationsPage() {
         )}
 
         {applications.data && applications.data.length > 0 && (
+          <>
+          <TableToolbar
+            search={search}
+            onSearchChange={setSearch}
+            searchPlaceholder={t('applications.searchPlaceholder')}
+            filtersActive={search !== '' || statusFilter !== ''}
+            onReset={() => {
+              setSearch('')
+              setStatusFilter('')
+            }}
+            resultCount={visibleApplications.length}
+          >
+            <FilterSelect
+              label={t('common.status')}
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={(['pending', 'active', 'disabled'] as const).map((status) => ({
+                value: status,
+                label: t(`applications.status.${status}`),
+              }))}
+            />
+          </TableToolbar>
+          {visibleApplications.length === 0 ? (
+            <p className="text-muted-foreground py-6 text-center text-sm">{t('table.noResults')}</p>
+          ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableCaption className="sr-only">{t('applications.listTitle')}</TableCaption>
@@ -157,7 +196,7 @@ export function AdminApplicationsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {applications.data.map((application) => (
+                {visibleApplications.map((application) => (
                   <TableRow key={application.id}>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -254,6 +293,8 @@ export function AdminApplicationsPage() {
               </TableBody>
             </Table>
           </div>
+          )}
+          </>
         )}
       </Section>
 

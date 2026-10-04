@@ -58,8 +58,29 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
             var term = search.ToUpperInvariant();
             usersQuery = usersQuery.Where(user =>
                 (user.NormalizedEmail != null && user.NormalizedEmail.Contains(term))
-                || user.DisplayName.ToUpper().Contains(term));
+                || user.DisplayName.ToUpper().Contains(term)
+                || (user.PhoneNumber != null && user.PhoneNumber.Contains(search))
+                || (user.Company != null && user.Company.ToUpper().Contains(term)));
         }
+
+        var role = query.Role?.Trim();
+        if (!string.IsNullOrEmpty(role))
+        {
+            usersQuery = usersQuery.Where(user => _dbContext.UserRoles.Any(userRole =>
+                userRole.UserId == user.Id
+                && _dbContext.Roles.Any(r => r.Id == userRole.RoleId && r.Name == role)));
+        }
+
+        var now = _clock.UtcNow;
+        usersQuery = query.Status?.Trim().ToLowerInvariant() switch
+        {
+            UserStatusFilter.Locked => usersQuery.Where(user =>
+                user.LockoutEnabled && user.LockoutEnd != null && user.LockoutEnd > now),
+            UserStatusFilter.Unconfirmed => usersQuery.Where(user => !user.EmailConfirmed),
+            UserStatusFilter.Active => usersQuery.Where(user =>
+                !(user.LockoutEnabled && user.LockoutEnd != null && user.LockoutEnd > now)),
+            _ => usersQuery,
+        };
 
         var totalCount = await usersQuery.CountAsync(cancellationToken).ConfigureAwait(false);
 
@@ -73,7 +94,6 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         var userIds = users.Select(user => user.Id).ToArray();
         var rolesByUser = await LoadRolesAsync(userIds, cancellationToken).ConfigureAwait(false);
 
-        var now = _clock.UtcNow;
         var items = users
             .Select(user => ToSummary(user, rolesByUser.GetValueOrDefault(user.Id) ?? [], now))
             .ToArray();
@@ -120,11 +140,14 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         }
 
         var email = request.Email.Trim();
-        var displayName = string.IsNullOrWhiteSpace(request.DisplayName)
-            ? DeriveDisplayName(email)
-            : request.DisplayName.Trim();
+        var user = new ApplicationUser(Guid.NewGuid(), email, DeriveDisplayName(email), _clock.UtcNow);
 
-        var user = new ApplicationUser(Guid.NewGuid(), email, displayName, _clock.UtcNow);
+        // Validate the details before touching the store so bad input is a 400, not a half-made account.
+        var details = user.UpdateDetails(request.ToDetails(), _clock.UtcNow);
+        if (details.IsFailure)
+        {
+            return Result<UserSummaryDto>.Failure(details.Error);
+        }
 
         var created = await _userManager.CreateAsync(user, request.Password).ConfigureAwait(false);
         if (!created.Succeeded)
@@ -182,7 +205,7 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
             return Result<UserSummaryDto>.Failure(UserErrors.CannotModifyOwnRoles);
         }
 
-        var rename = user.UpdateDisplayName(request.DisplayName, _clock.UtcNow);
+        var rename = user.UpdateDetails(request.ToDetails(), _clock.UtcNow);
         if (rename.IsFailure)
         {
             return Result<UserSummaryDto>.Failure(rename.Error);
@@ -338,7 +361,17 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         IsLockedOut: user.LockoutEnabled && user.LockoutEnd is not null && user.LockoutEnd > now,
         LockoutEndUtc: user.LockoutEnd,
         CreatedAtUtc: user.CreatedAtUtc,
-        Roles: roles.Order(StringComparer.Ordinal).ToArray());
+        Roles: roles.Order(StringComparer.Ordinal).ToArray(),
+        FirstName: user.FirstName,
+        LastName: user.LastName,
+        PhoneNumber: user.PhoneNumber,
+        JobTitle: user.JobTitle,
+        Company: user.Company,
+        Department: user.Department,
+        AddressLine: user.AddressLine,
+        City: user.City,
+        PostalCode: user.PostalCode,
+        Country: user.Country);
 
     private static string DeriveDisplayName(string email)
     {

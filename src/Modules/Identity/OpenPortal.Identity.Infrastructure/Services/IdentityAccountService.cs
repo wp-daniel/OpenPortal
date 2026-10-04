@@ -49,7 +49,7 @@ internal sealed class IdentityAccountService : IAccountService
         }
 
         var user = lookup.Value;
-        var rename = user.UpdateDisplayName(request.DisplayName, _clock.UtcNow);
+        var rename = user.UpdateDetails(request.ToDetails(), _clock.UtcNow);
 
         if (rename.IsFailure)
         {
@@ -134,6 +134,16 @@ internal sealed class IdentityAccountService : IAccountService
             CreatedAtUtc: user.CreatedAtUtc,
             UpdatedAtUtc: user.UpdatedAtUtc,
             Roles: roles.Order(StringComparer.Ordinal).ToArray(),
-            Language: user.Language));
+            Language: user.Language,
+            FirstName: user.FirstName,
+            LastName: user.LastName,
+            PhoneNumber: user.PhoneNumber,
+            JobTitle: user.JobTitle,
+            Company: user.Company,
+            Department: user.Department,
+            AddressLine: user.AddressLine,
+            City: user.City,
+            PostalCode: user.PostalCode,
+            Country: user.Country));
     }
 }
