@@ -119,8 +119,11 @@ the portal decides who may:
    users.
 
 A user without access is stopped at the portal. Withdrawing access revokes the application's tokens, and the
-token endpoint re-checks access on every refresh, so the session ends within the access token lifetime (10
-minutes by default). [`samples/OpenPortal.SampleApp`](samples/OpenPortal.SampleApp) shows the whole thing.
+token endpoint re-checks access on every refresh, so the user cannot sign in again and the tokens stop working
+within the access token lifetime (10 minutes by default). The application's own session is a local cookie that
+`OpenPortal.Client` does not refresh by itself: a user already inside keeps it until it expires or they sign out.
+[`samples/OpenPortal.SampleApp`](samples/OpenPortal.SampleApp) shows the whole thing; the
+[wiki](https://github.com/wp-daniel/OpenPortal/wiki/Connecting-an-Application) walks through connecting any app.
 
 ## Tests
 

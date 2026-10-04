@@ -19,7 +19,8 @@ public static class OpenPortalClientExtensions
     /// and announces the application to the portal so an administrator can approve it.
     /// <para>
     /// The portal decides who may sign in: a user without access to this application never gets back here
-    /// with a session, and a user whose access is withdrawn loses it at the next token refresh.
+    /// with a session. A user whose access is withdrawn cannot sign in again and the saved tokens can no longer
+    /// be refreshed, but the local cookie session is not re-checked: it lasts until it expires or the user signs out.
     /// </para>
     /// </summary>
     public static IServiceCollection AddOpenPortalAuthentication(
