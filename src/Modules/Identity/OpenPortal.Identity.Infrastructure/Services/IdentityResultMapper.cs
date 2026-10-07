@@ -12,7 +12,7 @@ internal static class IdentityResultMapper
 {
     private const string DuplicateEmailCode = "DuplicateEmail";
     private const string DuplicateUserNameCode = "DuplicateUserName";
-    private const string FallbackCode = "identity.invalid_operation";
+    private const string PasswordMismatchCode = "PasswordMismatch";
 
     private static readonly string[] PasswordComplexityCodes =
     [
@@ -25,7 +25,7 @@ internal static class IdentityResultMapper
     ];
 
     /// <param name="result">The failed Identity result.</param>
-    /// <param name="fallback">Error to use when the Identity codes carry no more specific meaning.</param>
+    /// <param name="fallback">Error to use when Identity reports a failure without saying why.</param>
     public static Error ToError(this IdentityResult result, Error fallback)
     {
         ArgumentNullException.ThrowIfNull(result);
@@ -34,6 +34,12 @@ internal static class IdentityResultMapper
         if (result.Succeeded)
         {
             throw new ArgumentException("Only failed Identity results can be mapped to an error.", nameof(result));
+        }
+
+        var first = result.Errors.FirstOrDefault(error => !string.IsNullOrWhiteSpace(error.Code));
+        if (first is null)
+        {
+            return fallback;
         }
 
         var codes = result.Errors.Select(error => error.Code).ToArray();
@@ -49,13 +55,13 @@ internal static class IdentityResultMapper
             return UserErrors.DuplicateEmail;
         }
 
+        if (codes.Contains(PasswordMismatchCode, StringComparer.Ordinal))
+        {
+            return UserErrors.CurrentPasswordIncorrect;
+        }
+
         // Identity validator descriptions are written for end users (for example "Passwords must have at
         // least one digit"), so the first one is safe to surface and far more useful than a bare code.
-        var description = result.Errors.FirstOrDefault()?.Description ?? fallback.Description;
-        var code = codes.Length > 0 && !string.IsNullOrWhiteSpace(codes[0])
-            ? "identity." + codes[0].ToLowerInvariant()
-            : FallbackCode;
-
-        return Error.Validation(code, description);
+        return Error.Validation("identity." + first.Code.ToLowerInvariant(), first.Description);
     }
 }

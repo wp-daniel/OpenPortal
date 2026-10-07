@@ -167,7 +167,7 @@ public sealed class ApiTests : IClassFixture<OpenPortalFactory>
 
         session.GetProperty("isAuthenticated").GetBoolean().ShouldBeTrue();
         session.GetProperty("user").GetProperty("email").GetString().ShouldBe("ada@example.com");
-        session.GetProperty("user").GetProperty("displayName").GetString().ShouldBe("ada");
+        session.GetProperty("user").GetProperty("displayName").GetString().ShouldBe("ada Test");
         session.GetProperty("user").GetProperty("roles").EnumerateArray()
             .Select(role => role.GetString()).ShouldContain("User");
 

@@ -6,11 +6,11 @@ public sealed class ApplicationUserTests
 {
     private static readonly DateTimeOffset Now = new(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);
 
-    private static ApplicationUser NewUser(string email = "ada@example.com", string displayName = "Ada Lovelace") =>
-        new(Guid.NewGuid(), email, displayName, Now);
+    private static ApplicationUser NewUser(string email = "ada@example.com") =>
+        ApplicationUser.Create(Guid.NewGuid(), email, Details("Ada", "Lovelace", phone: null), Now).Value;
 
     [Fact]
-    public void Constructor_sets_the_user_name_to_the_email_address()
+    public void Create_sets_the_user_name_to_the_email_address_and_derives_the_display_name()
     {
         var user = NewUser("  Ada@Example.com  ");
 
@@ -24,70 +24,24 @@ public sealed class ApplicationUserTests
     }
 
     [Fact]
-    public void Constructor_rejects_a_blank_email()
+    public void Create_rejects_a_blank_email()
     {
         Should.Throw<ArgumentException>(() => NewUser("   "));
     }
 
     [Fact]
-    public void Constructor_rejects_a_null_email()
+    public void Create_rejects_a_null_email()
     {
         Should.Throw<ArgumentNullException>(() => NewUser(null!));
     }
 
     [Fact]
-    public void Constructor_rejects_a_blank_display_name()
+    public void Create_validates_the_details_instead_of_throwing()
     {
-        Should.Throw<ArgumentException>(() => NewUser("ada@example.com", "   "));
-    }
-
-    [Fact]
-    public void Constructor_rejects_a_null_display_name()
-    {
-        Should.Throw<ArgumentNullException>(() => NewUser("ada@example.com", null!));
-    }
-
-    [Theory]
-    [InlineData("a")]
-    [InlineData("   ")]
-    public void UpdateDisplayName_rejects_a_name_below_the_minimum(string displayName)
-    {
-        var user = NewUser();
-        user.UpdateDisplayName("Grace Hopper", Now);
-
-        var result = user.UpdateDisplayName(displayName, Now.AddHours(1));
+        var result = ApplicationUser.Create(Guid.NewGuid(), "ada@example.com", Details(first: "  "), Now);
 
         result.IsFailure.ShouldBeTrue();
-        user.DisplayName.ShouldBe("Grace Hopper");
-        user.UpdatedAtUtc.ShouldBe(Now);
-    }
-
-    [Fact]
-    public void UpdateDisplayName_rejects_an_over_long_name()
-    {
-        var user = NewUser();
-
-        var result = user.UpdateDisplayName(
-            new string('x', ApplicationUser.DisplayNameMaxLength + 1),
-            Now);
-
-        result.Error.ShouldBe(UserErrors.DisplayNameTooLong);
-    }
-
-    [Fact]
-    public void UpdateDisplayName_trims_and_stamps_only_on_an_actual_change()
-    {
-        var user = NewUser();
-        user.UpdateDisplayName("Grace Hopper", Now);
-
-        user.UpdateDisplayName("Grace Hopper", Now).IsSuccess.ShouldBeTrue();
-        // Same value submitted again: not a change, so the timestamp must not move. Otherwise every form
-        // save would claim the account had been modified.
-        user.UpdatedAtUtc.ShouldBe(Now);
-
-        user.UpdateDisplayName("  Grace Hopper  ", Now.AddDays(1)).IsSuccess.ShouldBeTrue();
-        user.DisplayName.ShouldBe("Grace Hopper");
-        user.UpdatedAtUtc.ShouldBe(Now);
+        result.Error.ShouldBe(UserErrors.FirstNameRequired);
     }
 
     [Fact]
@@ -207,6 +161,15 @@ public sealed class ApplicationUserTests
         var tooLong = new string('x', ApplicationUser.NameMaxLength + 1);
 
         NewUser().UpdateDetails(Details(first: tooLong), Now).Error.ShouldBe(UserErrors.NameTooLong);
+    }
+
+    [Fact]
+    public void UpdateDetails_rejects_names_that_together_overflow_the_display_name()
+    {
+        var longest = new string('x', ApplicationUser.NameMaxLength);
+
+        // Each name is within its own limit, but "first last" is one character over the display name's.
+        NewUser().UpdateDetails(Details(first: longest, last: longest), Now).Error.ShouldBe(UserErrors.DisplayNameTooLong);
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using OpenPortal.SharedKernel.Text;
 
 namespace OpenPortal.Identity.Domain.Users;
 
@@ -12,7 +13,6 @@ namespace OpenPortal.Identity.Domain.Users;
 /// </summary>
 public sealed class ApplicationUser : IdentityUser<Guid>
 {
-    public const int DisplayNameMinLength = 2;
     public const int DisplayNameMaxLength = 120;
     public const int LanguageMaxLength = 10;
     public const int NameMaxLength = 60;
@@ -24,25 +24,45 @@ public sealed class ApplicationUser : IdentityUser<Guid>
     {
     }
 
-    public ApplicationUser(Guid id, string email, string displayName, DateTimeOffset createdAtUtc)
+    private ApplicationUser(Guid id, string email, DateTimeOffset createdAtUtc)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(email);
-        ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
-
-        var trimmedEmail = email.Trim();
-
         Id = id;
-        Email = trimmedEmail;
+        Email = email;
 
         // Identity requires a non-empty user name even when sign-in happens by email, and its
         // user-name validator rejects anything but letters and digits. Using the email's local part as a
         // placeholder would produce unstable normalisation, so the address itself is used: this platform
         // has exactly one identifier per account, and a second one that nobody signs in with is a second
         // thing to keep unique, to leak and to explain.
-        UserName = trimmedEmail;
+        UserName = email;
 
-        DisplayName = displayName.Trim();
         CreatedAtUtc = createdAtUtc;
+    }
+
+    /// <summary>
+    /// Creates an account with its details, validated first so bad input is a failure rather than an
+    /// exception. The display name is derived from the first and last name, as in <see cref="UpdateDetails"/>.
+    /// </summary>
+    public static SharedKernel.Results.Result<ApplicationUser> Create(
+        Guid id,
+        string email,
+        UserDetails details,
+        DateTimeOffset createdAtUtc)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(email);
+
+        var user = new ApplicationUser(id, email.Trim(), createdAtUtc);
+
+        var named = user.UpdateDetails(details, createdAtUtc);
+        if (named.IsFailure)
+        {
+            return SharedKernel.Results.Result<ApplicationUser>.Failure(named.Error);
+        }
+
+        // Filling in the details of a new account is not an update of it.
+        user.UpdatedAtUtc = null;
+
+        return SharedKernel.Results.Result<ApplicationUser>.Success(user);
     }
 
     /// <summary>Human-readable name shown in the UI. Never used as a login credential.</summary>
@@ -69,34 +89,6 @@ public sealed class ApplicationUser : IdentityUser<Guid>
     public void MarkAvatarChanged(DateTimeOffset? changedAtUtc)
     {
         AvatarUpdatedAtUtc = changedAtUtc;
-    }
-
-    /// <summary>
-    /// Renames the account, rejecting names the UI could not render meaningfully.
-    /// </summary>
-    public SharedKernel.Results.Result UpdateDisplayName(string displayName, DateTimeOffset now)
-    {
-        ArgumentNullException.ThrowIfNull(displayName);
-
-        var normalized = displayName.Trim();
-
-        if (normalized.Length < DisplayNameMinLength)
-        {
-            return SharedKernel.Results.Result.Failure(UserErrors.DisplayNameTooShort);
-        }
-
-        if (normalized.Length > DisplayNameMaxLength)
-        {
-            return SharedKernel.Results.Result.Failure(UserErrors.DisplayNameTooLong);
-        }
-
-        if (!string.Equals(DisplayName, normalized, StringComparison.Ordinal))
-        {
-            DisplayName = normalized;
-            UpdatedAtUtc = now;
-        }
-
-        return SharedKernel.Results.Result.Success();
     }
 
     public string FirstName { get; private set; } = string.Empty;
@@ -126,15 +118,15 @@ public sealed class ApplicationUser : IdentityUser<Guid>
     {
         ArgumentNullException.ThrowIfNull(details);
 
-        var first = details.FirstName?.Trim() ?? string.Empty;
-        var last = details.LastName?.Trim() ?? string.Empty;
+        var first = TextRules.Normalise(details.FirstName);
+        var last = TextRules.Normalise(details.LastName);
 
-        if (first.Length == 0)
+        if (first is null)
         {
             return SharedKernel.Results.Result.Failure(UserErrors.FirstNameRequired);
         }
 
-        if (last.Length == 0)
+        if (last is null)
         {
             return SharedKernel.Results.Result.Failure(UserErrors.LastNameRequired);
         }
@@ -144,25 +136,26 @@ public sealed class ApplicationUser : IdentityUser<Guid>
             return SharedKernel.Results.Result.Failure(UserErrors.NameTooLong);
         }
 
+        // Two names within their own limit can still overflow the display name column by the space.
         var displayName = $"{first} {last}";
-        if (displayName.Length < DisplayNameMinLength)
+        if (displayName.Length > DisplayNameMaxLength)
         {
-            return SharedKernel.Results.Result.Failure(UserErrors.DisplayNameTooShort);
+            return SharedKernel.Results.Result.Failure(UserErrors.DisplayNameTooLong);
         }
 
-        var phone = Clean(details.PhoneNumber);
+        var phone = TextRules.Normalise(details.PhoneNumber);
         if (phone is not null && !IsWellFormedPhoneNumber(phone))
         {
             return SharedKernel.Results.Result.Failure(UserErrors.InvalidPhoneNumber);
         }
 
-        var jobTitle = Clean(details.JobTitle);
-        var company = Clean(details.Company);
-        var department = Clean(details.Department);
-        var addressLine = Clean(details.AddressLine);
-        var city = Clean(details.City);
-        var postalCode = Clean(details.PostalCode);
-        var country = Clean(details.Country);
+        var jobTitle = TextRules.Normalise(details.JobTitle);
+        var company = TextRules.Normalise(details.Company);
+        var department = TextRules.Normalise(details.Department);
+        var addressLine = TextRules.Normalise(details.AddressLine);
+        var city = TextRules.Normalise(details.City);
+        var postalCode = TextRules.Normalise(details.PostalCode);
+        var country = TextRules.Normalise(details.Country);
 
         if (new[] { jobTitle, company, department, addressLine, city, postalCode, country }
             .Any(value => value is not null && value.Length > DetailMaxLength))
@@ -211,13 +204,10 @@ public sealed class ApplicationUser : IdentityUser<Guid>
         return digits is >= 6 and <= 15;
     }
 
-    private static string? Clean(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
     /// <summary>Stores the preferred UI language. <see langword="null"/> clears the preference.</summary>
     public SharedKernel.Results.Result SetLanguage(string? language, DateTimeOffset now)
     {
-        var normalized = string.IsNullOrWhiteSpace(language) ? null : language.Trim();
+        var normalized = TextRules.Normalise(language);
 
         if (normalized is not null && !IsWellFormedLanguageCode(normalized))
         {

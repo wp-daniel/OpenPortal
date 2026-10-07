@@ -195,11 +195,6 @@ export interface Profile {
   readonly projects: readonly Project[]
 }
 
-export interface PublicContent {
-  readonly profile: Profile | null
-  readonly projects: readonly Project[]
-}
-
 export interface ProfileRequest {
   readonly id: string | null
   readonly displayName: string

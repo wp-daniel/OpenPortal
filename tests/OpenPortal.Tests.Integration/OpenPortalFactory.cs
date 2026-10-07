@@ -65,11 +65,13 @@ public sealed class OpenPortalFactory : WebApplicationFactory<Program>, IAsyncLi
         var rolesManager = scope.ServiceProvider.GetRequiredService<
             Microsoft.AspNetCore.Identity.RoleManager<Microsoft.AspNetCore.Identity.IdentityRole<Guid>>>();
 
-        var user = new OpenPortal.Identity.Domain.Users.ApplicationUser(
+        // Named after the address ("ada@example.com" is "ada Test") so tests can predict the display name.
+        var user = OpenPortal.Identity.Domain.Users.ApplicationUser.Create(
             Guid.NewGuid(),
             email,
-            email.Split('@')[0],
-            DateTimeOffset.UtcNow);
+            new OpenPortal.Identity.Domain.Users.UserDetails(
+                email.Split('@')[0], "Test", null, null, null, null, null, null, null, null),
+            DateTimeOffset.UtcNow).Value;
 
         var created = await users.CreateAsync(user, password);
         created.Succeeded.ShouldBeTrue(

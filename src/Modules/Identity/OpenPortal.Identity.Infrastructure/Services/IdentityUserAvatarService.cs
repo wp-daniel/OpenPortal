@@ -170,6 +170,6 @@ internal sealed class IdentityUserAvatarService : IUserAvatarService
 
         return persisted.Succeeded
             ? Result.Success()
-            : Result.Failure(persisted.ToError(UserErrors.AvatarRequired));
+            : Result.Failure(persisted.ToError(UserErrors.SaveFailed));
     }
 }

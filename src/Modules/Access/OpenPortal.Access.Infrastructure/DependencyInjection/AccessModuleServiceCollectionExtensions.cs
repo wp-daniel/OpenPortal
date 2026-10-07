@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Access.Infrastructure.Configuration;
 using OpenPortal.Access.Infrastructure.Persistence;
@@ -45,10 +46,7 @@ public static class AccessModuleServiceCollectionExtensions
                 .UseDbContext<AccessDbContext>()
                 .ReplaceDefaultEntities<Guid>());
 
-        if (!services.Any(descriptor => descriptor.ServiceType == typeof(IClock)))
-        {
-            services.AddSingleton<IClock, SystemClock>();
-        }
+        services.TryAddSingleton<IClock, SystemClock>();
 
         services.AddScoped<OidcClientRegistry>();
         services.AddScoped<AccessQueries>();

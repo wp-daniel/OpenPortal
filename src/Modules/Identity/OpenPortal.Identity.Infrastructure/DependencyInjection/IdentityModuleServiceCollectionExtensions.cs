@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Identity.Domain.Users;
@@ -61,10 +62,7 @@ public static class IdentityModuleServiceCollectionExtensions
         services.AddScoped<IUserAvatarService, IdentityUserAvatarService>();
         services.AddScoped<IdentityDataSeeder>();
 
-        if (!services.Any(descriptor => descriptor.ServiceType == typeof(IClock)))
-        {
-            services.AddSingleton<IClock, SystemClock>();
-        }
+        services.TryAddSingleton<IClock, SystemClock>();
 
         services
             .AddIdentityCore<ApplicationUser>()

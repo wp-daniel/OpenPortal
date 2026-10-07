@@ -16,11 +16,11 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
     /// </summary>
     private const string TimingEqualisationPassword = "OpenPortal::timing-equalisation";
 
-    private static readonly ApplicationUser TimingEqualisationUser = new(
+    private static readonly ApplicationUser TimingEqualisationUser = ApplicationUser.Create(
         Guid.Empty,
         "timing-equalisation@invalid.local",
-        "Timing Equalisation",
-        DateTimeOffset.UnixEpoch);
+        new UserDetails("Timing", "Equalisation", null, null, null, null, null, null, null, null),
+        DateTimeOffset.UnixEpoch).Value;
 
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;

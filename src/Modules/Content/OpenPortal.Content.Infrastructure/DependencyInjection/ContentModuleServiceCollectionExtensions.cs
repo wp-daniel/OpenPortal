@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OpenPortal.Content.Application.Abstractions;
 using OpenPortal.Content.Infrastructure.Persistence;
 using OpenPortal.Content.Infrastructure.Services;
+using OpenPortal.SharedKernel.Time;
 
 namespace OpenPortal.Content.Infrastructure.DependencyInjection;
 
@@ -28,6 +30,8 @@ public static class ContentModuleServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(configureContext);
 
         services.AddDbContext<ContentDbContext>(configureContext);
+
+        services.TryAddSingleton<IClock, SystemClock>();
 
         services.AddScoped<IPublicContentService, PublicContentService>();
         services.AddScoped<IContentManagementService, ContentManagementService>();

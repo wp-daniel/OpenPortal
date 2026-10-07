@@ -54,14 +54,8 @@ public static class UserErrors
     public static Error CurrentPasswordIncorrect { get; } =
         Error.Validation(Prefix + "current_password_incorrect", "The current password is not correct.");
 
-    public static Error DisplayNameRequired { get; } =
-        Error.Validation(Prefix + "display_name_required", "A display name is required.");
-
-    public static Error DisplayNameTooShort { get; } =
-        Error.Validation(Prefix + "display_name_too_short", $"The display name must be at least {ApplicationUser.DisplayNameMinLength} characters.");
-
     public static Error DisplayNameTooLong { get; } =
-        Error.Validation(Prefix + "display_name_too_long", $"The display name must not exceed {ApplicationUser.DisplayNameMaxLength} characters.");
+        Error.Validation(Prefix + "display_name_too_long", $"The full name (first and last name) must not exceed {ApplicationUser.DisplayNameMaxLength} characters.");
 
     public static Error FirstNameRequired { get; } =
         Error.Validation(Prefix + "first_name_required", "A first name is required.");
@@ -90,6 +84,17 @@ public static class UserErrors
     public static Error AvatarNotFound { get; } =
         Error.NotFound(Prefix + "avatar_not_found", "The user has no profile picture.");
 
-    public static Error EmailRequired { get; } =
-        Error.Validation(Prefix + "email_required", "An email address is required.");
+    public static Error SaveFailed { get; } =
+        Error.Failure(Prefix + "save_failed", "The account could not be saved.");
+
+    public static Error RoleAssignmentFailed { get; } =
+        Error.Failure(
+            Prefix + "role_assignment_failed",
+            "The account was created but its roles could not be assigned, so it has been removed.");
+
+    public static Error RoleUpdateFailed { get; } =
+        Error.Failure(Prefix + "role_update_failed", "The account's roles could not be updated.");
+
+    public static Error DeleteFailed { get; } =
+        Error.Failure(Prefix + "delete_failed", "The account could not be deleted.");
 }

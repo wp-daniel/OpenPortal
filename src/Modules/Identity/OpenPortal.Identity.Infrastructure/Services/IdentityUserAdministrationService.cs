@@ -136,45 +136,36 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         ArgumentNullException.ThrowIfNull(request);
 
         var roles = RolesFor(request.IsAdministrator);
-        if (roles.IsFailure)
-        {
-            return Result<UserSummaryDto>.Failure(roles.Error);
-        }
-
-        var assignable = _guard.EnsureMayAssign(roles.Value);
+        var assignable = _guard.EnsureMayAssign(roles);
         if (assignable.IsFailure)
         {
             return Result<UserSummaryDto>.Failure(assignable.Error);
         }
 
-        var email = request.Email.Trim();
-        var user = new ApplicationUser(Guid.NewGuid(), email, DeriveDisplayName(email), _clock.UtcNow);
-
         // Validate the details before touching the store so bad input is a 400, not a half-made account.
-        var details = user.UpdateDetails(request.ToDetails(), _clock.UtcNow);
-        if (details.IsFailure)
+        var account = ApplicationUser.Create(Guid.NewGuid(), request.Email, request.ToDetails(), _clock.UtcNow);
+        if (account.IsFailure)
         {
-            return Result<UserSummaryDto>.Failure(details.Error);
+            return Result<UserSummaryDto>.Failure(account.Error);
         }
 
+        var user = account.Value;
         var created = await _userManager.CreateAsync(user, request.Password).ConfigureAwait(false);
         if (!created.Succeeded)
         {
-            return Result<UserSummaryDto>.Failure(created.ToError(UserErrors.DuplicateEmail));
+            return Result<UserSummaryDto>.Failure(created.ToError(UserErrors.SaveFailed));
         }
 
-        var assigned = await _userManager.AddToRolesAsync(user, roles.Value).ConfigureAwait(false);
+        var assigned = await _userManager.AddToRolesAsync(user, roles).ConfigureAwait(false);
         if (!assigned.Succeeded)
         {
             // Never leave a half-provisioned account behind.
             await _userManager.DeleteAsync(user).ConfigureAwait(false);
 
-            return Result<UserSummaryDto>.Failure(assigned.ToError(Error.Failure(
-                "identity.role_assignment_failed",
-                "The account was created but its roles could not be assigned, so it has been removed.")));
+            return Result<UserSummaryDto>.Failure(assigned.ToError(UserErrors.RoleAssignmentFailed));
         }
 
-        return Result<UserSummaryDto>.Success(ToSummary(user, roles.Value, _clock.UtcNow));
+        return Result<UserSummaryDto>.Success(ToSummary(user, roles, _clock.UtcNow));
     }
 
     public async Task<Result<UserSummaryDto>> UpdateUserAsync(
@@ -197,21 +188,16 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         }
 
         var user = lookup.Value;
-        var roles = RolesFor(request.IsAdministrator);
-        if (roles.IsFailure)
-        {
-            return Result<UserSummaryDto>.Failure(roles.Error);
-        }
+        var effectiveRoles = RolesFor(request.IsAdministrator);
 
         var changeable = await _guard.EnsureMayChangeAsync(user).ConfigureAwait(false);
-        var assignable = changeable.IsSuccess ? _guard.EnsureMayAssign(roles.Value) : changeable;
+        var assignable = changeable.IsSuccess ? _guard.EnsureMayAssign(effectiveRoles) : changeable;
         if (assignable.IsFailure)
         {
             return Result<UserSummaryDto>.Failure(assignable.Error);
         }
 
         var currentRoles = await _userManager.GetRolesAsync(user).ConfigureAwait(false);
-        var effectiveRoles = roles.Value;
 
         if (_currentUser.UserId == userId && !SameMembership(currentRoles, effectiveRoles))
         {
@@ -229,7 +215,7 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         var persisted = await _userManager.UpdateAsync(user).ConfigureAwait(false);
         if (!persisted.Succeeded)
         {
-            return Result<UserSummaryDto>.Failure(persisted.ToError(UserErrors.DisplayNameRequired));
+            return Result<UserSummaryDto>.Failure(persisted.ToError(UserErrors.SaveFailed));
         }
 
         var removed = currentRoles.Except(effectiveRoles, StringComparer.Ordinal).ToArray();
@@ -238,8 +224,7 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
             var removal = await _userManager.RemoveFromRolesAsync(user, removed).ConfigureAwait(false);
             if (!removal.Succeeded)
             {
-                return Result<UserSummaryDto>.Failure(removal.ToError(
-                    Error.Failure("identity.role_update_failed", "The account's roles could not be updated.")));
+                return Result<UserSummaryDto>.Failure(removal.ToError(UserErrors.RoleUpdateFailed));
             }
         }
 
@@ -249,8 +234,7 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
             var addition = await _userManager.AddToRolesAsync(user, added).ConfigureAwait(false);
             if (!addition.Succeeded)
             {
-                return Result<UserSummaryDto>.Failure(addition.ToError(
-                    Error.Failure("identity.role_update_failed", "The account's roles could not be updated.")));
+                return Result<UserSummaryDto>.Failure(addition.ToError(UserErrors.RoleUpdateFailed));
             }
         }
 
@@ -295,7 +279,7 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
 
         return reset.Succeeded
             ? Result.Success()
-            : Result.Failure(reset.ToError(UserErrors.PasswordComplexity));
+            : Result.Failure(reset.ToError(UserErrors.SaveFailed));
     }
 
     public async Task<Result> DeleteUserAsync(Guid userId, CancellationToken cancellationToken)
@@ -329,19 +313,15 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
 
         return deleted.Succeeded
             ? Result.Success()
-            : Result.Failure(deleted.ToError(Error.Failure("identity.delete_failed", "The account could not be deleted.")));
+            : Result.Failure(deleted.ToError(UserErrors.DeleteFailed));
     }
 
     /// <summary>
     /// The roles behind the administrator flag: every account holds <see cref="Roles.User"/>, and an
     /// administrator also holds <see cref="Roles.Administrator"/>.
     /// </summary>
-    private static Result<IReadOnlyList<string>> RolesFor(bool isAdministrator)
-    {
-        string[] effective = isAdministrator ? [Roles.User, Roles.Administrator] : [Roles.User];
-
-        return Result<IReadOnlyList<string>>.Success(effective);
-    }
+    private static IReadOnlyList<string> RolesFor(bool isAdministrator) =>
+        isAdministrator ? [Roles.User, Roles.Administrator] : [Roles.User];
 
     private async Task<Dictionary<Guid, IReadOnlyList<string>>> LoadRolesAsync(
         IReadOnlyCollection<Guid> userIds,
@@ -412,18 +392,4 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         PostalCode: user.PostalCode,
         Country: user.Country,
         AvatarUpdatedAtUtc: user.AvatarUpdatedAtUtc);
-
-    private static string DeriveDisplayName(string email)
-    {
-        var localPart = email.Split('@', 2)[0];
-
-        if (localPart.Length < ApplicationUser.DisplayNameMinLength)
-        {
-            localPart = Roles.User;
-        }
-
-        return localPart.Length > ApplicationUser.DisplayNameMaxLength
-            ? localPart[..ApplicationUser.DisplayNameMaxLength]
-            : localPart;
-    }
 }

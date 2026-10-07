@@ -3,6 +3,7 @@ using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Identity.Application.Contracts;
 using OpenPortal.Identity.Domain.Users;
 using OpenPortal.SharedKernel.Results;
+using OpenPortal.SharedKernel.Text;
 using OpenPortal.SharedKernel.Time;
 
 namespace OpenPortal.Identity.Infrastructure.Services;
@@ -60,7 +61,7 @@ internal sealed class IdentityAccountService : IAccountService
 
         return persisted.Succeeded
             ? await ToProfileAsync(user, cancellationToken).ConfigureAwait(false)
-            : Result<AccountProfileDto>.Failure(persisted.ToError(UserErrors.DisplayNameRequired));
+            : Result<AccountProfileDto>.Failure(persisted.ToError(UserErrors.SaveFailed));
     }
 
     public async Task<Result<AccountProfileDto>> UpdateLanguageAsync(
@@ -75,7 +76,7 @@ internal sealed class IdentityAccountService : IAccountService
             return Result<AccountProfileDto>.Failure(lookup.Error);
         }
 
-        var requested = string.IsNullOrWhiteSpace(request.Language) ? null : request.Language.Trim();
+        var requested = TextRules.Normalise(request.Language);
         if (requested is not null && !_languages.IsSupported(requested))
         {
             return Result<AccountProfileDto>.Failure(UserErrors.UnsupportedLanguage);
@@ -92,7 +93,7 @@ internal sealed class IdentityAccountService : IAccountService
 
         return persisted.Succeeded
             ? await ToProfileAsync(user, cancellationToken).ConfigureAwait(false)
-            : Result<AccountProfileDto>.Failure(persisted.ToError(UserErrors.UnsupportedLanguage));
+            : Result<AccountProfileDto>.Failure(persisted.ToError(UserErrors.SaveFailed));
     }
 
     public async Task<Result> ChangePasswordAsync(

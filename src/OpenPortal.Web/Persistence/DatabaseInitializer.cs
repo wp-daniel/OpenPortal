@@ -153,20 +153,20 @@ public sealed class DatabaseInitializer
         var displayName = string.IsNullOrWhiteSpace(bootstrap.DisplayName) ? "Portal Administrator" : bootstrap.DisplayName.Trim();
         var nameParts = displayName.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-        var user = new ApplicationUser(Guid.NewGuid(), email, displayName, DateTimeOffset.UtcNow)
-        {
-            EmailConfirmed = true,
-        };
-
         // The bootstrap setting only carries a display name, so it is split into the first and last name
         // that every account now has; the administrator can refine them from the account page.
-        var named = user.UpdateDetails(
+        var account = ApplicationUser.Create(
+            Guid.NewGuid(),
+            email,
             new UserDetails(nameParts[0], nameParts.Length > 1 ? nameParts[1] : "Administrator", null, null, null, null, null, null, null, null),
             DateTimeOffset.UtcNow);
-        if (named.IsFailure)
+        if (account.IsFailure)
         {
-            throw new BootstrapAdminException($"BootstrapAdmin:DisplayName was rejected: {named.Error.Description}");
+            throw new BootstrapAdminException($"BootstrapAdmin:DisplayName was rejected: {account.Error.Description}");
         }
+
+        var user = account.Value;
+        user.EmailConfirmed = true;
 
         var created = await _userManager.CreateAsync(user, bootstrap.Password).ConfigureAwait(false);
         if (!created.Succeeded)

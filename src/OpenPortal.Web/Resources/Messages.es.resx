@@ -46,7 +46,6 @@
   <data name="common.save" xml:space="preserve"><value>Guardar</value></data>
   <data name="common.saving" xml:space="preserve"><value>Guardando…</value></data>
   <data name="common.search" xml:space="preserve"><value>Buscar</value></data>
-  <data name="common.clear" xml:space="preserve"><value>Borrar</value></data>
   <data name="common.previous" xml:space="preserve"><value>Anterior</value></data>
   <data name="common.next" xml:space="preserve"><value>Siguiente</value></data>
   <data name="common.actions" xml:space="preserve"><value>Acciones</value></data>
@@ -208,8 +207,6 @@
   <data name="projects.technologies" xml:space="preserve"><value>Tecnologías</value></data>
   <data name="projects.technologiesHint" xml:space="preserve"><value>Separadas por comas; compartidas entre proyectos.</value></data>
   <data name="projects.submit" xml:space="preserve"><value>Guardar proyecto</value></data>
-  <data name="validation.displayName.required" xml:space="preserve"><value>El nombre para mostrar es obligatorio.</value></data>
-  <data name="validation.displayName.length" xml:space="preserve"><value>El nombre para mostrar debe tener entre 2 y 120 caracteres.</value></data>
   <data name="validation.currentPassword.required" xml:space="preserve"><value>La contraseña actual es obligatoria.</value></data>
   <data name="validation.currentPassword.max" xml:space="preserve"><value>La contraseña actual no puede superar los 256 caracteres.</value></data>
   <data name="validation.newPassword.required" xml:space="preserve"><value>La contraseña nueva es obligatoria.</value></data>
@@ -245,10 +242,7 @@
   <data name="error.identity.cannot_modify_own_roles" xml:space="preserve"><value>Un administrador no puede cambiar sus propios roles.</value></data>
   <data name="error.identity.password_complexity" xml:space="preserve"><value>La contraseña no cumple la política de complejidad configurada.</value></data>
   <data name="error.identity.current_password_incorrect" xml:space="preserve"><value>La contraseña actual no es correcta.</value></data>
-  <data name="error.identity.display_name_required" xml:space="preserve"><value>Se requiere un nombre para mostrar.</value></data>
-  <data name="error.identity.display_name_too_short" xml:space="preserve"><value>El nombre para mostrar debe tener al menos 2 caracteres.</value></data>
-  <data name="error.identity.display_name_too_long" xml:space="preserve"><value>El nombre para mostrar no puede superar los 120 caracteres.</value></data>
-  <data name="error.identity.email_required" xml:space="preserve"><value>Se requiere una dirección de correo.</value></data>
+  <data name="error.identity.display_name_too_long" xml:space="preserve"><value>El nombre completo (nombre y apellidos) no puede superar los 120 caracteres.</value></data>
   <data name="error.identity.role_update_failed" xml:space="preserve"><value>No se pudieron actualizar los roles de la cuenta.</value></data>
   <data name="error.content.edit_forbidden" xml:space="preserve"><value>Editar el contenido requiere una cuenta de administrador.</value></data>
   <data name="error.content.profile_not_found" xml:space="preserve"><value>El perfil solicitado no existe.</value></data>
@@ -622,4 +616,6 @@
   <data name="users.deleted" xml:space="preserve"><value>Cuenta eliminada</value></data>
   <data name="error.identity.cannot_delete_self" xml:space="preserve"><value>No puedes eliminar tu propia cuenta.</value></data>
   <data name="error.identity.delete_failed" xml:space="preserve"><value>No se pudo eliminar la cuenta.</value></data>
+  <data name="error.identity.save_failed" xml:space="preserve"><value>No se pudo guardar la cuenta.</value></data>
+  <data name="error.identity.role_assignment_failed" xml:space="preserve"><value>La cuenta se creó pero no se le pudieron asignar los roles, así que se ha eliminado.</value></data>
 </root>
