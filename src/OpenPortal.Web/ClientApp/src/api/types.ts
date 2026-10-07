@@ -36,6 +36,8 @@ export interface SessionUser {
   readonly language: string | null
   /** When the profile picture last changed; null when there is none. Versions the avatar URL. */
   readonly avatarUpdatedAtUtc: string | null
+  /** Keys of the portal pages the user may open (every page for an administrator). */
+  readonly pages: readonly string[]
 }
 
 /**
@@ -109,7 +111,7 @@ export interface UserSummary extends UserDetails {
   readonly isLockedOut: boolean
   readonly lockoutEndUtc: string | null
   readonly createdAtUtc: string
-  readonly roles: readonly string[]
+  readonly isAdministrator: boolean
   readonly avatarUpdatedAtUtc: string | null
 }
 
@@ -126,11 +128,12 @@ export interface PagedResult<T> {
 export interface CreateUserRequest extends UserDetails {
   readonly email: string
   readonly password: string
-  readonly roles: readonly string[]
+  /** Only an administrator may set it; the server refuses it otherwise. */
+  readonly isAdministrator: boolean
 }
 
 export interface UpdateUserRequest extends UserDetails {
-  readonly roles: readonly string[]
+  readonly isAdministrator: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -308,6 +311,8 @@ export interface GroupDetail {
   readonly description: string | null
   readonly members: readonly UserReference[]
   readonly applications: readonly ApplicationReference[]
+  /** Keys of the portal pages granted to the group. */
+  readonly pages: readonly string[]
   readonly createdAtUtc: string
 }
 
@@ -357,4 +362,23 @@ export interface LaunchpadItem {
   readonly displayName: string
   readonly description: string | null
   readonly baseUrl: string
+}
+
+/** A page of the portal that can be granted to groups. Labels are translation keys. */
+export interface PortalPage {
+  readonly key: string
+  readonly labelKey: string
+  readonly areaKey: string
+}
+
+export interface PageGrant {
+  readonly pageKey: string
+  readonly groupId: string
+}
+
+/** Grantable pages × groups, and which group may open which page. */
+export interface PagePermissionMatrix {
+  readonly pages: readonly PortalPage[]
+  readonly groups: readonly GroupReference[]
+  readonly grants: readonly PageGrant[]
 }

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { KeyRound, Loader2, Pencil, Plus } from 'lucide-react'
+import { KeyRound, Loader2, Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { z } from 'zod'
 import type { PasswordPolicy, UserSummary } from '@/api/types'
@@ -15,11 +15,21 @@ import { UserAvatar } from '@/components/UserAvatar'
 import { UserDetailsFields } from '@/components/UserDetailsFields'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
 import {
   Table,
   TableBody,
@@ -34,6 +44,7 @@ import { useDebounced } from '@/hooks/useDebounced'
 import { useSession } from '@/hooks/useSession'
 import { notify } from '@/hooks/useToast'
 import { useI18n } from '@/i18n/useI18n'
+import { useAccessRefresh } from '@/lib/access'
 import { describeError, traceIdOf } from '@/lib/errors'
 import { reportFormError, serverFieldErrors, zodFieldErrors } from '@/lib/forms'
 import { describePasswordPolicy, newPasswordSchema } from '@/lib/passwordPolicy'
@@ -47,45 +58,52 @@ import {
   type UserDetailsForm,
 } from '@/lib/userDetails'
 
-/** The roles the server recognises. Anything else is rejected there, so the list is fixed here. */
-const ROLES = ['Administrator', 'User'] as const
-
 const STATUSES = ['active', 'locked', 'unconfirmed'] as const
 
-/** Administrator-only account management. */
+/**
+ * Account management, for administrators and holders of the users page. Whether an account is an
+ * administrator is a single flag that only an administrator can set (the server enforces it).
+ */
 export function AdminUsersPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
-  const [role, setRole] = useState('')
+  const [kind, setKind] = useState('')
   const [status, setStatus] = useState('')
   const [accessUser, setAccessUser] = useState<UserSummary | null>(null)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<UserSummary | null>(null)
+  const [deleting, setDeleting] = useState<UserSummary | null>(null)
   const queryClient = useQueryClient()
-  const { session } = useSession()
+  const refreshAccess = useAccessRefresh()
+  // Only an administrator may grant the administrator role or change an administrator (the server enforces it).
+  const { session, isAdministrator } = useSession()
   const { t } = useI18n()
   const appliedSearch = useDebounced(search.trim())
 
   const users = useQuery({
-    queryKey: ['admin-users', page, appliedSearch, role, status],
-    queryFn: ({ signal }) => userAdminApi.list({ page, pageSize: 20, search: appliedSearch, role, status }, signal),
+    queryKey: ['admin-users', page, appliedSearch, kind, status],
+    queryFn: ({ signal }) =>
+      userAdminApi.list(
+        { page, pageSize: 20, search: appliedSearch, administrator: kind === '' ? undefined : kind === 'administrators', status },
+        signal,
+      ),
     // Keeps the table on screen while a filter change loads, instead of flashing a skeleton per keystroke.
     placeholderData: (previous) => previous,
   })
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['admin-users'] })
 
-  // Failures are toasted by the global MutationCache handler, so a failed role change is never silent.
-  const setRoles = useMutation({
-    mutationFn: ({ user, roles }: { user: UserSummary; roles: string[] }) =>
-      userAdminApi.update(user.id, { ...user, roles }),
-    onSuccess: async (_result, { user }) => {
-      notify.success(t('users.rolesUpdated'), user.email)
-      await refresh()
+  // Failures are toasted by the global MutationCache handler, so a failed delete is never silent.
+  const remove = useMutation({
+    mutationFn: (user: UserSummary) => userAdminApi.remove(user.id),
+    onSuccess: async (_result, user) => {
+      setDeleting(null)
+      notify.success(t('users.deleted'), user.email)
+      await Promise.all([refresh(), refreshAccess()])
     },
   })
 
-  const filtersActive = search !== '' || role !== '' || status !== ''
+  const filtersActive = search !== '' || kind !== '' || status !== ''
 
   function changeFilter(apply: () => void) {
     apply()
@@ -119,17 +137,20 @@ export function AdminUsersPage() {
           onReset={() =>
             changeFilter(() => {
               setSearch('')
-              setRole('')
+              setKind('')
               setStatus('')
             })
           }
           resultCount={users.data?.totalCount}
         >
           <FilterSelect
-            label={t('common.roles')}
-            value={role}
-            onChange={(value) => changeFilter(() => setRole(value))}
-            options={ROLES.map((entry) => ({ value: entry, label: t(`role.${entry}`) }))}
+            label={t('users.kind.label')}
+            value={kind}
+            onChange={(value) => changeFilter(() => setKind(value))}
+            options={[
+              { value: 'administrators', label: t('users.kind.administrators') },
+              { value: 'others', label: t('users.kind.others') },
+            ]}
           />
           <FilterSelect
             label={t('common.status')}
@@ -164,14 +185,15 @@ export function AdminUsersPage() {
                   <TableHead>{t('common.displayName')}</TableHead>
                   <TableHead>{t('common.phone')}</TableHead>
                   <TableHead>{t('common.company')}</TableHead>
-                  <TableHead>{t('common.roles')}</TableHead>
+                  <TableHead>{t('users.administrator')}</TableHead>
                   <TableHead>{t('common.status')}</TableHead>
                   <TableHead className="text-right">{t('common.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.data.items.map((user) => {
-                  const isAdmin = user.roles.includes('Administrator')
+                  const locked = user.isAdministrator && !isAdministrator
+                  const self = user.id === session.user?.id
 
                   return (
                     <TableRow key={user.id}>
@@ -196,13 +218,14 @@ export function AdminUsersPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {user.roles.map((entry) => (
-                            <Badge key={entry} variant="secondary">
-                              {t(`role.${entry}`)}
-                            </Badge>
-                          ))}
-                        </div>
+                        {user.isAdministrator ? (
+                          <Badge variant="secondary">
+                            <ShieldCheck />
+                            {t('users.administrator')}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {user.isLockedOut ? (
@@ -218,6 +241,8 @@ export function AdminUsersPage() {
                           <Button
                             variant="ghost"
                             size="sm"
+                            disabled={locked}
+                            title={locked ? t('users.administratorOnly') : undefined}
                             onClick={() => {
                               setEditing(user)
                               setFormOpen(true)
@@ -231,19 +256,14 @@ export function AdminUsersPage() {
                             {t('users.access')}
                           </Button>
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
-                            disabled={setRoles.isPending}
-                            onClick={() =>
-                              setRoles.mutate({
-                                user,
-                                roles: isAdmin
-                                  ? user.roles.filter((entry) => entry !== 'Administrator')
-                                  : [...user.roles, 'Administrator'],
-                              })
-                            }
+                            aria-label={t('common.delete')}
+                            disabled={locked || self}
+                            title={self ? t('users.cannotDeleteSelf') : locked ? t('users.administratorOnly') : undefined}
+                            onClick={() => setDeleting(user)}
                           >
-                            {isAdmin ? t('users.revokeAdmin') : t('users.makeAdmin')}
+                            <Trash2 />
                           </Button>
                         </div>
                       </TableCell>
@@ -281,6 +301,30 @@ export function AdminUsersPage() {
       />
 
       <UserAccessSheet user={accessUser} onClose={() => setAccessUser(null)} />
+
+      <AlertDialog open={deleting !== null} onOpenChange={(open) => !open && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('users.deleteTitle', { name: deleting?.displayName ?? '' })}</AlertDialogTitle>
+            <AlertDialogDescription>{t('users.deleteDescription', { email: deleting?.email ?? '' })}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={remove.isPending}
+              onClick={(event) => {
+                event.preventDefault()
+                if (deleting) {
+                  remove.mutate(deleting)
+                }
+              }}
+            >
+              {t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
@@ -338,10 +382,12 @@ function UserForm({
 }) {
   const { t } = useI18n()
   const editing = user !== null
+  const { isAdministrator, user: me } = useSession()
+  const self = user !== null && user.id === me?.id
   const [email, setEmail] = useState(user?.email ?? '')
   const [password, setPassword] = useState('')
   const [details, setDetails] = useState<UserDetailsForm>(user ? detailsToForm(user) : EMPTY_DETAILS)
-  const [roles, setRoles] = useState<string[]>(user ? [...user.roles] : [])
+  const [administrator, setAdministrator] = useState(user?.isAdministrator ?? false)
   const [errors, setErrors] = useState<Partial<Record<AccountField | UserDetailsField, string>>>({})
   const [tab, setTab] = useState<UserFormTab>('account')
 
@@ -359,7 +405,7 @@ function UserForm({
 
   const save = useMutation({
     mutationFn: () => {
-      const body = { ...formToDetails(details), roles }
+      const body = { ...formToDetails(details), isAdministrator: administrator }
 
       return user
         ? userAdminApi.update(user.id, body)
@@ -458,25 +504,23 @@ function UserForm({
                 )}
               </div>
 
-              <div className="grid gap-2">
-                <span className="text-sm">{t('common.roles')}</span>
-                <div className="flex gap-6">
-                  {ROLES.map((entry) => (
-                    <div key={entry} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`role-${entry}`}
-                        checked={roles.includes(entry)}
-                        onCheckedChange={(checked) =>
-                          setRoles(checked === true ? [...roles, entry] : roles.filter((value) => value !== entry))
-                        }
-                      />
-                      <Label htmlFor={`role-${entry}`} className="font-normal">
-                        {t(`role.${entry}`)}
-                      </Label>
-                    </div>
-                  ))}
+              {/* Only an administrator sees the flag; nobody can change their own. */}
+              {isAdministrator && (
+                <div className="flex items-start justify-between gap-4 rounded-md border p-3">
+                  <div className="grid gap-1">
+                    <Label htmlFor="user-administrator">{t('users.administrator')}</Label>
+                    <p className="text-muted-foreground text-xs">
+                      {self ? t('users.administratorSelfHint') : t('users.administratorHint')}
+                    </p>
+                  </div>
+                  <Switch
+                    id="user-administrator"
+                    checked={administrator}
+                    disabled={self}
+                    onCheckedChange={setAdministrator}
+                  />
                 </div>
-              </div>
+              )}
             </fieldset>
 
             <Separator />

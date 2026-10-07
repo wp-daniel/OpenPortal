@@ -15,6 +15,7 @@ import { AccountPage } from '@/pages/AccountPage'
 import { AdminAccessPage } from '@/pages/AdminAccessPage'
 import { AdminApplicationsPage } from '@/pages/AdminApplicationsPage'
 import { AdminGroupsPage } from '@/pages/AdminGroupsPage'
+import { AdminPagePermissionsPage } from '@/pages/AdminPagePermissionsPage'
 import { AdminUsersPage } from '@/pages/AdminUsersPage'
 import { ContentProfilePage } from '@/pages/ContentProfilePage'
 import { ContentProjectPage } from '@/pages/ContentProjectPage'
@@ -23,7 +24,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage'
 import { SignInPage } from '@/pages/SignInPage'
 import { AppLayout } from '@/routes/AppLayout'
 import { AuthLayout } from '@/routes/AuthLayout'
-import { AdminRoute, ProtectedRoute, PublicOnlyRoute } from '@/routes/guards'
+import { PageRoute, ProtectedRoute, PublicOnlyRoute } from '@/routes/guards'
 
 /**
  * Mutations a form handles itself set `meta: { handlesErrors: true }`. Every other failed mutation gets a
@@ -75,6 +76,7 @@ const queryClient = new QueryClient({
 })
 
 const crumbs = (...steps: Crumb[]): RouteHandle => ({ crumbs: steps })
+const page = (key: string, ...steps: Crumb[]): RouteHandle => ({ crumbs: steps, page: key })
 
 const router = createBrowserRouter([
   {
@@ -95,21 +97,28 @@ const router = createBrowserRouter([
               { path: 'account', element: <AccountPage />, handle: crumbs({ labelKey: 'nav.account' }) },
               { path: 'access-denied', element: <AccessDeniedPage />, handle: crumbs({ labelKey: 'nav.accessDenied' }) },
               {
-                element: <AdminRoute />,
+                // Each route names its portal page (`page`, a server `PortalPages` key); PageRoute lets in the
+                // groups granted that page and administrators. A route without a page is for administrators only.
+                element: <PageRoute />,
                 handle: crumbs({ labelKey: 'nav.administration' }),
                 children: [
                   {
                     handle: crumbs({ labelKey: 'nav.identity' }),
                     children: [
-                      { path: 'admin/users', element: <AdminUsersPage />, handle: crumbs({ labelKey: 'nav.users' }) },
-                      { path: 'admin/groups', element: <AdminGroupsPage />, handle: crumbs({ labelKey: 'nav.groups' }) },
-                      { path: 'admin/access', element: <AdminAccessPage />, handle: crumbs({ labelKey: 'nav.access' }) },
+                      { path: 'admin/users', element: <AdminUsersPage />, handle: page('users', { labelKey: 'nav.users' }) },
+                      { path: 'admin/groups', element: <AdminGroupsPage />, handle: page('groups', { labelKey: 'nav.groups' }) },
+                      { path: 'admin/access', element: <AdminAccessPage />, handle: page('access', { labelKey: 'nav.access' }) },
+                      {
+                        path: 'admin/page-permissions',
+                        element: <AdminPagePermissionsPage />,
+                        handle: crumbs({ labelKey: 'nav.pagePermissions' }),
+                      },
                     ],
                   },
                   {
                     path: 'admin/applications',
                     element: <AdminApplicationsPage />,
-                    handle: crumbs({ labelKey: 'nav.applications' }),
+                    handle: page('applications', { labelKey: 'nav.applications' }),
                   },
                   {
                     handle: crumbs({ labelKey: 'nav.content' }),
@@ -117,17 +126,21 @@ const router = createBrowserRouter([
                       {
                         path: 'admin/content/profile',
                         element: <ContentProfilePage />,
-                        handle: crumbs({ labelKey: 'nav.profile' }),
+                        handle: page('content.profile', { labelKey: 'nav.profile' }),
                       },
                       {
                         path: 'admin/content/projects',
                         element: <ContentProjectPage />,
-                        handle: crumbs({ labelKey: 'nav.projects' }),
+                        handle: page('content.projects', { labelKey: 'nav.projects' }),
                       },
                       {
                         path: 'admin/content/projects/:projectId',
                         element: <ContentProjectPage />,
-                        handle: crumbs({ labelKey: 'nav.projects', to: '/admin/content/projects' }, { labelKey: 'common.edit' }),
+                        handle: page(
+                          'content.projects',
+                          { labelKey: 'nav.projects', to: '/admin/content/projects' },
+                          { labelKey: 'common.edit' },
+                        ),
                       },
                     ],
                   },

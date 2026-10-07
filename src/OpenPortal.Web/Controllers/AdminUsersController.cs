@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Identity.Application.Contracts;
 using OpenPortal.Web.Authorization;
@@ -7,26 +8,30 @@ using OpenPortal.Web.Infrastructure;
 
 namespace OpenPortal.Web.Controllers;
 
-/// <summary>Administrator-only account management.</summary>
+/// <summary>Account management, for administrators and holders of the users page.</summary>
+/// <remarks>
 /// <para>
-/// The policy here is the first gate. Every service behind these routes re-checks the caller's role before
+/// The page check here is the first gate. Every service behind these routes re-checks the caller before
 /// mutating anything, so the endpoints cannot be bypassed by calling the service from elsewhere.
 /// </para>
 /// </remarks>
 [ApiController]
 [Route("api/admin/users")]
-[Authorize(Policy = Policies.AdministratorOnly)]
+[Authorize]
 [Produces("application/json")]
 public sealed class AdminUsersController : ControllerBase
 {
     private readonly IUserAdministrationService _users;
+    private readonly IAccessAdministrationService _access;
 
-    public AdminUsersController(IUserAdministrationService users)
+    public AdminUsersController(IUserAdministrationService users, IAccessAdministrationService access)
     {
         _users = users;
+        _access = access;
     }
 
     /// <summary>Lists accounts, filtered and paged.</summary>
+    [RequirePortalPage(PortalPages.Users, PortalPages.Groups, PortalPages.Access)]
     [HttpGet]
     [ProducesResponseType<PagedResult<UserSummaryDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
@@ -43,6 +48,7 @@ public sealed class AdminUsersController : ControllerBase
     }
 
     /// <summary>Returns one account.</summary>
+    [RequirePortalPage(PortalPages.Users)]
     [HttpGet("{userId:guid}")]
     [ProducesResponseType<UserSummaryDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -57,6 +63,7 @@ public sealed class AdminUsersController : ControllerBase
     }
 
     /// <summary>Creates an account.</summary>
+    [RequirePortalPage(PortalPages.Users)]
     [HttpPost]
     [ProducesResponseType<UserSummaryDto>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
@@ -76,6 +83,7 @@ public sealed class AdminUsersController : ControllerBase
     }
 
     /// <summary>Updates an account's display name and role membership.</summary>
+    [RequirePortalPage(PortalPages.Users)]
     [HttpPut("{userId:guid}")]
     [ProducesResponseType<UserSummaryDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
@@ -94,6 +102,7 @@ public sealed class AdminUsersController : ControllerBase
     }
 
     /// <summary>Sets a new password and ends that account's existing sessions.</summary>
+    [RequirePortalPage(PortalPages.Users)]
     [HttpPost("{userId:guid}/reset-password")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
@@ -109,5 +118,29 @@ public sealed class AdminUsersController : ControllerBase
         return reset.IsSuccess
             ? NoContent()
             : ProblemResults.FromResult(HttpContext, reset);
+    }
+
+    /// <summary>
+    /// Deletes an account, then what the Access module holds about it (group memberships, direct grants and
+    /// tokens). Nobody can delete themselves; only an administrator can delete an administrator.
+    /// </summary>
+    [RequirePortalPage(PortalPages.Users)]
+    [HttpDelete("{userId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DeleteAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var deleted = await _users.DeleteUserAsync(userId, cancellationToken).ConfigureAwait(false);
+        if (deleted.IsFailure)
+        {
+            return ProblemResults.FromResult(HttpContext, deleted);
+        }
+
+        // The account is gone either way; a failure here leaves only references the screens show as unknown.
+        var forgotten = await _access.RemoveUserAsync(userId, cancellationToken).ConfigureAwait(false);
+
+        return forgotten.IsSuccess ? NoContent() : ProblemResults.FromResult(HttpContext, forgotten);
     }
 }

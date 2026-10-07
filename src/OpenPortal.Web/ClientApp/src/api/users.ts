@@ -3,7 +3,7 @@ import type { CreateUserRequest, PagedResult, UpdateUserRequest, UserSummary } f
 
 export const userAdminApi = {
   list: (
-    params: { page: number; pageSize: number; search?: string; role?: string; status?: string },
+    params: { page: number; pageSize: number; search?: string; administrator?: boolean; status?: string },
     signal?: AbortSignal,
   ): Promise<PagedResult<UserSummary>> =>
     api.get<PagedResult<UserSummary>>(
@@ -11,7 +11,7 @@ export const userAdminApi = {
         page: params.page,
         pageSize: params.pageSize,
         search: params.search,
-        role: params.role,
+        administrator: params.administrator === undefined ? undefined : String(params.administrator),
         status: params.status,
       }),
       signal,
@@ -28,6 +28,9 @@ export const userAdminApi = {
   uploadAvatar: (userId: string, image: Blob) => api.put<void>(`/api/admin/users/${userId}/avatar`, avatarForm(image)),
 
   removeAvatar: (userId: string) => api.delete<void>(`/api/admin/users/${userId}/avatar`),
+
+  /** Deletes the account, its group memberships and its application grants. */
+  remove: (userId: string) => api.delete<void>(`/api/admin/users/${userId}`),
 }
 
 /** The multipart body every avatar upload sends: one `file` part, judged by its bytes on the server. */

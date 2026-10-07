@@ -336,7 +336,7 @@ public sealed class ApiTests : IClassFixture<OpenPortalFactory>
                 company = "Navy",
                 jobTitle = "Rear Admiral",
                 city = "Arlington",
-                roles = new[] { "User" },
+                isAdministrator = false,
             });
 
         response.StatusCode.ShouldBe(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
@@ -357,7 +357,7 @@ public sealed class ApiTests : IClassFixture<OpenPortalFactory>
 
         using var noLastName = await client.PostAsync(
             "/api/admin/users",
-            new { email = "a@example.com", password = Passwords.Valid, firstName = "Ada", roles = new[] { "User" } });
+            new { email = "a@example.com", password = Passwords.Valid, firstName = "Ada" });
         using var badPhone = await client.PostAsync(
             "/api/admin/users",
             new
@@ -367,7 +367,7 @@ public sealed class ApiTests : IClassFixture<OpenPortalFactory>
                 firstName = "Ada",
                 lastName = "Lovelace",
                 phoneNumber = "call me maybe",
-                roles = new[] { "User" },
+                isAdministrator = false,
             });
 
         noLastName.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
@@ -376,7 +376,7 @@ public sealed class ApiTests : IClassFixture<OpenPortalFactory>
     }
 
     [Fact]
-    public async Task Admin_can_filter_users_by_role_status_and_search()
+    public async Task Admin_can_filter_users_by_administrator_flag_status_and_search()
     {
         var admin = await _factory.CreateUserAsync("filter-admin@example.com", Passwords.Valid, "Administrator");
         using var client = await ApiClient.CreateAsync(_factory);
@@ -392,7 +392,7 @@ public sealed class ApiTests : IClassFixture<OpenPortalFactory>
                 lastName = "Zimmermann",
                 phoneNumber = "+39 333 123 4567",
                 company = "Acme Spa",
-                roles = new[] { "User" },
+                isAdministrator = false,
             });
         created.StatusCode.ShouldBe(HttpStatusCode.Created);
 
@@ -409,8 +409,10 @@ public sealed class ApiTests : IClassFixture<OpenPortalFactory>
 
         (await EmailsAsync("?search=acme")).ShouldBe(["filter-target@example.com"]);
         (await EmailsAsync("?search=333%20123")).ShouldBe(["filter-target@example.com"]);
-        (await EmailsAsync("?role=Administrator")).ShouldContain("filter-admin@example.com");
-        (await EmailsAsync("?role=Administrator")).ShouldNotContain("filter-target@example.com");
+        (await EmailsAsync("?administrator=true")).ShouldContain("filter-admin@example.com");
+        (await EmailsAsync("?administrator=true")).ShouldNotContain("filter-target@example.com");
+        (await EmailsAsync("?administrator=false")).ShouldContain("filter-target@example.com");
+        (await EmailsAsync("?administrator=false")).ShouldNotContain("filter-admin@example.com");
         (await EmailsAsync("?status=active")).ShouldContain("filter-target@example.com");
         (await EmailsAsync("?status=locked")).ShouldBeEmpty();
     }

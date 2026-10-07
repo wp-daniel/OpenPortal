@@ -16,7 +16,7 @@ import { describeError } from '@/lib/errors'
  * own areas.
  */
 export function DashboardPage() {
-  const { user, isAdministrator } = useSession()
+  const { user, canOpen } = useSession()
   const { t } = useI18n()
 
   const launchpad = useQuery({
@@ -74,41 +74,62 @@ export function DashboardPage() {
           </Button>
         </Section>
 
-        {isAdministrator && (
-          <>
-            <Section title={t('dashboard.users.title')} description={t('dashboard.users.description')}>
-              <Button asChild variant="outline" size="sm">
-                <Link to="/admin/users">{t('dashboard.users.manage')}</Link>
-              </Button>
-            </Section>
-
-            <Section title={t('dashboard.access.title')} description={t('dashboard.access.description')}>
-              <div className="flex flex-wrap gap-2">
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/admin/access">{t('nav.access')}</Link>
-                </Button>
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/admin/applications">{t('nav.applications')}</Link>
-                </Button>
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/admin/groups">{t('nav.groups')}</Link>
-                </Button>
-              </div>
-            </Section>
-
-            <Section title={t('dashboard.content.title')} description={t('dashboard.content.description')}>
-              <div className="flex flex-wrap gap-2">
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/admin/content/profile">{t('nav.profile')}</Link>
-                </Button>
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/admin/content/projects">{t('nav.projects')}</Link>
-                </Button>
-              </div>
-            </Section>
-          </>
+        {canOpen('users') && (
+          <Section title={t('dashboard.users.title')} description={t('dashboard.users.description')}>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/admin/users">{t('dashboard.users.manage')}</Link>
+            </Button>
+          </Section>
         )}
+
+        <ShortcutSection
+          title={t('dashboard.access.title')}
+          description={t('dashboard.access.description')}
+          links={[
+            { to: '/admin/access', label: t('nav.access'), page: 'access' },
+            { to: '/admin/applications', label: t('nav.applications'), page: 'applications' },
+            { to: '/admin/groups', label: t('nav.groups'), page: 'groups' },
+          ]}
+        />
+
+        <ShortcutSection
+          title={t('dashboard.content.title')}
+          description={t('dashboard.content.description')}
+          links={[
+            { to: '/admin/content/profile', label: t('nav.profile'), page: 'content.profile' },
+            { to: '/admin/content/projects', label: t('nav.projects'), page: 'content.projects' },
+          ]}
+        />
       </div>
     </>
+  )
+}
+
+interface Shortcut {
+  readonly to: string
+  readonly label: string
+  /** Portal page key; the link shows only to holders of the page and administrators. */
+  readonly page: string
+}
+
+/** A card of links to administration pages, keeping only those the user may open (none: no card). */
+function ShortcutSection({ title, description, links }: { title: string; description: string; links: Shortcut[] }) {
+  const { canOpen } = useSession()
+  const visible = links.filter((link) => canOpen(link.page))
+
+  if (visible.length === 0) {
+    return null
+  }
+
+  return (
+    <Section title={title} description={description}>
+      <div className="flex flex-wrap gap-2">
+        {visible.map((link) => (
+          <Button key={link.to} asChild variant="outline" size="sm">
+            <Link to={link.to}>{link.label}</Link>
+          </Button>
+        ))}
+      </div>
+    </Section>
   )
 }

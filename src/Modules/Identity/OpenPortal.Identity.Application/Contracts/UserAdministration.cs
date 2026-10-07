@@ -11,7 +11,7 @@ public sealed record UserSummaryDto(
     bool IsLockedOut,
     DateTimeOffset? LockoutEndUtc,
     DateTimeOffset CreatedAtUtc,
-    IReadOnlyList<string> Roles,
+    bool IsAdministrator,
     string FirstName,
     string LastName,
     string? PhoneNumber,
@@ -39,9 +39,8 @@ public sealed class UserListQuery
     [StringLength(256, ErrorMessage = "validation.search.max")]
     public string? Search { get; init; }
 
-    /// <summary>Only accounts holding this role.</summary>
-    [StringLength(64, ErrorMessage = "validation.search.max")]
-    public string? Role { get; init; }
+    /// <summary>Only administrators (<c>true</c>) or only the other accounts (<c>false</c>); all when absent.</summary>
+    public bool? Administrator { get; init; }
 
     /// <summary>One of <see cref="UserStatusFilter"/>; anything else is ignored.</summary>
     [StringLength(32, ErrorMessage = "validation.search.max")]
@@ -68,17 +67,15 @@ public sealed class CreateUserRequest : UserDetailsRequest
     [StringLength(256, ErrorMessage = "validation.password.max")]
     public string Password { get; init; } = string.Empty;
 
-    /// <summary>
-    /// Requested roles. Filtered against <see cref="Roles.All"/> on the server; unknown names are rejected
-    /// rather than silently dropped.
-    /// </summary>
-    public IReadOnlyList<string> Roles { get; init; } = [];
+    /// <summary>Whether the account is an administrator. Only an administrator may set it.</summary>
+    public bool IsAdministrator { get; init; }
 }
 
-/// <summary>Editable fields and role membership of an existing account.</summary>
+/// <summary>Editable fields of an existing account, and whether it is an administrator.</summary>
 public sealed class UpdateUserRequest : UserDetailsRequest
 {
-    public IReadOnlyList<string> Roles { get; init; } = [];
+    /// <summary>Whether the account is an administrator. Only an administrator may change it.</summary>
+    public bool IsAdministrator { get; init; }
 }
 
 /// <summary>A new password set by an administrator on another account.</summary>

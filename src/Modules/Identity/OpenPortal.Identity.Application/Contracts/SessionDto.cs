@@ -8,6 +8,7 @@ namespace OpenPortal.Identity.Application.Contracts;
 /// no use for them and they are an unnecessary disclosure risk.
 /// </para>
 /// </summary>
+/// <param name="Pages">Keys of the portal pages the user may open (every page for an administrator).</param>
 public sealed record SessionUserDto(
     Guid Id,
     string Email,
@@ -15,7 +16,8 @@ public sealed record SessionUserDto(
     bool EmailConfirmed,
     IReadOnlyList<string> Roles,
     string? Language,
-    DateTimeOffset? AvatarUpdatedAtUtc);
+    DateTimeOffset? AvatarUpdatedAtUtc,
+    IReadOnlyList<string> Pages);
 
 /// <summary>Current session state as observed by the client.</summary>
 /// <param name="IsAuthenticated">Whether a valid session cookie was presented.</param>

@@ -31,6 +31,8 @@ public sealed class AccessDbContext : DbContext
 
     public DbSet<ApplicationGroupGrant> GroupGrants => Set<ApplicationGroupGrant>();
 
+    public DbSet<PageGroupGrant> PageGrants => Set<PageGroupGrant>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);

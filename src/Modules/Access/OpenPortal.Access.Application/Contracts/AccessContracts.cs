@@ -84,6 +84,7 @@ public sealed record GroupDetailDto(
     string? Description,
     IReadOnlyList<UserReferenceDto> Members,
     IReadOnlyList<ApplicationReferenceDto> Applications,
+    IReadOnlyList<string> Pages,
     DateTimeOffset CreatedAtUtc);
 
 public sealed record SaveGroupRequest(string Name, string? Description);
@@ -137,6 +138,27 @@ public sealed record LaunchpadItemDto(Guid Id, string ClientId, string DisplayNa
 /// <param name="Allowed">True only when the application is active and the user holds a grant.</param>
 /// <param name="ApplicationName">Display name to show on a refusal; null for an unknown client.</param>
 public sealed record AccessDecision(bool Allowed, string? ApplicationName);
+
+// ---------------------------------------------------------------------------
+// Page permissions.
+// ---------------------------------------------------------------------------
+
+/// <summary>A page of the portal that can be granted to groups.</summary>
+/// <param name="Key">Stable identifier, e.g. <c>users</c> or <c>content.projects</c>.</param>
+/// <param name="LabelKey">Translation key of the page name.</param>
+/// <param name="AreaKey">Translation key of the area the page belongs to.</param>
+public sealed record PortalPageDto(string Key, string LabelKey, string AreaKey);
+
+public sealed record PageGrantDto(string PageKey, Guid GroupId);
+
+/// <summary>The complete set of pages a group should hold.</summary>
+public sealed record SetGroupPagesRequest(IReadOnlyList<string>? Pages);
+
+/// <summary>The page permission matrix: catalog pages × groups, and the grants between them.</summary>
+public sealed record PagePermissionMatrixDto(
+    IReadOnlyList<PortalPageDto> Pages,
+    IReadOnlyList<GroupReferenceDto> Groups,
+    IReadOnlyList<PageGrantDto> Grants);
 
 // ---------------------------------------------------------------------------
 // Ports implemented by the host.

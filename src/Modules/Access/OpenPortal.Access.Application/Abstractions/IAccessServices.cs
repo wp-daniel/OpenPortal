@@ -79,6 +79,12 @@ public interface IAccessAdministrationService
     Task<Result> GrantGroupAsync(Guid applicationId, Guid groupId, CancellationToken cancellationToken);
 
     Task<Result> RevokeGroupAsync(Guid applicationId, Guid groupId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Forgets a user whose account was deleted: their direct grants and group memberships go, and their
+    /// tokens are revoked. Removing a user that holds nothing succeeds.
+    /// </summary>
+    Task<Result> RemoveUserAsync(Guid userId, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -104,12 +110,68 @@ public interface IApplicationAnnouncementService
 }
 
 /// <summary>
-/// Decides whether the caller may administer access. Supplied by the host, so this module stays
-/// independent of the Identity module (the same seam as Content's <c>IContentEditAuthorization</c>).
+/// Which portal pages the members of each group may open. Every method re-checks the caller through
+/// <see cref="IAccessAdminAuthorization"/> (<see cref="AccessOperation.ManagePagePermissions"/>). Grants are
+/// idempotent, like application grants.
+/// </summary>
+public interface IPagePermissionService
+{
+    /// <summary>Every page of the catalog, every group, and which group may open which page.</summary>
+    Task<Result<PagePermissionMatrixDto>> GetMatrixAsync(CancellationToken cancellationToken);
+
+    Task<Result> GrantAsync(string pageKey, Guid groupId, CancellationToken cancellationToken);
+
+    Task<Result> RevokeAsync(string pageKey, Guid groupId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Replaces the pages of one group with <paramref name="pageKeys"/> in one change, so a whole area can be
+    /// switched at once. Every key must be in the catalog.
+    /// </summary>
+    Task<Result> SetGroupPagesAsync(Guid groupId, IReadOnlyCollection<string> pageKeys, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// Answers "which pages may this user open" through their groups. Used by the host's authorization handler
+/// and the session, which identify the user themselves, so it performs no caller check of its own.
+/// </summary>
+public interface IPagePermissionEvaluator
+{
+    /// <summary>Keys of the catalog pages granted to any group the user belongs to.</summary>
+    Task<IReadOnlyList<string>> GetPagesAsync(Guid userId, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// The pages of the portal that can be granted to groups. Supplied by the host, which owns the pages; the
+/// module only stores grants against their keys (the same seam as Identity's <c>ILanguageCatalog</c>).
+/// </summary>
+public interface IPortalPageCatalog
+{
+    IReadOnlyList<PortalPageDto> Pages { get; }
+
+    bool IsKnown(string? pageKey);
+}
+
+/// <summary>What the caller wants to do, so the host can decide which pages allow it.</summary>
+public enum AccessOperation
+{
+    ListApplications,
+    ManageApplications,
+    ListGroups,
+    ManageGroups,
+    ViewTree,
+    ViewUserAccess,
+    ManageUserGrants,
+    ManageGroupGrants,
+    ManagePagePermissions,
+}
+
+/// <summary>
+/// Decides whether the caller may perform an administrative operation. Supplied by the host, so this module
+/// stays independent of the Identity module (the same seam as Content's <c>IContentEditAuthorization</c>).
 /// </summary>
 public interface IAccessAdminAuthorization
 {
-    Result EnsureCanAdminister();
+    Task<Result> EnsureCanAsync(AccessOperation operation, CancellationToken cancellationToken);
 }
 
 /// <summary>Looks up user accounts by id. Supplied by the host from its identity store.</summary>

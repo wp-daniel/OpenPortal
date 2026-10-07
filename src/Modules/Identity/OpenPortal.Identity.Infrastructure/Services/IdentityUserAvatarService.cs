@@ -16,6 +16,7 @@ internal sealed class IdentityUserAvatarService : IUserAvatarService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ICurrentUser _currentUser;
     private readonly UserLookup _userLookup;
+    private readonly AdministrationGuard _guard;
     private readonly IClock _clock;
 
     public IdentityUserAvatarService(
@@ -23,12 +24,14 @@ internal sealed class IdentityUserAvatarService : IUserAvatarService
         UserManager<ApplicationUser> userManager,
         ICurrentUser currentUser,
         UserLookup userLookup,
+        AdministrationGuard guard,
         IClock clock)
     {
         _dbContext = dbContext;
         _userManager = userManager;
         _currentUser = currentUser;
         _userLookup = userLookup;
+        _guard = guard;
         _clock = clock;
     }
 
@@ -69,32 +72,45 @@ internal sealed class IdentityUserAvatarService : IUserAvatarService
 
     public async Task<Result> SetForUserAsync(Guid userId, byte[] content, CancellationToken cancellationToken)
     {
-        var guard = CallerGuard.EnsureAdministrator(_currentUser);
+        var guard = await _guard.EnsureCanAsync(UserAdministrationOperation.ManageUsers, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return guard;
         }
 
-        var lookup = await _userLookup.FindAsync(userId, cancellationToken).ConfigureAwait(false);
+        var target = await FindChangeableAsync(userId, cancellationToken).ConfigureAwait(false);
 
-        return lookup.IsFailure
-            ? Result.Failure(lookup.Error)
-            : await SetAsync(lookup.Value, content, cancellationToken).ConfigureAwait(false);
+        return target.IsFailure
+            ? Result.Failure(target.Error)
+            : await SetAsync(target.Value, content, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Result> RemoveForUserAsync(Guid userId, CancellationToken cancellationToken)
     {
-        var guard = CallerGuard.EnsureAdministrator(_currentUser);
+        var guard = await _guard.EnsureCanAsync(UserAdministrationOperation.ManageUsers, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return guard;
         }
 
-        var lookup = await _userLookup.FindAsync(userId, cancellationToken).ConfigureAwait(false);
+        var target = await FindChangeableAsync(userId, cancellationToken).ConfigureAwait(false);
 
-        return lookup.IsFailure
-            ? Result.Failure(lookup.Error)
-            : await RemoveAsync(lookup.Value, cancellationToken).ConfigureAwait(false);
+        return target.IsFailure
+            ? Result.Failure(target.Error)
+            : await RemoveAsync(target.Value, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<Result<ApplicationUser>> FindChangeableAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var lookup = await _userLookup.FindAsync(userId, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
+        {
+            return lookup;
+        }
+
+        var allowed = await _guard.EnsureMayChangeAsync(lookup.Value).ConfigureAwait(false);
+
+        return allowed.IsFailure ? Result<ApplicationUser>.Failure(allowed.Error) : lookup;
     }
 
     private async Task<Result> SetAsync(ApplicationUser user, byte[] content, CancellationToken cancellationToken)

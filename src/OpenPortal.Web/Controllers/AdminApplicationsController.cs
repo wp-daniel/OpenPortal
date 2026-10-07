@@ -8,10 +8,10 @@ using OpenPortal.Web.Infrastructure;
 
 namespace OpenPortal.Web.Controllers;
 
-/// <summary>Administrator-only registry of the applications that sign in through the portal.</summary>
+/// <summary>Registry, for administrators and holders of the applications page, of the applications that sign in through the portal.</summary>
 [ApiController]
 [Route("api/admin/applications")]
-[Authorize(Policy = Policies.AdministratorOnly)]
+[Authorize]
 [Produces("application/json")]
 public sealed class AdminApplicationsController : ControllerBase
 {
@@ -23,12 +23,14 @@ public sealed class AdminApplicationsController : ControllerBase
     }
 
     /// <summary>Lists every application, waiting ones first.</summary>
+    [RequirePortalPage(PortalPages.Applications, PortalPages.Groups, PortalPages.Users)]
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<ApplicationDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<IReadOnlyList<ApplicationDto>>> ListAsync(CancellationToken cancellationToken) =>
         Respond(await _applications.ListAsync(cancellationToken).ConfigureAwait(false));
 
+    [RequirePortalPage(PortalPages.Applications)]
     [HttpGet("{applicationId:guid}")]
     [ProducesResponseType<ApplicationDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -36,6 +38,7 @@ public sealed class AdminApplicationsController : ControllerBase
         Respond(await _applications.GetAsync(applicationId, cancellationToken).ConfigureAwait(false));
 
     /// <summary>Registers an application by hand. The response carries its client secret, shown once.</summary>
+    [RequirePortalPage(PortalPages.Applications)]
     [HttpPost]
     [ProducesResponseType<ApplicationSecretDto>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
@@ -53,6 +56,7 @@ public sealed class AdminApplicationsController : ControllerBase
         return CreatedAtAction(nameof(GetAsync), new { applicationId = created.Value.Application.Id }, created.Value);
     }
 
+    [RequirePortalPage(PortalPages.Applications)]
     [HttpPut("{applicationId:guid}")]
     [ProducesResponseType<ApplicationDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
@@ -64,6 +68,7 @@ public sealed class AdminApplicationsController : ControllerBase
         Respond(await _applications.UpdateAsync(applicationId, request, cancellationToken).ConfigureAwait(false));
 
     /// <summary>Approves an announced application. The response carries its client secret, shown once.</summary>
+    [RequirePortalPage(PortalPages.Applications)]
     [HttpPost("{applicationId:guid}/approve")]
     [ProducesResponseType<ApplicationSecretDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
@@ -71,6 +76,7 @@ public sealed class AdminApplicationsController : ControllerBase
         Respond(await _applications.ApproveAsync(applicationId, cancellationToken).ConfigureAwait(false));
 
     /// <summary>Issues a new client secret; the previous one stops working.</summary>
+    [RequirePortalPage(PortalPages.Applications)]
     [HttpPost("{applicationId:guid}/secret")]
     [ProducesResponseType<ApplicationSecretDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
@@ -78,24 +84,28 @@ public sealed class AdminApplicationsController : ControllerBase
         Respond(await _applications.RegenerateSecretAsync(applicationId, cancellationToken).ConfigureAwait(false));
 
     /// <summary>Adopts the redirect URIs the application last announced.</summary>
+    [RequirePortalPage(PortalPages.Applications)]
     [HttpPost("{applicationId:guid}/apply-manifest")]
     [ProducesResponseType<ApplicationDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ApplicationDto>> ApplyManifestAsync(Guid applicationId, CancellationToken cancellationToken) =>
         Respond(await _applications.ApplyManifestAsync(applicationId, cancellationToken).ConfigureAwait(false));
 
+    [RequirePortalPage(PortalPages.Applications)]
     [HttpPost("{applicationId:guid}/disable")]
     [ProducesResponseType<ApplicationDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ApplicationDto>> DisableAsync(Guid applicationId, CancellationToken cancellationToken) =>
         Respond(await _applications.DisableAsync(applicationId, cancellationToken).ConfigureAwait(false));
 
+    [RequirePortalPage(PortalPages.Applications)]
     [HttpPost("{applicationId:guid}/enable")]
     [ProducesResponseType<ApplicationDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ApplicationDto>> EnableAsync(Guid applicationId, CancellationToken cancellationToken) =>
         Respond(await _applications.EnableAsync(applicationId, cancellationToken).ConfigureAwait(false));
 
+    [RequirePortalPage(PortalPages.Applications)]
     [HttpDelete("{applicationId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

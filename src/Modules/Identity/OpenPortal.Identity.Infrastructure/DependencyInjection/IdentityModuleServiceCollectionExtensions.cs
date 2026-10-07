@@ -53,6 +53,7 @@ public static class IdentityModuleServiceCollectionExtensions
         services.AddHttpContextAccessor();
 
         services.AddScoped<UserLookup>();
+        services.AddScoped<AdministrationGuard>();
         services.AddScoped<IAuthenticationService, IdentityAuthenticationService>();
         services.AddScoped<IAccountService, IdentityAccountService>();
         services.AddScoped<IUserAdministrationService, IdentityUserAdministrationService>();

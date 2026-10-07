@@ -289,7 +289,7 @@ export function AdminAccessPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive hover:bg-destructive/90 text-white"
+              variant="destructive"
               disabled={revoke.isPending}
               onClick={(event) => {
                 event.preventDefault()

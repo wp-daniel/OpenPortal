@@ -35,7 +35,7 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
 
     public async Task<Result<AccessTreeDto>> GetTreeAsync(CancellationToken cancellationToken)
     {
-        var guard = _authorization.EnsureCanAdminister();
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ViewTree, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<AccessTreeDto>.Failure(guard.Error);
@@ -89,7 +89,7 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
 
     public async Task<Result<UserAccessDto>> GetUserAccessAsync(Guid userId, CancellationToken cancellationToken)
     {
-        var guard = _authorization.EnsureCanAdminister();
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ViewUserAccess, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<UserAccessDto>.Failure(guard.Error);
@@ -149,7 +149,7 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
 
     public async Task<Result> GrantUserAsync(Guid applicationId, Guid userId, CancellationToken cancellationToken)
     {
-        var guard = _authorization.EnsureCanAdminister();
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageUserGrants, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return guard;
@@ -181,7 +181,7 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
 
     public async Task<Result> RevokeUserAsync(Guid applicationId, Guid userId, CancellationToken cancellationToken)
     {
-        var guard = _authorization.EnsureCanAdminister();
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageUserGrants, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return guard;
@@ -210,7 +210,7 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
 
     public async Task<Result> GrantGroupAsync(Guid applicationId, Guid groupId, CancellationToken cancellationToken)
     {
-        var guard = _authorization.EnsureCanAdminister();
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageGroupGrants, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return guard;
@@ -241,7 +241,7 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
 
     public async Task<Result> RevokeGroupAsync(Guid applicationId, Guid groupId, CancellationToken cancellationToken)
     {
-        var guard = _authorization.EnsureCanAdminister();
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageGroupGrants, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return guard;
@@ -269,6 +269,43 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             await _access.RevokeIfNoLongerAllowedAsync(application, members, cancellationToken).ConfigureAwait(false);
+        }
+
+        return Result.Success();
+    }
+
+    public async Task<Result> RemoveUserAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageUserGrants, cancellationToken).ConfigureAwait(false);
+        if (guard.IsFailure)
+        {
+            return guard;
+        }
+
+        var applicationIds = await _access.GrantedApplicationIdsAsync(userId, cancellationToken).ConfigureAwait(false);
+
+        _db.UserGrants.RemoveRange(await _db.UserGrants
+            .Where(grant => grant.UserId == userId)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false));
+
+        _db.GroupMembers.RemoveRange(await _db.GroupMembers
+            .Where(member => member.UserId == userId)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false));
+
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Nothing grants the user anything any more, so this revokes every token they held.
+        var applications = await _db.Applications
+            .AsNoTracking()
+            .Where(application => applicationIds.Contains(application.Id))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        foreach (var application in applications)
+        {
+            await _access.RevokeIfNoLongerAllowedAsync(application, [userId], cancellationToken).ConfigureAwait(false);
         }
 
         return Result.Success();

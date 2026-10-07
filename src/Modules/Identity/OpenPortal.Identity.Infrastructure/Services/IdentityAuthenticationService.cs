@@ -27,6 +27,7 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
     private readonly IPasswordHasher<ApplicationUser> _passwordHasher;
     private readonly UserLookup _userLookup;
     private readonly ICurrentUser _currentUser;
+    private readonly IUserPageSource _pages;
     private readonly IOptions<IdentityOptions> _identityOptions;
     private readonly Lazy<string> _timingEqualisationHash;
 
@@ -36,6 +37,7 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
         IPasswordHasher<ApplicationUser> passwordHasher,
         UserLookup userLookup,
         ICurrentUser currentUser,
+        IUserPageSource pages,
         IOptions<IdentityOptions> identityOptions)
     {
         _signInManager = signInManager;
@@ -43,6 +45,7 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
         _passwordHasher = passwordHasher;
         _userLookup = userLookup;
         _currentUser = currentUser;
+        _pages = pages;
         _identityOptions = identityOptions;
         _timingEqualisationHash = new Lazy<string>(
             () => _passwordHasher.HashPassword(TimingEqualisationUser, TimingEqualisationPassword),
@@ -125,6 +128,7 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
 
         var user = lookup.Value;
         var roles = await _userManager.GetRolesAsync(user).ConfigureAwait(false);
+        var pages = await _pages.GetPagesAsync(user.Id, roles.ToArray(), cancellationToken).ConfigureAwait(false);
 
         return Result<SessionDto>.Success(new SessionDto(
             IsAuthenticated: true,
@@ -135,7 +139,8 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
                 EmailConfirmed: user.EmailConfirmed,
                 Roles: roles.Order(StringComparer.Ordinal).ToArray(),
                 Language: user.Language,
-                AvatarUpdatedAtUtc: user.AvatarUpdatedAtUtc),
+                AvatarUpdatedAtUtc: user.AvatarUpdatedAtUtc,
+                Pages: pages),
             PasswordPolicy: PasswordPolicy));
     }
 

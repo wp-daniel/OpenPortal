@@ -43,19 +43,54 @@ internal sealed class UserLookup
 /// <summary>
 /// Second authorisation gate for administrative operations.
 /// <para>
-/// Endpoints already require the administrator policy, but services re-check the caller's role so the
-/// rule survives being called from a host, a background job or a future module that forgot the attribute.
+/// Endpoints already check the caller's pages, but services re-check through the host's
+/// <see cref="IUserAdministrationAuthorization"/> so the rule survives being called from a host, a background
+/// job or a future module that forgot the attribute. On top of that, this module's own rule: only an
+/// administrator may grant the administrator role or change an administrator's account, so a page delegated
+/// to a group can never be used to climb above it.
 /// </para>
 /// </summary>
-internal static class CallerGuard
+internal sealed class AdministrationGuard
 {
-    public static Result EnsureAdministrator(ICurrentUser currentUser)
+    private readonly IUserAdministrationAuthorization _authorization;
+    private readonly ICurrentUser _currentUser;
+    private readonly UserManager<ApplicationUser> _userManager;
+
+    public AdministrationGuard(
+        IUserAdministrationAuthorization authorization,
+        ICurrentUser currentUser,
+        UserManager<ApplicationUser> userManager)
     {
-        ArgumentNullException.ThrowIfNull(currentUser);
-
-        var isAdministrator = currentUser.IsAuthenticated
-            && currentUser.Roles.Contains(Identity.Domain.Users.Roles.Administrator, StringComparer.Ordinal);
-
-        return isAdministrator ? Result.Success() : Result.Failure(UserErrors.Forbidden);
+        _authorization = authorization;
+        _currentUser = currentUser;
+        _userManager = userManager;
     }
+
+    public bool CallerIsAdministrator =>
+        _currentUser.IsAuthenticated
+        && _currentUser.Roles.Contains(Roles.Administrator, StringComparer.Ordinal);
+
+    public Task<Result> EnsureCanAsync(UserAdministrationOperation operation, CancellationToken cancellationToken) =>
+        _authorization.EnsureCanAsync(operation, cancellationToken);
+
+    /// <summary>Refuses a caller who is not an administrator when <paramref name="target"/> is one.</summary>
+    public async Task<Result> EnsureMayChangeAsync(ApplicationUser target)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+
+        if (CallerIsAdministrator)
+        {
+            return Result.Success();
+        }
+
+        var targetIsAdministrator = await _userManager.IsInRoleAsync(target, Roles.Administrator).ConfigureAwait(false);
+
+        return targetIsAdministrator ? Result.Failure(UserErrors.AdministratorRequired) : Result.Success();
+    }
+
+    /// <summary>Refuses a caller who is not an administrator when <paramref name="roles"/> include it.</summary>
+    public Result EnsureMayAssign(IEnumerable<string> roles) =>
+        CallerIsAdministrator || !roles.Contains(Roles.Administrator, StringComparer.Ordinal)
+            ? Result.Success()
+            : Result.Failure(UserErrors.AdministratorRequired);
 }

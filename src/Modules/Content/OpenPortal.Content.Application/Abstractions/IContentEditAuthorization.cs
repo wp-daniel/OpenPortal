@@ -2,6 +2,13 @@ using OpenPortal.SharedKernel.Results;
 
 namespace OpenPortal.Content.Application.Abstractions;
 
+/// <summary>The parts of the content that are edited separately, so each can be delegated on its own.</summary>
+public enum ContentArea
+{
+    Profile,
+    Projects,
+}
+
 /// <summary>
 /// Decides whether the caller may edit content.
 /// <para>
@@ -14,7 +21,8 @@ namespace OpenPortal.Content.Application.Abstractions;
 public interface IContentEditAuthorization
 {
     /// <summary>
-    /// Returns <see cref="Result.Success"/> when the caller may edit, otherwise a failure describing why not.
+    /// Returns <see cref="Result.Success"/> when the caller may edit <paramref name="area"/>, otherwise a
+    /// failure describing why not.
     /// </summary>
-    Result EnsureCanEdit();
+    Task<Result> EnsureCanEditAsync(ContentArea area, CancellationToken cancellationToken);
 }

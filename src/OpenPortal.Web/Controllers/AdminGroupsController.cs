@@ -8,10 +8,10 @@ using OpenPortal.Web.Infrastructure;
 
 namespace OpenPortal.Web.Controllers;
 
-/// <summary>Administrator-only management of user groups.</summary>
+/// <summary>Management of user groups, for administrators and holders of the groups page.</summary>
 [ApiController]
 [Route("api/admin/groups")]
-[Authorize(Policy = Policies.AdministratorOnly)]
+[Authorize]
 [Produces("application/json")]
 public sealed class AdminGroupsController : ControllerBase
 {
@@ -22,18 +22,21 @@ public sealed class AdminGroupsController : ControllerBase
         _groups = groups;
     }
 
+    [RequirePortalPage(PortalPages.Groups, PortalPages.Access)]
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<GroupSummaryDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<IReadOnlyList<GroupSummaryDto>>> ListAsync(CancellationToken cancellationToken) =>
         Respond(await _groups.ListAsync(cancellationToken).ConfigureAwait(false));
 
+    [RequirePortalPage(PortalPages.Groups)]
     [HttpGet("{groupId:guid}")]
     [ProducesResponseType<GroupDetailDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<GroupDetailDto>> GetAsync(Guid groupId, CancellationToken cancellationToken) =>
         Respond(await _groups.GetAsync(groupId, cancellationToken).ConfigureAwait(false));
 
+    [RequirePortalPage(PortalPages.Groups)]
     [HttpPost]
     [ProducesResponseType<GroupDetailDto>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
@@ -51,6 +54,7 @@ public sealed class AdminGroupsController : ControllerBase
         return CreatedAtAction(nameof(GetAsync), new { groupId = created.Value.Id }, created.Value);
     }
 
+    [RequirePortalPage(PortalPages.Groups)]
     [HttpPut("{groupId:guid}")]
     [ProducesResponseType<GroupDetailDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
@@ -62,6 +66,7 @@ public sealed class AdminGroupsController : ControllerBase
         CancellationToken cancellationToken) =>
         Respond(await _groups.UpdateAsync(groupId, request, cancellationToken).ConfigureAwait(false));
 
+    [RequirePortalPage(PortalPages.Groups)]
     [HttpDelete("{groupId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -73,6 +78,7 @@ public sealed class AdminGroupsController : ControllerBase
     }
 
     /// <summary>Adds a member. Idempotent.</summary>
+    [RequirePortalPage(PortalPages.Groups)]
     [HttpPut("{groupId:guid}/members/{userId:guid}")]
     [ProducesResponseType<GroupDetailDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -80,6 +86,7 @@ public sealed class AdminGroupsController : ControllerBase
         Respond(await _groups.AddMemberAsync(groupId, userId, cancellationToken).ConfigureAwait(false));
 
     /// <summary>Removes a member. Idempotent.</summary>
+    [RequirePortalPage(PortalPages.Groups)]
     [HttpDelete("{groupId:guid}/members/{userId:guid}")]
     [ProducesResponseType<GroupDetailDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

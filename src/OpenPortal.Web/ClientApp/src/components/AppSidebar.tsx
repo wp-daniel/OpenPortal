@@ -49,6 +49,11 @@ interface NavLeaf {
   readonly labelKey: string
   /** Match only this exact path (the dashboard at `/` would otherwise be active everywhere). */
   readonly end?: boolean
+  /**
+   * Administration links only: the portal page (server `PortalPages` key) the link opens, shown to holders of
+   * the page. Without one the link is for administrators only. Keep it equal to the route's `handle.page`.
+   */
+  readonly page?: string
 }
 
 interface NavEntry extends NavLeaf {
@@ -73,25 +78,38 @@ const adminBranches: readonly NavBranch[] = [
     labelKey: 'nav.identity',
     icon: ShieldCheck,
     children: [
-      { to: '/admin/users', labelKey: 'nav.users' },
-      { to: '/admin/groups', labelKey: 'nav.groups' },
-      { to: '/admin/access', labelKey: 'nav.access' },
+      { to: '/admin/users', labelKey: 'nav.users', page: 'users' },
+      { to: '/admin/groups', labelKey: 'nav.groups', page: 'groups' },
+      { to: '/admin/access', labelKey: 'nav.access', page: 'access' },
+      { to: '/admin/page-permissions', labelKey: 'nav.pagePermissions' },
     ],
   },
   {
     labelKey: 'nav.applications',
     icon: AppWindow,
-    children: [{ to: '/admin/applications', labelKey: 'nav.applications' }],
+    children: [{ to: '/admin/applications', labelKey: 'nav.applications', page: 'applications' }],
   },
   {
     labelKey: 'nav.content',
     icon: FileText,
     children: [
-      { to: '/admin/content/profile', labelKey: 'nav.profile' },
-      { to: '/admin/content/projects', labelKey: 'nav.projects' },
+      { to: '/admin/content/profile', labelKey: 'nav.profile', page: 'content.profile' },
+      { to: '/admin/content/projects', labelKey: 'nav.projects', page: 'content.projects' },
     ],
   },
 ]
+
+/** The administration branches with only the links the user may open; branches left empty disappear. */
+function useAdminBranches(): readonly NavBranch[] {
+  const { isAdministrator, canOpen } = useSession()
+
+  return adminBranches
+    .map((branch) => ({
+      ...branch,
+      children: branch.children.filter((child) => (child.page === undefined ? isAdministrator : canOpen(child.page))),
+    }))
+    .filter((branch) => branch.children.length > 0)
+}
 
 function useIsActive() {
   const { pathname } = useLocation()
@@ -100,7 +118,7 @@ function useIsActive() {
 }
 
 /**
- * The primary navigation: brand, the portal's own pages, the administration areas (administrators only) and
+ * The primary navigation: brand, the portal's own pages, the administration pages the user may open and
  * the signed-in user's menu at the bottom.
  *
  * It collapses to an icon rail on desktop (Ctrl/Cmd+B or the header button; the choice is remembered in the
@@ -109,7 +127,7 @@ function useIsActive() {
  */
 export function AppSidebar() {
   const { t } = useI18n()
-  const { isAdministrator } = useSession()
+  const branches = useAdminBranches()
   const isActive = useIsActive()
   const { isMobile, setOpenMobile } = useSidebar()
 
@@ -157,11 +175,11 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarGroup>
 
-        {isAdministrator && (
+        {branches.length > 0 && (
           <SidebarGroup>
             <SidebarGroupLabel>{t('nav.administration')}</SidebarGroupLabel>
             <SidebarMenu>
-              {adminBranches.map((branch) => (
+              {branches.map((branch) => (
                 <NavBranchItem key={branch.labelKey} branch={branch} onNavigate={close} />
               ))}
             </SidebarMenu>

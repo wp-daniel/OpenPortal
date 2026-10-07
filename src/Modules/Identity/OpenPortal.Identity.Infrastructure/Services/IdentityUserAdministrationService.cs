@@ -16,6 +16,7 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
     private readonly IdentityDbContext _dbContext;
     private readonly ICurrentUser _currentUser;
     private readonly UserLookup _userLookup;
+    private readonly AdministrationGuard _guard;
     private readonly IClock _clock;
 
     public IdentityUserAdministrationService(
@@ -23,12 +24,14 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         IdentityDbContext dbContext,
         ICurrentUser currentUser,
         UserLookup userLookup,
+        AdministrationGuard guard,
         IClock clock)
     {
         _userManager = userManager;
         _dbContext = dbContext;
         _currentUser = currentUser;
         _userLookup = userLookup;
+        _guard = guard;
         _clock = clock;
     }
 
@@ -36,7 +39,7 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         UserListQuery query,
         CancellationToken cancellationToken)
     {
-        var guard = CallerGuard.EnsureAdministrator(_currentUser);
+        var guard = await _guard.EnsureCanAsync(UserAdministrationOperation.ListUsers, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<PagedResult<UserSummaryDto>>.Failure(guard.Error);
@@ -63,12 +66,11 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
                 || (user.Company != null && user.Company.ToUpper().Contains(term)));
         }
 
-        var role = query.Role?.Trim();
-        if (!string.IsNullOrEmpty(role))
+        if (query.Administrator is bool administrator)
         {
             usersQuery = usersQuery.Where(user => _dbContext.UserRoles.Any(userRole =>
                 userRole.UserId == user.Id
-                && _dbContext.Roles.Any(r => r.Id == userRole.RoleId && r.Name == role)));
+                && _dbContext.Roles.Any(r => r.Id == userRole.RoleId && r.Name == Roles.Administrator)) == administrator);
         }
 
         var now = _clock.UtcNow;
@@ -104,7 +106,7 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
 
     public async Task<Result<UserSummaryDto>> GetUserAsync(Guid userId, CancellationToken cancellationToken)
     {
-        var guard = CallerGuard.EnsureAdministrator(_currentUser);
+        var guard = await _guard.EnsureCanAsync(UserAdministrationOperation.ManageUsers, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<UserSummaryDto>.Failure(guard.Error);
@@ -125,7 +127,7 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         CreateUserRequest request,
         CancellationToken cancellationToken)
     {
-        var guard = CallerGuard.EnsureAdministrator(_currentUser);
+        var guard = await _guard.EnsureCanAsync(UserAdministrationOperation.ManageUsers, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<UserSummaryDto>.Failure(guard.Error);
@@ -133,10 +135,16 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
 
         ArgumentNullException.ThrowIfNull(request);
 
-        var roles = NormaliseRoles(request.Roles);
+        var roles = RolesFor(request.IsAdministrator);
         if (roles.IsFailure)
         {
             return Result<UserSummaryDto>.Failure(roles.Error);
+        }
+
+        var assignable = _guard.EnsureMayAssign(roles.Value);
+        if (assignable.IsFailure)
+        {
+            return Result<UserSummaryDto>.Failure(assignable.Error);
         }
 
         var email = request.Email.Trim();
@@ -174,7 +182,7 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         UpdateUserRequest request,
         CancellationToken cancellationToken)
     {
-        var guard = CallerGuard.EnsureAdministrator(_currentUser);
+        var guard = await _guard.EnsureCanAsync(UserAdministrationOperation.ManageUsers, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<UserSummaryDto>.Failure(guard.Error);
@@ -189,10 +197,17 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         }
 
         var user = lookup.Value;
-        var roles = NormaliseRoles(request.Roles);
+        var roles = RolesFor(request.IsAdministrator);
         if (roles.IsFailure)
         {
             return Result<UserSummaryDto>.Failure(roles.Error);
+        }
+
+        var changeable = await _guard.EnsureMayChangeAsync(user).ConfigureAwait(false);
+        var assignable = changeable.IsSuccess ? _guard.EnsureMayAssign(roles.Value) : changeable;
+        if (assignable.IsFailure)
+        {
+            return Result<UserSummaryDto>.Failure(assignable.Error);
         }
 
         var currentRoles = await _userManager.GetRolesAsync(user).ConfigureAwait(false);
@@ -247,7 +262,7 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         ResetPasswordRequest request,
         CancellationToken cancellationToken)
     {
-        var guard = CallerGuard.EnsureAdministrator(_currentUser);
+        var guard = await _guard.EnsureCanAsync(UserAdministrationOperation.ManageUsers, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result.Failure(guard.Error);
@@ -259,6 +274,12 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         if (lookup.IsFailure)
         {
             return Result.Failure(lookup.Error);
+        }
+
+        var changeable = await _guard.EnsureMayChangeAsync(lookup.Value).ConfigureAwait(false);
+        if (changeable.IsFailure)
+        {
+            return changeable;
         }
 
         // The reset token is generated server-side and immediately consumed: this is an administrative
@@ -277,29 +298,47 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
             : Result.Failure(reset.ToError(UserErrors.PasswordComplexity));
     }
 
-    /// <summary>
-    /// Validates requested role names against the server-side allowlist and guarantees every account
-    /// retains the default <see cref="Roles.User"/> role.
-    /// </summary>
-    private static Result<IReadOnlyList<string>> NormaliseRoles(IReadOnlyList<string> requestedRoles)
+    public async Task<Result> DeleteUserAsync(Guid userId, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(requestedRoles);
-
-        var requested = requestedRoles
-            .Where(role => !string.IsNullOrWhiteSpace(role))
-            .Select(role => role.Trim())
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
-
-        if (requested.Any(role => !Roles.IsKnown(role)))
+        var guard = await _guard.EnsureCanAsync(UserAdministrationOperation.ManageUsers, cancellationToken).ConfigureAwait(false);
+        if (guard.IsFailure)
         {
-            return Result<IReadOnlyList<string>>.Failure(UserErrors.UnknownRole);
+            return guard;
         }
 
-        var effective = requested
-            .Where(role => !string.Equals(role, Roles.User, StringComparison.Ordinal))
-            .Prepend(Roles.User)
-            .ToArray();
+        // Deleting yourself would end your own session mid-request and could remove the last administrator.
+        if (_currentUser.UserId == userId)
+        {
+            return Result.Failure(UserErrors.CannotDeleteSelf);
+        }
+
+        var lookup = await _userLookup.FindAsync(userId, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
+        {
+            return Result.Failure(lookup.Error);
+        }
+
+        var changeable = await _guard.EnsureMayChangeAsync(lookup.Value).ConfigureAwait(false);
+        if (changeable.IsFailure)
+        {
+            return changeable;
+        }
+
+        // Roles, claims, logins and the picture go with the account (cascading keys in the Identity schema).
+        var deleted = await _userManager.DeleteAsync(lookup.Value).ConfigureAwait(false);
+
+        return deleted.Succeeded
+            ? Result.Success()
+            : Result.Failure(deleted.ToError(Error.Failure("identity.delete_failed", "The account could not be deleted.")));
+    }
+
+    /// <summary>
+    /// The roles behind the administrator flag: every account holds <see cref="Roles.User"/>, and an
+    /// administrator also holds <see cref="Roles.Administrator"/>.
+    /// </summary>
+    private static Result<IReadOnlyList<string>> RolesFor(bool isAdministrator)
+    {
+        string[] effective = isAdministrator ? [Roles.User, Roles.Administrator] : [Roles.User];
 
         return Result<IReadOnlyList<string>>.Success(effective);
     }
@@ -361,7 +400,7 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         IsLockedOut: user.LockoutEnabled && user.LockoutEnd is not null && user.LockoutEnd > now,
         LockoutEndUtc: user.LockoutEnd,
         CreatedAtUtc: user.CreatedAtUtc,
-        Roles: roles.Order(StringComparer.Ordinal).ToArray(),
+        IsAdministrator: roles.Contains(Roles.Administrator, StringComparer.Ordinal),
         FirstName: user.FirstName,
         LastName: user.LastName,
         PhoneNumber: user.PhoneNumber,

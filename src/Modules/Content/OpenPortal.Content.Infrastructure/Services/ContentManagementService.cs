@@ -37,7 +37,7 @@ internal sealed class ContentManagementService : IContentManagementService
 
     public async Task<Result<ProfileDto>> GetProfileAsync(CancellationToken cancellationToken)
     {
-        var guard = _authorization.EnsureCanEdit();
+        var guard = await _authorization.EnsureCanEditAsync(ContentArea.Profile, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<ProfileDto>.Failure(guard.Error);
@@ -56,7 +56,7 @@ internal sealed class ContentManagementService : IContentManagementService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var guard = _authorization.EnsureCanEdit();
+        var guard = await _authorization.EnsureCanEditAsync(ContentArea.Profile, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<ProfileDto>.Failure(guard.Error);
@@ -115,7 +115,7 @@ internal sealed class ContentManagementService : IContentManagementService
 
     public async Task<Result<IReadOnlyList<ManagedProjectDto>>> ListProjectsAsync(CancellationToken cancellationToken)
     {
-        var guard = _authorization.EnsureCanEdit();
+        var guard = await _authorization.EnsureCanEditAsync(ContentArea.Projects, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<IReadOnlyList<ManagedProjectDto>>.Failure(guard.Error);
@@ -138,7 +138,7 @@ internal sealed class ContentManagementService : IContentManagementService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var guard = _authorization.EnsureCanEdit();
+        var guard = await _authorization.EnsureCanEditAsync(ContentArea.Projects, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<ManagedProjectDto>.Failure(guard.Error);
@@ -228,7 +228,7 @@ internal sealed class ContentManagementService : IContentManagementService
         bool isPublished,
         CancellationToken cancellationToken)
     {
-        var guard = _authorization.EnsureCanEdit();
+        var guard = await _authorization.EnsureCanEditAsync(ContentArea.Projects, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<ManagedProjectDto>.Failure(guard.Error);
@@ -249,7 +249,7 @@ internal sealed class ContentManagementService : IContentManagementService
 
     public async Task<Result> DeleteProjectAsync(Guid projectId, CancellationToken cancellationToken)
     {
-        var guard = _authorization.EnsureCanEdit();
+        var guard = await _authorization.EnsureCanEditAsync(ContentArea.Projects, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result.Failure(guard.Error);

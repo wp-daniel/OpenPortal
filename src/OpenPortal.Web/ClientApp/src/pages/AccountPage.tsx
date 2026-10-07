@@ -128,18 +128,8 @@ function AccountDetails({ user, profile }: { user: SessionUser | null; profile: 
           </dd>
         </div>
         <div className="space-y-1">
-          <dt className="text-muted-foreground">{t('common.roles')}</dt>
-          <dd className="flex flex-wrap gap-1">
-            {(user?.roles.length ?? 0) === 0 ? (
-              <span className="text-muted-foreground">{t('common.none')}</span>
-            ) : (
-              user!.roles.map((role) => (
-                <Badge key={role} variant="secondary">
-                  {t(`role.${role}`)}
-                </Badge>
-              ))
-            )}
-          </dd>
+          <dt className="text-muted-foreground">{t('users.administrator')}</dt>
+          <dd>{user?.roles.includes('Administrator') ? t('common.yes') : t('common.no')}</dd>
         </div>
         {profile && (
           <div className="space-y-1">

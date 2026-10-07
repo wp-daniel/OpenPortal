@@ -89,7 +89,7 @@ public sealed class AvatarsController : ControllerBase
 
     /// <summary>Replaces another account's picture (administrators only).</summary>
     [HttpPut("api/admin/users/{userId:guid}/avatar")]
-    [Authorize(Policy = Policies.AdministratorOnly)]
+    [RequirePortalPage(PortalPages.Users)]
     [RequestSizeLimit(RequestLimitBytes)]
     [RequestFormLimits(MultipartBodyLengthLimit = RequestLimitBytes)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -111,7 +111,7 @@ public sealed class AvatarsController : ControllerBase
 
     /// <summary>Removes another account's picture (administrators only).</summary>
     [HttpDelete("api/admin/users/{userId:guid}/avatar")]
-    [Authorize(Policy = Policies.AdministratorOnly)]
+    [RequirePortalPage(PortalPages.Users)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

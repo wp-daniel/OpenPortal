@@ -21,6 +21,11 @@ export interface Crumb {
 /** What a route declares in its `handle` to appear in the trail; routes without one add nothing. */
 export interface RouteHandle {
   readonly crumbs?: readonly Crumb[]
+  /**
+   * The portal page (server `PortalPages` key) this route belongs to. Inside `PageRoute` it decides who may open
+   * the route: holders of the page and administrators. A route there without one is for administrators only.
+   */
+  readonly page?: string
 }
 
 const home: Crumb = { labelKey: 'nav.dashboard', to: '/' }

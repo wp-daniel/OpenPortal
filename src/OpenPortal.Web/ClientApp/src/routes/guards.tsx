@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
-import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { Navigate, Outlet, useLocation, useMatches } from 'react-router-dom'
+import type { RouteHandle } from '@/components/AppBreadcrumbs'
 import { ErrorPanel, LoadingState } from '@/components/StatePanels'
 import { useSession } from '@/hooks/useSession'
 import { useI18n } from '@/i18n/useI18n'
@@ -52,11 +53,23 @@ export function ProtectedRoute() {
   return <Outlet />
 }
 
-/** Nested inside {@link ProtectedRoute}: only administrators pass, everyone else returns to the dashboard. */
-export function AdminRoute() {
-  const { isAdministrator } = useSession()
+/**
+ * Nested inside {@link ProtectedRoute}: lets through holders of the page the matched route declares in
+ * `handle.page` (administrators hold every page); a route without one is for administrators only. Everyone
+ * else returns to the dashboard. A new route is protected by declaring its page, with no change here.
+ */
+export function PageRoute() {
+  const { isAdministrator, canOpen } = useSession()
+  const matches = useMatches()
 
-  return isAdministrator ? <Outlet /> : <Navigate to="/" replace />
+  // The deepest route that names a page decides, so a child can belong to a different page than its parent.
+  const page = matches
+    .map((match) => (match.handle as RouteHandle | undefined)?.page)
+    .findLast((key) => key !== undefined)
+
+  const allowed = page === undefined ? isAdministrator : canOpen(page)
+
+  return allowed ? <Outlet /> : <Navigate to="/" replace />
 }
 
 /** The sign-in page is for anonymous visitors only; a signed-in user is sent where they were going. */

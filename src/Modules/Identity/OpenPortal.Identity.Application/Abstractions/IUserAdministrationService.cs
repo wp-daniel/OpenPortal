@@ -44,4 +44,10 @@ public interface IUserAdministrationService
         Guid userId,
         ResetPasswordRequest request,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Deletes an account. Nobody can delete themselves, and only an administrator can delete an
+    /// administrator. What other modules hold about the user (groups, grants) is the host's to remove.
+    /// </summary>
+    Task<Result> DeleteUserAsync(Guid userId, CancellationToken cancellationToken);
 }

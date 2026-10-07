@@ -328,7 +328,7 @@ export function AdminApplicationsPage() {
               <AlertDialogFooter>
                 <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                 <AlertDialogAction
-                  className={confirmation.kind === 'delete' ? 'bg-destructive text-white hover:bg-destructive/90' : undefined}
+                  variant={confirmation.kind === 'delete' ? 'destructive' : 'default'}
                   disabled={confirm.isPending}
                   onClick={(event) => {
                     // Keep the dialog open until the request finishes; it closes on success.

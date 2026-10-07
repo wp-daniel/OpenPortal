@@ -12,7 +12,8 @@ namespace OpenPortal.Access.Infrastructure.DependencyInjection;
 /// <summary>
 /// Registers the Access module: applications, groups, grants and OpenIddict's client store.
 /// <para>
-/// The host still supplies <see cref="IAccessAdminAuthorization"/> and <see cref="IUserDirectory"/>, and
+/// The host still supplies <see cref="IAccessAdminAuthorization"/>, <see cref="IUserDirectory"/> and
+/// <see cref="IPortalPageCatalog"/>, and
 /// configures the OpenIddict <em>server</em> (endpoints, signing keys) itself, because those depend on its
 /// authentication stack and its environment.
 /// </para>
@@ -56,6 +57,8 @@ public static class AccessModuleServiceCollectionExtensions
         services.AddScoped<IAccessAdministrationService, AccessAdministrationService>();
         services.AddScoped<IAccessEvaluator, AccessEvaluator>();
         services.AddScoped<IApplicationAnnouncementService, ApplicationAnnouncementService>();
+        services.AddScoped<IPagePermissionService, PagePermissionService>();
+        services.AddScoped<IPagePermissionEvaluator, PagePermissionEvaluator>();
 
         return services;
     }

@@ -175,3 +175,28 @@ internal sealed class ApplicationGroupGrantConfiguration : IEntityTypeConfigurat
             .HasDatabaseName("IX_ApplicationGroupGrants_GroupId");
     }
 }
+
+internal sealed class PageGroupGrantConfiguration : IEntityTypeConfiguration<PageGroupGrant>
+{
+    public void Configure(EntityTypeBuilder<PageGroupGrant> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("PageGroupGrants");
+
+        builder.HasKey(grant => new { grant.PageKey, grant.GroupId });
+
+        builder.Property(grant => grant.PageKey)
+            .IsRequired()
+            .HasMaxLength(PageGroupGrant.PageKeyMaxLength);
+
+        builder.HasOne<Group>()
+            .WithMany()
+            .HasForeignKey(grant => grant.GroupId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // "Which pages may this user open" joins memberships to grants by group on every admin request.
+        builder.HasIndex(grant => grant.GroupId)
+            .HasDatabaseName("IX_PageGroupGrants_GroupId");
+    }
+}

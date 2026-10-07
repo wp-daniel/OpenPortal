@@ -130,9 +130,38 @@ logout. Without that, the first write following a sign-in fails with 400 and loo
 `ValidateAntiforgeryTokenFilter` is a global filter and must `await` `ValidateRequestAsync`; forgetting the
 await silently disables validation for every endpoint.
 
-**Authorisation** is applied twice on purpose. The `[Authorize(Policy = Policies.AdministratorOnly)]`
-attribute is the first gate, and `RoleContentEditAuthorization` re-checks inside the Content service. An
-abstraction reachable from more than one pipeline cannot depend on each caller remembering to guard it.
+**Authorisation** is applied twice on purpose. `[RequirePortalPage(...)]` (or, for what is never
+delegated, `[Authorize(Policy = Policies.AdministratorOnly)]`) is the first gate, and each module re-checks
+inside its services through a host adapter (`IUserAdministrationAuthorization`, `IAccessAdminAuthorization`,
+`IContentEditAuthorization`, all in `Web/Authorization/ModuleAuthorization.cs`). An abstraction reachable
+from more than one pipeline cannot depend on each caller remembering to guard it.
+
+**Page permissions.** The administration pages can be granted to groups, like applications. The pages are
+declared once, in `Web/Authorization/PortalPages.cs` (key, label key, area key); administrators open every
+page without a grant, and a group granted a page gives all its members full use of that page.
+
+- Endpoints carry `[RequirePortalPage(page, ...)]`: the caller passes when they hold *any* listed page. A
+  read shared by several screens lists them all (listing users is allowed to the users, groups and access
+  pages, because those screens pick users), the writes list only their own page.
+- `PortalPageAuthorizationHandler` reads the caller's pages from the database once per request
+  (`CurrentPagePermissions`); nothing is cached in the cookie, so removing a grant or a membership takes
+  effect on the next request.
+- Modules do not know pages. They name an *operation* (`AccessOperation`, `UserAdministrationOperation`,
+  `ContentArea`) and the host maps it to the same page lists as the endpoints.
+- Grants live in Access (`PageGroupGrants`, keyed by page key and group, cascading with the group). Access
+  validates keys against the host's `IPortalPageCatalog`; a key the host no longer declares is ignored.
+- Never delegated: the page permissions themselves (`/api/admin/page-permissions`, `AdministratorOnly`),
+  granting or removing the administrator role, and changing an administrator's account, password or
+  picture (`AdministrationGuard` in Identity, `identity.administrator_required`). A holder of the groups page
+  can still add themselves to another group; delegate it accordingly.
+- The session carries `user.pages` (every page for an administrator, via the host's `IUserPageSource`), from
+  which the client builds the sidebar and guards routes.
+
+Adding a page: declare it in `PortalPages` (and `All`), put `[RequirePortalPage]` on its endpoints, give the
+client route `handle.page` and the sidebar link `page` with the same key, and add the label keys to the
+resx files. It appears on the page permissions screen and in the group dialog by itself. `PagePermissionTests` fails
+when an `api/admin`/`api/manage` endpoint has neither a page nor `AdministratorOnly`, when a page is used but
+not declared (or declared but unused), or when its labels are not translated.
 
 **The password policy is published, not restated.** `/api/auth/session` returns the policy read from
 `IOptions<IdentityOptions>.Password`, and it does so for anonymous callers too, because the change-password
@@ -159,8 +188,9 @@ refresh tokens is enabled; clients are confidential.
 store (its tables live in `AccessDbContext`, so a client and its `PortalApplication` commit together). The
 host owns the OpenIddict *server*: endpoints, keys and `Oidc/ConnectController`, because they depend on the
 authentication stack and the environment. Access stores user ids only; names come through the host's
-`IUserDirectory` adapter (backed by Identity's `IUserLookupService`), and "is the caller an administrator"
-through `IAccessAdminAuthorization` — the same seam as Content's `IContentEditAuthorization`.
+`IUserDirectory` adapter (backed by Identity's `IUserLookupService`), and "may the caller do this"
+through `IAccessAdminAuthorization` — the same seam as Content's `IContentEditAuthorization`. Access also
+stores the page grants (see *Page permissions* above) against the host's `IPortalPageCatalog`.
 
 **The access rule** lives in one place (`AccessQueries`): a user may open an application when it is
 *active* and the user holds a direct grant or belongs to a group that holds one. Groups are flat. The rule is

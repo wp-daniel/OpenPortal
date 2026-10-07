@@ -14,8 +14,8 @@ namespace OpenPortal.Web.Authorization;
 public static class Policies
 {
     /// <summary>
-    /// Requires an authenticated account holding the administrator role. Applied to every endpoint that
-    /// manages other people's accounts or edits site content.
+    /// Requires an authenticated account holding the administrator role. Applied to the endpoints that are
+    /// never delegated to a group (the page permissions); the others use <see cref="RequirePortalPageAttribute"/>.
     /// </summary>
     public const string AdministratorOnly = "AdministratorOnly";
 }
@@ -42,6 +42,10 @@ public static class AuthorizationSetup
                     .RequireAuthenticatedUser()
                     .RequireClaim(ClaimTypes.Role, Roles.Administrator));
         });
+
+        // Page checks: [RequirePortalPage] carries its own requirement, answered from the caller's pages.
+        services.AddScoped<CurrentPagePermissions>();
+        services.AddScoped<IAuthorizationHandler, PortalPageAuthorizationHandler>();
 
         return services;
     }

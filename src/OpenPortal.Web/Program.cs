@@ -77,10 +77,13 @@ builder.Services.AddOpenPortalLocalization(builder.Configuration);
 // Modules.
 //
 // Each module registers its own services. The host supplies only what belongs to the host: the
-// database provider, the current-user adapter, and the answer to "may this caller edit content".
+// database provider, the current-user adapter, and the answers to "may this caller do this", which come
+// from the caller's portal pages (Authorization/PortalPages.cs).
 // ---------------------------------------------------------------------------
 builder.Services.AddSingleton<ICurrentUser, HttpContextCurrentUser>();
-builder.Services.AddScoped<IContentEditAuthorization, RoleContentEditAuthorization>();
+builder.Services.AddScoped<IContentEditAuthorization, ContentEditAuthorization>();
+builder.Services.AddScoped<IUserAdministrationAuthorization, UserAdministrationAuthorization>();
+builder.Services.AddScoped<IUserPageSource, PortalUserPageSource>();
 
 builder.Services.AddIdentityModule(
     builder.Configuration,
@@ -94,6 +97,7 @@ builder.Services.AddContentModule(options =>
 // other.
 builder.Services.AddScoped<IAccessAdminAuthorization, AccessAdminAuthorization>();
 builder.Services.AddScoped<IUserDirectory, IdentityUserDirectory>();
+builder.Services.AddSingleton<IPortalPageCatalog, PortalPageCatalog>();
 
 builder.Services.AddAccessModule(
     builder.Configuration,

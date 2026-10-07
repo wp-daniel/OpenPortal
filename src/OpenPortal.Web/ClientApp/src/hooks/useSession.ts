@@ -4,6 +4,8 @@ import { UNAVAILABLE_PASSWORD_POLICY } from '@/lib/passwordPolicy'
 
 export const SESSION_QUERY_KEY = ['session'] as const
 
+const NO_PAGES: readonly string[] = []
+
 /**
  * The signed-in session, as the whole app sees it.
  *
@@ -21,6 +23,9 @@ export function useSession() {
     staleTime: 0,
   })
 
+  const isAdministrator = data?.user?.roles.includes('Administrator') ?? false
+  const pages = data?.user?.pages ?? NO_PAGES
+
   return {
     // Placeholder rather than undefined so consumers never branch on the session being absent. The policy is
     // the marked "unknown" value, which makes password forms skip client-side complexity checks until the
@@ -34,6 +39,10 @@ export function useSession() {
     isError,
     refetch,
     user: data?.user ?? null,
-    isAdministrator: data?.user?.roles.includes('Administrator') ?? false,
+    isAdministrator,
+    /** Keys of the portal pages the user may open (`PortalPages` on the server). */
+    pages,
+    /** Whether the user may open the page `key`; administrators may open every page. */
+    canOpen: (key: string) => isAdministrator || pages.includes(key),
   }
 }

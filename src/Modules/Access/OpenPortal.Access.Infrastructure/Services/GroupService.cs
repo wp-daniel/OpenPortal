@@ -16,6 +16,7 @@ internal sealed class GroupService : IGroupService
     private readonly AccessQueries _access;
     private readonly IUserDirectory _directory;
     private readonly IAccessAdminAuthorization _authorization;
+    private readonly IPortalPageCatalog _catalog;
     private readonly IClock _clock;
 
     public GroupService(
@@ -23,18 +24,20 @@ internal sealed class GroupService : IGroupService
         AccessQueries access,
         IUserDirectory directory,
         IAccessAdminAuthorization authorization,
+        IPortalPageCatalog catalog,
         IClock clock)
     {
         _db = db;
         _access = access;
         _directory = directory;
         _authorization = authorization;
+        _catalog = catalog;
         _clock = clock;
     }
 
     public async Task<Result<IReadOnlyList<GroupSummaryDto>>> ListAsync(CancellationToken cancellationToken)
     {
-        var guard = _authorization.EnsureCanAdminister();
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ListGroups, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<IReadOnlyList<GroupSummaryDto>>.Failure(guard.Error);
@@ -70,7 +73,7 @@ internal sealed class GroupService : IGroupService
 
     public async Task<Result<GroupDetailDto>> GetAsync(Guid groupId, CancellationToken cancellationToken)
     {
-        var guard = _authorization.EnsureCanAdminister();
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageGroups, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<GroupDetailDto>.Failure(guard.Error);
@@ -87,7 +90,7 @@ internal sealed class GroupService : IGroupService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var guard = _authorization.EnsureCanAdminister();
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageGroups, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<GroupDetailDto>.Failure(guard.Error);
@@ -117,7 +120,7 @@ internal sealed class GroupService : IGroupService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var guard = _authorization.EnsureCanAdminister();
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageGroups, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<GroupDetailDto>.Failure(guard.Error);
@@ -149,7 +152,7 @@ internal sealed class GroupService : IGroupService
 
     public async Task<Result> DeleteAsync(Guid groupId, CancellationToken cancellationToken)
     {
-        var guard = _authorization.EnsureCanAdminister();
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageGroups, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return guard;
@@ -178,7 +181,7 @@ internal sealed class GroupService : IGroupService
 
     public async Task<Result<GroupDetailDto>> AddMemberAsync(Guid groupId, Guid userId, CancellationToken cancellationToken)
     {
-        var guard = _authorization.EnsureCanAdminister();
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageGroups, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<GroupDetailDto>.Failure(guard.Error);
@@ -209,7 +212,7 @@ internal sealed class GroupService : IGroupService
         Guid userId,
         CancellationToken cancellationToken)
     {
-        var guard = _authorization.EnsureCanAdminister();
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageGroups, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<GroupDetailDto>.Failure(guard.Error);
@@ -260,6 +263,13 @@ internal sealed class GroupService : IGroupService
 
         var applications = await GrantedApplicationsAsync(group.Id, cancellationToken).ConfigureAwait(false);
 
+        var pages = await _db.PageGrants
+            .AsNoTracking()
+            .Where(grant => grant.GroupId == group.Id)
+            .Select(grant => grant.PageKey)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
         return new GroupDetailDto(
             group.Id,
             group.Name,
@@ -272,6 +282,7 @@ internal sealed class GroupService : IGroupService
                 .OrderBy(application => application.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .Select(application => application.ToReference())
                 .ToList(),
+            pages.Where(_catalog.IsKnown).Order(StringComparer.Ordinal).ToList(),
             group.CreatedAtUtc);
     }
 }

@@ -9,12 +9,13 @@ using OpenPortal.Web.Infrastructure;
 namespace OpenPortal.Web.Controllers;
 
 /// <summary>
-/// Administrator-only access grants. Grants are idempotent PUT/DELETE pairs, so a retried request or a
+/// Application access grants, for administrators and holders of the access page (users and groups pages for
+/// their own part). Grants are idempotent PUT/DELETE pairs, so a retried request or a
 /// double click cannot fail or create a duplicate.
 /// </summary>
 [ApiController]
 [Route("api/admin/access")]
-[Authorize(Policy = Policies.AdministratorOnly)]
+[Authorize]
 [Produces("application/json")]
 public sealed class AdminAccessController : ControllerBase
 {
@@ -26,6 +27,7 @@ public sealed class AdminAccessController : ControllerBase
     }
 
     /// <summary>Every application with its groups (and their members) and its directly granted users.</summary>
+    [RequirePortalPage(PortalPages.Access)]
     [HttpGet("tree")]
     [ProducesResponseType<AccessTreeDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
@@ -37,6 +39,7 @@ public sealed class AdminAccessController : ControllerBase
     }
 
     /// <summary>What one user can open, and why.</summary>
+    [RequirePortalPage(PortalPages.Access, PortalPages.Users)]
     [HttpGet("users/{userId:guid}")]
     [ProducesResponseType<UserAccessDto>(StatusCodes.Status200OK)]
     public async Task<ActionResult<UserAccessDto>> GetUserAccessAsync(Guid userId, CancellationToken cancellationToken)
@@ -46,24 +49,28 @@ public sealed class AdminAccessController : ControllerBase
         return access.IsSuccess ? Ok(access.Value) : ProblemResults.FromResult(HttpContext, access);
     }
 
+    [RequirePortalPage(PortalPages.Access, PortalPages.Users)]
     [HttpPut("applications/{applicationId:guid}/users/{userId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GrantUserAsync(Guid applicationId, Guid userId, CancellationToken cancellationToken) =>
         Respond(await _access.GrantUserAsync(applicationId, userId, cancellationToken).ConfigureAwait(false));
 
+    [RequirePortalPage(PortalPages.Access, PortalPages.Users)]
     [HttpDelete("applications/{applicationId:guid}/users/{userId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RevokeUserAsync(Guid applicationId, Guid userId, CancellationToken cancellationToken) =>
         Respond(await _access.RevokeUserAsync(applicationId, userId, cancellationToken).ConfigureAwait(false));
 
+    [RequirePortalPage(PortalPages.Access, PortalPages.Groups)]
     [HttpPut("applications/{applicationId:guid}/groups/{groupId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GrantGroupAsync(Guid applicationId, Guid groupId, CancellationToken cancellationToken) =>
         Respond(await _access.GrantGroupAsync(applicationId, groupId, cancellationToken).ConfigureAwait(false));
 
+    [RequirePortalPage(PortalPages.Access, PortalPages.Groups)]
     [HttpDelete("applications/{applicationId:guid}/groups/{groupId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

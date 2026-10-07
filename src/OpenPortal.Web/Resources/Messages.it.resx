@@ -49,15 +49,11 @@
   <data name="common.clear" xml:space="preserve"><value>Cancella</value></data>
   <data name="common.previous" xml:space="preserve"><value>Precedente</value></data>
   <data name="common.next" xml:space="preserve"><value>Successiva</value></data>
-  <data name="common.none" xml:space="preserve"><value>Nessuno</value></data>
   <data name="common.actions" xml:space="preserve"><value>Azioni</value></data>
   <data name="common.status" xml:space="preserve"><value>Stato</value></data>
   <data name="common.email" xml:space="preserve"><value>Email</value></data>
   <data name="common.password" xml:space="preserve"><value>Password</value></data>
   <data name="common.displayName" xml:space="preserve"><value>Nome visualizzato</value></data>
-  <data name="common.roles" xml:space="preserve"><value>Ruoli</value></data>
-  <data name="role.Administrator" xml:space="preserve"><value>Amministratore</value></data>
-  <data name="role.User" xml:space="preserve"><value>Utente</value></data>
   <data name="clientError.sessionEnded" xml:space="preserve"><value>La tua sessione è terminata</value></data>
   <data name="clientError.signInAgain" xml:space="preserve"><value>Accedi di nuovo per continuare.</value></data>
   <data name="clientError.actionFailed" xml:space="preserve"><value>Non è stato possibile completare l'azione</value></data>
@@ -141,7 +137,6 @@
   <data name="account.memberSince" xml:space="preserve"><value>Iscritto dal</value></data>
   <data name="users.title" xml:space="preserve"><value>Utenti</value></data>
   <data name="users.description" xml:space="preserve"><value>Crea account e gestisci chi può amministrare il portale.</value></data>
-  <data name="users.rolesUpdated" xml:space="preserve"><value>Ruoli aggiornati</value></data>
   <data name="users.accounts" xml:space="preserve"><value>Account</value></data>
   <data name="users.searchPlaceholder" xml:space="preserve"><value>Email o nome visualizzato</value></data>
   <data name="users.noMatch" xml:space="preserve"><value>Nessun account corrisponde.</value></data>
@@ -149,8 +144,6 @@
   <data name="users.lockedOut" xml:space="preserve"><value>Bloccato</value></data>
   <data name="users.active" xml:space="preserve"><value>Attivo</value></data>
   <data name="users.unconfirmed" xml:space="preserve"><value>Non confermato</value></data>
-  <data name="users.revokeAdmin" xml:space="preserve"><value>Revoca admin</value></data>
-  <data name="users.makeAdmin" xml:space="preserve"><value>Rendi admin</value></data>
   <data name="users.pagination" xml:space="preserve"><value>Paginazione</value></data>
   <data name="users.pageOf_one" xml:space="preserve"><value>Pagina {page} di {total} ({count} account)</value></data>
   <data name="users.pageOf_other" xml:space="preserve"><value>Pagina {page} di {total} ({count} account)</value></data>
@@ -249,7 +242,6 @@
   <data name="error.identity.user_not_found" xml:space="preserve"><value>L’utente richiesto non esiste.</value></data>
   <data name="error.identity.duplicate_email" xml:space="preserve"><value>Esiste già un account con questo indirizzo email.</value></data>
   <data name="error.identity.unsupported_language" xml:space="preserve"><value>La lingua richiesta non è supportata.</value></data>
-  <data name="error.identity.unknown_role" xml:space="preserve"><value>Uno o più ruoli indicati non sono riconosciuti dalla piattaforma.</value></data>
   <data name="error.identity.cannot_modify_own_roles" xml:space="preserve"><value>Un amministratore non può modificare i propri ruoli.</value></data>
   <data name="error.identity.password_complexity" xml:space="preserve"><value>La password non rispetta la policy di complessità configurata.</value></data>
   <data name="error.identity.current_password_incorrect" xml:space="preserve"><value>La password attuale non è corretta.</value></data>
@@ -404,7 +396,6 @@
   <data name="groups.column.name" xml:space="preserve"><value>Gruppo</value></data>
   <data name="groups.column.members" xml:space="preserve"><value>Membri</value></data>
   <data name="groups.column.applications" xml:space="preserve"><value>Applicazioni</value></data>
-  <data name="groups.manage" xml:space="preserve"><value>Membri e app</value></data>
   <data name="groups.memberCount_one" xml:space="preserve"><value>{count} membro</value></data>
   <data name="groups.memberCount_other" xml:space="preserve"><value>{count} membri</value></data>
   <data name="groups.created" xml:space="preserve"><value>Gruppo creato</value></data>
@@ -422,13 +413,10 @@
   <data name="groups.form.nameRequired" xml:space="preserve"><value>Inserisci un nome.</value></data>
   <data name="groups.form.nameMax" xml:space="preserve"><value>Usa al massimo {max} caratteri.</value></data>
   <data name="groups.form.descriptionMax" xml:space="preserve"><value>Usa al massimo {max} caratteri.</value></data>
-  <data name="groups.sheet.description" xml:space="preserve"><value>I membri e le applicazioni che ottengono tramite questo gruppo.</value></data>
-  <data name="groups.sheet.members_one" xml:space="preserve"><value>{count} membro</value></data>
-  <data name="groups.sheet.members_other" xml:space="preserve"><value>{count} membri</value></data>
+  <data name="groups.sheet.description" xml:space="preserve"><value>I membri e ciò che ottengono tramite questo gruppo.</value></data>
   <data name="groups.sheet.add" xml:space="preserve"><value>Aggiungi</value></data>
   <data name="groups.sheet.remove" xml:space="preserve"><value>Rimuovi {name} dal gruppo</value></data>
   <data name="groups.sheet.noMembers" xml:space="preserve"><value>Ancora nessun membro.</value></data>
-  <data name="groups.sheet.applications" xml:space="preserve"><value>Applicazioni</value></data>
   <data name="groups.sheet.applicationsHint" xml:space="preserve"><value>Attiva un'applicazione per darla a tutti i membri del gruppo.</value></data>
   <data name="access.title" xml:space="preserve"><value>Accessi</value></data>
   <data name="access.description" xml:space="preserve"><value>Chi può aprire ogni applicazione: tramite un gruppo o con accesso diretto.</value></data>
@@ -597,4 +585,41 @@
   <data name="error.geo.invalid_postal_code" xml:space="preserve"><value>Il CAP non è valido.</value></data>
   <data name="error.geo.invalid_query" xml:space="preserve"><value>Scrivi tra 2 e 80 caratteri per cercare.</value></data>
   <data name="address.city.typeToSearch" xml:space="preserve"><value>Scrivi almeno 2 lettere della città, oppure inserisci prima il CAP.</value></data>
+  <data name="nav.pagePermissions" xml:space="preserve"><value>Permessi pagine</value></data>
+  <data name="pagePermissions.title" xml:space="preserve"><value>Permessi pagine</value></data>
+  <data name="pagePermissions.description" xml:space="preserve"><value>Scegli quali gruppi possono aprire ogni pagina del portale. Gli amministratori aprono sempre tutte le pagine.</value></data>
+  <data name="pagePermissions.matrixHint" xml:space="preserve"><value>Spunta una pagina, o un'area intera, per permettere a ogni membro del gruppo di aprire e usare la pagina. Solo un amministratore può assegnare il ruolo di amministratore, modificare un amministratore o cambiare questi permessi.</value></data>
+  <data name="pagePermissions.empty.title" xml:space="preserve"><value>Ancora nessun gruppo</value></data>
+  <data name="pagePermissions.empty.description" xml:space="preserve"><value>Le pagine si assegnano ai gruppi. Crea prima un gruppo, poi torna qui.</value></data>
+  <data name="groups.sheet.pagesHint" xml:space="preserve"><value>Attiva una pagina per permettere a ogni membro del gruppo di aprirla.</value></data>
+  <data name="users.administratorOnly" xml:space="preserve"><value>Solo un amministratore può modificare un amministratore.</value></data>
+  <data name="error.access.page_not_found" xml:space="preserve"><value>La pagina richiesta non esiste.</value></data>
+  <data name="error.access.page_key_invalid" xml:space="preserve"><value>La chiave di una pagina può contenere solo lettere minuscole, cifre e trattini, in segmenti separati da punti.</value></data>
+  <data name="error.identity.administrator_required" xml:space="preserve"><value>Solo un amministratore può assegnare il ruolo di amministratore o modificare l&apos;account di un amministratore.</value></data>
+  <data name="pagePermissions.groupsTitle" xml:space="preserve"><value>Gruppi</value></data>
+  <data name="pagePermissions.groupSummary" xml:space="preserve"><value>{count} di {total} pagine</value></data>
+  <data name="pageTree.expand" xml:space="preserve"><value>Espandi {area}</value></data>
+  <data name="pageTree.collapse" xml:space="preserve"><value>Comprimi {area}</value></data>
+  <data name="pageTree.selectAll" xml:space="preserve"><value>Seleziona tutte</value></data>
+  <data name="pageTree.clear" xml:space="preserve"><value>Nessuna</value></data>
+  <data name="pageTree.searchPlaceholder" xml:space="preserve"><value>Cerca pagine…</value></data>
+  <data name="common.close" xml:space="preserve"><value>Chiudi</value></data>
+  <data name="groups.tab.details" xml:space="preserve"><value>Dettagli</value></data>
+  <data name="groups.tab.members" xml:space="preserve"><value>Membri</value></data>
+  <data name="groups.tab.applications" xml:space="preserve"><value>Applicazioni</value></data>
+  <data name="groups.tab.pages" xml:space="preserve"><value>Pagine</value></data>
+  <data name="common.yes" xml:space="preserve"><value>Sì</value></data>
+  <data name="common.no" xml:space="preserve"><value>No</value></data>
+  <data name="users.administrator" xml:space="preserve"><value>Amministratore</value></data>
+  <data name="users.administratorHint" xml:space="preserve"><value>Un amministratore apre tutte le pagine e gestisce tutto, compresi i permessi delle pagine.</value></data>
+  <data name="users.administratorSelfHint" xml:space="preserve"><value>Non puoi cambiarlo per il tuo account.</value></data>
+  <data name="users.kind.label" xml:space="preserve"><value>Tipo</value></data>
+  <data name="users.kind.administrators" xml:space="preserve"><value>Amministratori</value></data>
+  <data name="users.kind.others" xml:space="preserve"><value>Altri utenti</value></data>
+  <data name="users.cannotDeleteSelf" xml:space="preserve"><value>Non puoi eliminare il tuo account.</value></data>
+  <data name="users.deleteTitle" xml:space="preserve"><value>Eliminare {name}?</value></data>
+  <data name="users.deleteDescription" xml:space="preserve"><value>L&apos;account {email} viene eliminato definitivamente, insieme ai gruppi di cui fa parte e agli accessi alle applicazioni. Le sue sessioni nelle altre applicazioni terminano.</value></data>
+  <data name="users.deleted" xml:space="preserve"><value>Account eliminato</value></data>
+  <data name="error.identity.cannot_delete_self" xml:space="preserve"><value>Non puoi eliminare il tuo account.</value></data>
+  <data name="error.identity.delete_failed" xml:space="preserve"><value>Non è stato possibile eliminare l&apos;account.</value></data>
 </root>

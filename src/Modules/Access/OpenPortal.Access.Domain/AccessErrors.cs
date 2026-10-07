@@ -24,6 +24,14 @@ public static class AccessErrors
     public static Error UserNotFound { get; } =
         Error.NotFound(Prefix + "user_not_found", "The requested user does not exist.");
 
+    public static Error PageNotFound { get; } =
+        Error.NotFound(Prefix + "page_not_found", "The requested page does not exist.");
+
+    public static Error PageKeyInvalid { get; } =
+        Error.Validation(
+            Prefix + "page_key_invalid",
+            "A page key may only contain lower-case letters, digits and hyphens, in dot-separated segments.");
+
     public static Error ClientIdRequired { get; } =
         Error.Validation(Prefix + "client_id_required", "A client id is required.");
 

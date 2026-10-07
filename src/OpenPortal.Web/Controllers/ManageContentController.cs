@@ -7,7 +7,7 @@ using OpenPortal.Web.Infrastructure;
 
 namespace OpenPortal.Web.Controllers;
 
-/// <summary>Administrator-only editing of the site's content.</summary>
+/// <summary>Editing of the site's content, for administrators and holders of the content pages.</summary>
 /// <para>
 /// The policy is the first gate; the Content service re-checks authorisation through
 /// <c>IContentEditAuthorization</c> before mutating anything, so these routes cannot be bypassed.
@@ -15,7 +15,7 @@ namespace OpenPortal.Web.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/manage/content")]
-[Authorize(Policy = Policies.AdministratorOnly)]
+[Authorize]
 [Produces("application/json")]
 public sealed class ManageContentController : ControllerBase
 {
@@ -27,6 +27,7 @@ public sealed class ManageContentController : ControllerBase
     }
 
     /// <summary>Returns the profile for editing.</summary>
+    [RequirePortalPage(PortalPages.ContentProfile)]
     [HttpGet("profile")]
     [ProducesResponseType<ProfileDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -47,6 +48,7 @@ public sealed class ManageContentController : ControllerBase
     /// append to and no alternative address to post to.
     /// </para>
     /// </summary>
+    [RequirePortalPage(PortalPages.ContentProfile)]
     [HttpPut("profile")]
     [ProducesResponseType<ProfileDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
@@ -63,6 +65,7 @@ public sealed class ManageContentController : ControllerBase
     }
 
     /// <summary>Lists every project, published or not, in display order.</summary>
+    [RequirePortalPage(PortalPages.ContentProjects)]
     [HttpGet("projects")]
     [ProducesResponseType<IReadOnlyList<ManagedProjectDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
@@ -77,6 +80,7 @@ public sealed class ManageContentController : ControllerBase
     }
 
     /// <summary>Creates or replaces a project, addressed by <see cref="ProjectRequest.Id"/>.</summary>
+    [RequirePortalPage(PortalPages.ContentProjects)]
     [HttpPut("projects")]
     [ProducesResponseType<ProjectDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
@@ -94,6 +98,7 @@ public sealed class ManageContentController : ControllerBase
     }
 
     /// <summary>Publishes or unpublishes a project without touching its other fields.</summary>
+    [RequirePortalPage(PortalPages.ContentProjects)]
     [HttpPost("projects/{projectId:guid}/published")]
     [ProducesResponseType<ProjectDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -113,6 +118,7 @@ public sealed class ManageContentController : ControllerBase
     }
 
     /// <summary>Deletes a project and its technology associations.</summary>
+    [RequirePortalPage(PortalPages.ContentProjects)]
     [HttpDelete("projects/{projectId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

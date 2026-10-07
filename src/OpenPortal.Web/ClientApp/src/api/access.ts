@@ -7,12 +7,13 @@ import type {
   GroupDetail,
   GroupSummary,
   LaunchpadItem,
+  PagePermissionMatrix,
   SaveGroupRequest,
   UpdateApplicationRequest,
   UserAccess,
 } from './types'
 
-/** Applications that sign in through the portal (administrators only). */
+/** Applications that sign in through the portal (administrators and holders of the matching page). */
 export const applicationsApi = {
   list: (signal?: AbortSignal) => api.get<ApplicationSummary[]>('/api/admin/applications', signal),
 
@@ -34,7 +35,7 @@ export const applicationsApi = {
   remove: (id: string) => api.delete<void>(`/api/admin/applications/${id}`),
 }
 
-/** User groups (administrators only). */
+/** User groups (administrators and holders of the matching page). */
 export const groupsApi = {
   list: (signal?: AbortSignal) => api.get<GroupSummary[]>('/api/admin/groups', signal),
 
@@ -51,7 +52,7 @@ export const groupsApi = {
   removeMember: (id: string, userId: string) => api.delete<GroupDetail>(`/api/admin/groups/${id}/members/${userId}`),
 }
 
-/** Grants: who may open which application (administrators only). Every call is idempotent. */
+/** Grants: who may open which application (administrators and holders of the access page). Every call is idempotent. */
 export const accessApi = {
   tree: (signal?: AbortSignal) => api.get<AccessTree>('/api/admin/access/tree', signal),
 
@@ -70,6 +71,21 @@ export const accessApi = {
     api.delete<void>(`/api/admin/access/applications/${applicationId}/groups/${groupId}`),
 }
 
+/** Which groups may open which portal pages (administrators only). Every call is idempotent. */
+export const pagePermissionsApi = {
+  matrix: (signal?: AbortSignal) => api.get<PagePermissionMatrix>('/api/admin/page-permissions', signal),
+
+  grant: (pageKey: string, groupId: string) =>
+    api.put<void>(`/api/admin/page-permissions/${encodeURIComponent(pageKey)}/groups/${groupId}`, {}),
+
+  revoke: (pageKey: string, groupId: string) =>
+    api.delete<void>(`/api/admin/page-permissions/${encodeURIComponent(pageKey)}/groups/${groupId}`),
+
+  /** Replaces every page of the group in one change (a whole area at once). */
+  setGroupPages: (groupId: string, pages: readonly string[]) =>
+    api.put<void>(`/api/admin/page-permissions/groups/${groupId}`, { pages }),
+}
+
 /** The signed-in user's own applications. */
 export const launchpadApi = {
   list: (signal?: AbortSignal) => api.get<LaunchpadItem[]>('/api/account/applications', signal),
@@ -83,4 +99,5 @@ export const accessKeys = {
   tree: ['admin-access-tree'] as const,
   user: (userId: string) => ['admin-access-user', userId] as const,
   launchpad: ['launchpad'] as const,
+  pagePermissions: ['admin-page-permissions'] as const,
 }

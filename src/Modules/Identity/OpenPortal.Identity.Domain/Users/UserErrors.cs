@@ -37,8 +37,13 @@ public static class UserErrors
     public static Error UnsupportedLanguage { get; } =
         Error.Validation(Prefix + "unsupported_language", "The requested language is not supported.");
 
-    public static Error UnknownRole { get; } =
-        Error.Validation(Prefix + "unknown_role", "One or more supplied roles are not recognised by this platform.");
+    public static Error AdministratorRequired { get; } =
+        Error.Forbidden(
+            Prefix + "administrator_required",
+            "Only an administrator can grant the administrator role or change an administrator's account.");
+
+    public static Error CannotDeleteSelf { get; } =
+        Error.Conflict(Prefix + "cannot_delete_self", "You cannot delete your own account.");
 
     public static Error CannotModifyOwnRoles { get; } =
         Error.Conflict(Prefix + "cannot_modify_own_roles", "An administrator cannot change their own roles.");

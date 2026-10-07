@@ -31,7 +31,7 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
 
     public async Task<Result<IReadOnlyList<ApplicationDto>>> ListAsync(CancellationToken cancellationToken)
     {
-        var guard = _authorization.EnsureCanAdminister();
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ListApplications, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<IReadOnlyList<ApplicationDto>>.Failure(guard.Error);
@@ -65,7 +65,7 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
 
     public async Task<Result<ApplicationDto>> GetAsync(Guid applicationId, CancellationToken cancellationToken)
     {
-        var guard = _authorization.EnsureCanAdminister();
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageApplications, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<ApplicationDto>.Failure(guard.Error);
@@ -84,7 +84,7 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var guard = _authorization.EnsureCanAdminister();
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageApplications, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<ApplicationSecretDto>.Failure(guard.Error);
@@ -149,7 +149,7 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
 
     public async Task<Result<ApplicationSecretDto>> ApproveAsync(Guid applicationId, CancellationToken cancellationToken)
     {
-        var guard = _authorization.EnsureCanAdminister();
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageApplications, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<ApplicationSecretDto>.Failure(guard.Error);
@@ -182,7 +182,7 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
         Guid applicationId,
         CancellationToken cancellationToken)
     {
-        var guard = _authorization.EnsureCanAdminister();
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageApplications, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<ApplicationSecretDto>.Failure(guard.Error);
@@ -228,7 +228,7 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
 
     public async Task<Result> DeleteAsync(Guid applicationId, CancellationToken cancellationToken)
     {
-        var guard = _authorization.EnsureCanAdminister();
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageApplications, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return guard;
@@ -263,7 +263,7 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
         Func<PortalApplication, CancellationToken, Task>? afterSave,
         CancellationToken cancellationToken)
     {
-        var guard = _authorization.EnsureCanAdminister();
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageApplications, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<ApplicationDto>.Failure(guard.Error);
