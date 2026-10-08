@@ -12,7 +12,7 @@
 # ---------------------------------------------------------------------------------------------------------------
 # The client: built once here, copied into wwwroot below. The i18n check reads the server's resource files.
 # ---------------------------------------------------------------------------------------------------------------
-FROM node:22-alpine AS client
+FROM node:26-alpine AS client
 WORKDIR /src/src/OpenPortal.Web/ClientApp
 COPY src/OpenPortal.Web/ClientApp/package.json src/OpenPortal.Web/ClientApp/package-lock.json ./
 RUN npm ci --no-audit --no-fund
