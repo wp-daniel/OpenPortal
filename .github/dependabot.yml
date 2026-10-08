@@ -1,17 +1,31 @@
+# One pull request per ecosystem, once a month: every update of that kind is grouped into it, so the list of
+# open pull requests stays short. Security updates are not affected by this schedule (GitHub opens them as soon
+# as an advisory is published, when security updates are enabled for the repository).
 version: 2
 updates:
   - package-ecosystem: nuget
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    open-pull-requests-limit: 1
     groups:
       dotnet:
         patterns: ['*']
+    ignore:
+      # xUnit 4 (and its runner, and coverlet 10) run only on Microsoft.Testing.Platform, which dotnet test must be
+      # switched to first (global.json, CI arguments). Until then, stay on the current majors.
+      - dependency-name: xunit.v3
+        update-types: ['version-update:semver-major']
+      - dependency-name: xunit.runner.visualstudio
+        update-types: ['version-update:semver-major']
+      - dependency-name: coverlet.collector
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: npm
     directory: /src/OpenPortal.Web/ClientApp
     schedule:
-      interval: weekly
+      interval: monthly
+    open-pull-requests-limit: 1
     groups:
       client:
         patterns: ['*']
@@ -20,8 +34,20 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    open-pull-requests-limit: 1
+    groups:
+      actions:
+        patterns: ['*']
 
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: monthly
+    open-pull-requests-limit: 1
+    groups:
+      images:
+        patterns: ['*']
+    ignore:
+      # The client is built with the Node LTS the project targets (22); a new major is a deliberate change.
+      - dependency-name: node
+        update-types: ['version-update:semver-major']
