@@ -78,7 +78,20 @@ for (const file of walk(join(root, '..', '..'), /\.cs$/)) {
 }
 
 // Keys built by the server from a code, or in the client from a value (`applications.status.${status}`).
-const builtPrefixes = ['error.', 'problem.', 'applications.status.', 'applications.done.', 'applications.confirm.', 'users.status.', 'avatar.error.']
+const builtPrefixes = [
+  'error.',
+  'problem.',
+  'applications.status.',
+  'applications.done.',
+  'applications.confirm.',
+  'applications.groupClaims.',
+  'users.status.',
+  'avatar.error.',
+  'audit.action.',
+  'audit.category.',
+  'audit.period.',
+  'audit.subject.',
+]
 const base = (key) => key.replace(/_(zero|one|two|few|many|other)$/, '')
 const unused = [...neutral].filter((key) => !used.has(base(key)) && !builtPrefixes.some((prefix) => key.startsWith(prefix)))
 

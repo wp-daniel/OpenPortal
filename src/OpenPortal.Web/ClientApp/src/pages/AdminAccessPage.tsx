@@ -16,6 +16,7 @@ import { Link } from 'react-router-dom'
 import { accessApi, accessKeys } from '@/api/access'
 import type { AccessTreeApplication, UserReference } from '@/api/types'
 import { GroupPicker, UserPicker, type PickedPrincipal } from '@/components/access/PrincipalPicker'
+import { RoleAssignment, RoleChecklist } from '@/components/access/RoleAssignment'
 import { ApplicationStatusBadge, OnlineIndicator } from '@/components/access/shared'
 import { useAccessRefresh } from '@/lib/access'
 import { FormField } from '@/components/FormField'
@@ -217,6 +218,13 @@ export function AdminAccessPage() {
                                     </span>
                                   </Button>
                                 </CollapsibleTrigger>
+                                <RoleAssignment
+                                  roles={application.roles}
+                                  value={group.roles}
+                                  label={group.name}
+                                  save={(roles) => accessApi.grantGroup(application.id, group.id, roles)}
+                                  onSaved={refresh}
+                                />
                                 <RevokeButton
                                   label={t('access.revokeNamed', { name: group.name })}
                                   onClick={() => setRevoking({ application, kind: 'group', id: group.id, name: group.name })}
@@ -250,6 +258,13 @@ export function AdminAccessPage() {
                       {application.users.map((user) => (
                         <li key={user.id} role="treeitem" className="flex items-center gap-1">
                           <UserLeaf user={user} />
+                          <RoleAssignment
+                            roles={application.roles}
+                            value={user.roles}
+                            label={user.displayName || user.email}
+                            save={(roles) => accessApi.grantUser(application.id, user.id, roles)}
+                            onSaved={refresh}
+                          />
                           <RevokeButton
                             label={t('access.revokeNamed', { name: user.displayName || user.email })}
                             onClick={() =>
@@ -381,6 +396,7 @@ function GrantDialog({
   const [tab, setTab] = useState<'group' | 'user'>('group')
   const [group, setGroup] = useState<PickedPrincipal | null>(null)
   const [user, setUser] = useState<PickedPrincipal | null>(null)
+  const [roles, setRoles] = useState<string[]>([])
 
   const grant = useMutation({
     mutationFn: async () => {
@@ -389,9 +405,9 @@ function GrantDialog({
       }
 
       if (tab === 'group' && group) {
-        await accessApi.grantGroup(application.id, group.id)
+        await accessApi.grantGroup(application.id, group.id, roles)
       } else if (tab === 'user' && user) {
-        await accessApi.grantUser(application.id, user.id)
+        await accessApi.grantUser(application.id, user.id, roles)
       }
     },
     onSuccess: () => {
@@ -407,6 +423,7 @@ function GrantDialog({
   function close() {
     setGroup(null)
     setUser(null)
+    setRoles([])
     setTab('group')
     onClose()
   }
@@ -447,6 +464,14 @@ function GrantDialog({
             </FormField>
           </TabsContent>
         </Tabs>
+
+        {application && application.roles.length > 0 && (
+          <fieldset className="grid gap-2">
+            <legend className="mb-1 text-sm font-medium">{t('access.roles.title')}</legend>
+            <p className="text-muted-foreground text-xs">{t('access.roles.grantHint')}</p>
+            <RoleChecklist roles={application.roles} value={roles} onChange={setRoles} idPrefix="grant-role" />
+          </fieldset>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={close}>

@@ -4,20 +4,25 @@ using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.DataProtection;
 using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Access.Infrastructure.DependencyInjection;
+using OpenPortal.Audit.Application.Abstractions;
+using OpenPortal.Audit.Infrastructure.DependencyInjection;
 using OpenPortal.Content.Application.Abstractions;
 using OpenPortal.Content.Infrastructure.DependencyInjection;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Identity.Infrastructure.Configuration;
 using OpenPortal.Identity.Infrastructure.DependencyInjection;
 using OpenPortal.Web;
+using OpenPortal.Web.Auditing;
 using OpenPortal.Web.Authentication;
 using OpenPortal.Web.Authorization;
 using OpenPortal.Web.Geo;
+using OpenPortal.Web.Health;
 using OpenPortal.Web.Infrastructure;
 using OpenPortal.Web.Localization;
 using OpenPortal.Web.Middleware;
 using OpenPortal.Web.Oidc;
 using OpenPortal.Web.Persistence;
+using OpenPortal.Web.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -100,6 +105,15 @@ builder.Services.AddScoped<IUserDirectory, IdentityUserDirectory>();
 builder.Services.AddSingleton<IPortalPageCatalog, PortalPageCatalog>();
 
 builder.Services.AddAccessModule(
+    builder.Configuration,
+    options => DatabaseProviderSelector.Configure(options, database.Provider, database.ConnectionString));
+
+// Audit: the trail every module records to (IAuditTrail) and the log the audit page reads. The host says who
+// is calling and from where, and who may read the log.
+builder.Services.AddScoped<IAuditRequestContext, HttpAuditRequestContext>();
+builder.Services.AddScoped<IAuditLogAuthorization, AuditLogAuthorization>();
+
+builder.Services.AddAuditModule(
     builder.Configuration,
     options => DatabaseProviderSelector.Configure(options, database.Provider, database.ConnectionString));
 
@@ -203,6 +217,13 @@ builder.Services.AddOpenPortalGeo(builder.Configuration);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<DatabaseInitializer>();
 
+// Hardening: browser security headers, request rate limits, a trusted reverse proxy's forwarded headers, and
+// the health endpoints a load balancer or orchestrator probes.
+builder.Services.AddOptions<SecurityHeadersOptions>().Bind(builder.Configuration.GetSection(SecurityHeadersOptions.SectionName));
+builder.Services.AddOpenPortalRateLimiting(builder.Configuration);
+builder.Services.AddOpenPortalReverseProxy(builder.Configuration);
+builder.Services.AddOpenPortalHealthChecks();
+
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer<SecuritySchemeTransformer>());
 
 var app = builder.Build();
@@ -221,13 +242,31 @@ var app = builder.Build();
 // program - a test host would report only "the server has not been started" - and turning a specific,
 // actionable error into a generic one is a bad trade. BootstrapAdminException therefore carries the
 // diagnosis in its message instead.
+//
+// `--migrate` applies the migrations (and provisions roles and the bootstrap administrator) and exits: the
+// separate, ordered deployment step that production uses instead of Database:MigrateOnStartup, for example
+// the one-shot `migrate` service in docker-compose.yml.
+var migrateOnly = args.Contains("--migrate", StringComparer.OrdinalIgnoreCase);
+
 await using (var startupScope = app.Services.CreateAsyncScope())
 {
     await startupScope.ServiceProvider
         .GetRequiredService<DatabaseInitializer>()
-        .InitialiseAsync(CancellationToken.None)
+        .InitialiseAsync(forceMigrations: migrateOnly, CancellationToken.None)
         .ConfigureAwait(false);
 }
+
+if (migrateOnly)
+{
+    return;
+}
+
+// First, so the audit log, the rate limits and the https checks below see the client's real address and
+// scheme when a trusted reverse proxy is in front (ReverseProxy:Enabled).
+app.UseOpenPortalReverseProxy();
+
+// Before anything that can answer, so every response (static files and errors included) carries them.
+app.UseMiddleware<SecurityHeadersMiddleware>();
 
 if (!app.Environment.IsDevelopment())
 {
@@ -255,10 +294,16 @@ app.UseOpenPortalStatusCodePages();
 app.UseRouting();
 
 app.UseAuthentication();
+
+// After authentication, so a signed-in caller is counted as themselves; after routing, so endpoints can opt
+// into a stricter policy ([EnableRateLimiting]) or out (health probes).
+app.UseRateLimiter();
+
 app.UseAuthorization();
 
 app.MapControllers();
 app.MapOpenApi();
+app.MapOpenPortalHealthChecks();
 
 // Everything else is a client-side route: return the built SPA shell so a hard refresh or a deep link
 // works.
@@ -271,7 +316,8 @@ app.MapFallback(async context =>
     // The OpenID Connect paths are machine endpoints too: an unknown one is a 404, not the SPA shell.
     if (context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase)
         || context.Request.Path.StartsWithSegments("/connect", StringComparison.OrdinalIgnoreCase)
-        || context.Request.Path.StartsWithSegments("/.well-known", StringComparison.OrdinalIgnoreCase))
+        || context.Request.Path.StartsWithSegments("/.well-known", StringComparison.OrdinalIgnoreCase)
+        || context.Request.Path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase))
     {
         context.Response.StatusCode = StatusCodes.Status404NotFound;
         context.Response.ContentType = ProblemResults.ProblemJson;

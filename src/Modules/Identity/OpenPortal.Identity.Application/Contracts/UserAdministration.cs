@@ -22,7 +22,8 @@ public sealed record UserSummaryDto(
     string? City,
     string? PostalCode,
     string? Country,
-    DateTimeOffset? AvatarUpdatedAtUtc);
+    DateTimeOffset? AvatarUpdatedAtUtc,
+    DateTimeOffset? LastSignInAtUtc);
 
 /// <summary>Filter and paging parameters for the administration user list.</summary>
 public sealed class UserListQuery
@@ -53,6 +54,11 @@ public static class UserStatusFilter
     public const string Active = "active";
     public const string Locked = "locked";
     public const string Unconfirmed = "unconfirmed";
+
+    /// <summary>Never signed in, or not for <see cref="InactiveAfterDays"/> days.</summary>
+    public const string Inactive = "inactive";
+
+    public const int InactiveAfterDays = 90;
 }
 
 /// <summary>A new account created by an administrator.</summary>

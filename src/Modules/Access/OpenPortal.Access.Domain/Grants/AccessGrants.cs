@@ -31,6 +31,27 @@ public sealed class ApplicationUserGrant
     public Guid UserId { get; private set; }
 
     public DateTimeOffset GrantedAtUtc { get; private set; }
+
+    /// <summary>Keys of the application roles that come with this grant.</summary>
+    public IReadOnlyList<string> Roles { get; private set; } = [];
+
+    /// <summary>
+    /// Replaces the roles that come with this grant. The caller checks the keys against the application's
+    /// roles. Returns true when anything changed.
+    /// </summary>
+    public bool SetRoles(IEnumerable<string> roleKeys)
+    {
+        ArgumentNullException.ThrowIfNull(roleKeys);
+
+        var normalised = roleKeys.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
+        if (normalised.SequenceEqual(Roles, StringComparer.Ordinal))
+        {
+            return false;
+        }
+
+        Roles = normalised;
+        return true;
+    }
 }
 
 /// <summary>Access to one application granted to every member of one group.</summary>
@@ -56,6 +77,27 @@ public sealed class ApplicationGroupGrant
     public Guid GroupId { get; private set; }
 
     public DateTimeOffset GrantedAtUtc { get; private set; }
+
+    /// <summary>Keys of the application roles that come with this grant.</summary>
+    public IReadOnlyList<string> Roles { get; private set; } = [];
+
+    /// <summary>
+    /// Replaces the roles that come with this grant. The caller checks the keys against the application's
+    /// roles. Returns true when anything changed.
+    /// </summary>
+    public bool SetRoles(IEnumerable<string> roleKeys)
+    {
+        ArgumentNullException.ThrowIfNull(roleKeys);
+
+        var normalised = roleKeys.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
+        if (normalised.SequenceEqual(Roles, StringComparer.Ordinal))
+        {
+            return false;
+        }
+
+        Roles = normalised;
+        return true;
+    }
 }
 
 /// <summary>

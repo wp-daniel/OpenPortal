@@ -8,22 +8,8 @@
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
-    <script>
-      // Applies the saved (or OS) theme before first paint so a reload never flashes the wrong one.
-      try {
-        var t = localStorage.getItem("openportal-theme");
-        if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-        document.documentElement.classList.toggle("dark", t === "dark");
-      } catch (e) {}
-    </script>
-    <script>
-      // Sets <html lang> from the saved language before first paint; the app corrects it once the list of
-      // offered languages is known.
-      try {
-        var l = localStorage.getItem("openportal-lang");
-        if (l && /^[A-Za-z-]{2,10}$/.test(l)) document.documentElement.lang = l;
-      } catch (e) {}
-    </script>
+    <!-- Theme and language before first paint; a file rather than inline, for the Content-Security-Policy. -->
+    <script src="/boot.js"></script>
     <meta name="description" content="OpenPortal — a reusable application shell with user management and sessions." />
     <title>OpenPortal</title>
   </head>

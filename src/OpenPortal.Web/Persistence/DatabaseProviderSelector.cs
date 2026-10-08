@@ -7,19 +7,23 @@ namespace OpenPortal.Web.Persistence;
 /// The single place in the solution that knows which database engine is in use.
 /// <para>
 /// Every module registers its context through <see cref="Configure"/>, which takes a provider-agnostic
-/// options builder. Adding PostgreSQL means editing this class and adding the package: no module, domain or
-/// application project changes, and no query is provider-specific to begin with.
+/// options builder, so no module, domain or application project knows the engine and no query is
+/// provider-specific.
+/// </para>
+/// <para>
+/// Each provider has its own migrations, because a migration is written for one engine's column types: SQLite's
+/// are in this assembly (<c>Persistence/Migrations</c>), PostgreSQL's in <c>OpenPortal.Migrations.PostgreSql</c>.
 /// </para>
 /// </summary>
 public static class DatabaseProviderSelector
 {
+    /// <summary>The assembly holding the PostgreSQL migrations of every module.</summary>
+    public const string PostgreSqlMigrationsAssembly = "OpenPortal.Migrations.PostgreSql";
+
     /// <summary>
     /// Applies the provider selected by configuration to a module's context.
     /// </summary>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown for a provider that is declared but not yet implemented, so a misconfigured deployment fails
-    /// at startup with a clear message instead of at the first query.
-    /// </exception>
+    /// <exception cref="InvalidOperationException">For a provider this host does not know.</exception>
     public static void Configure(DbContextOptionsBuilder options, DatabaseProvider provider, string connectionString)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -33,12 +37,10 @@ public static class DatabaseProviderSelector
                 break;
 
             case DatabaseProvider.PostgreSql:
-                // Intentionally not wired up. Enabling it requires the Npgsql package, which is
-                // deliberately absent: see DatabaseOptions.PostgreSql.
-                throw new InvalidOperationException(
-                    "Database:Provider is set to PostgreSql, but the Npgsql provider has not been added. "
-                    + "Add the Npgsql.EntityFrameworkCore.PostgreSQL package to OpenPortal.Web and call "
-                    + "UseNpgsql here.");
+                // No retrying execution strategy: the Access module opens its own transactions (an application row
+                // and its OpenIddict client commit together), which a retrying strategy refuses.
+                options.UseNpgsql(connectionString, npgsql => npgsql.MigrationsAssembly(PostgreSqlMigrationsAssembly));
+                break;
 
             default:
                 throw new InvalidOperationException($"Unsupported database provider '{provider}'.");

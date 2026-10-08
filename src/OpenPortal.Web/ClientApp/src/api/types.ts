@@ -113,6 +113,8 @@ export interface UserSummary extends UserDetails {
   readonly createdAtUtc: string
   readonly isAdministrator: boolean
   readonly avatarUpdatedAtUtc: string | null
+  /** The last portal sign-in with a password; null if the account never signed in. */
+  readonly lastSignInAtUtc: string | null
 }
 
 export interface PagedResult<T> {
@@ -251,6 +253,19 @@ export interface ApplicationSummary {
   readonly lastSeenAtUtc: string | null
   readonly userCount: number
   readonly groupCount: number
+  /** The roles the application understands, assigned on grants and sent as `role` claims. */
+  readonly roles: readonly ApplicationRole[]
+  /** Which of a user's groups the application receives in the `groups` claim. */
+  readonly groupClaims: GroupClaimMode
+}
+
+export type GroupClaimMode = 'none' | 'granted' | 'all'
+
+/** A role an application understands. The key is what the application checks. */
+export interface ApplicationRole {
+  readonly key: string
+  readonly displayName: string | null
+  readonly description: string | null
 }
 
 /** Returned when a client secret is issued. The secret cannot be read again afterwards. */
@@ -265,6 +280,9 @@ export interface UpdateApplicationRequest {
   readonly baseUrl: string
   readonly redirectUris: readonly string[]
   readonly postLogoutRedirectUris: readonly string[]
+  /** The complete list of roles; a role left out is removed with its assignments. */
+  readonly roles: readonly ApplicationRole[]
+  readonly groupClaims: GroupClaimMode
 }
 
 export interface CreateApplicationRequest extends UpdateApplicationRequest {
@@ -320,6 +338,13 @@ export interface AccessTreeGroup {
   readonly id: string
   readonly name: string
   readonly members: readonly UserReference[]
+  /** Role keys that come with the group's grant. */
+  readonly roles: readonly string[]
+}
+
+/** A user granted an application directly, with the roles of that grant. */
+export interface AccessTreeUser extends UserReference {
+  readonly roles: readonly string[]
 }
 
 export interface AccessTreeApplication {
@@ -329,7 +354,8 @@ export interface AccessTreeApplication {
   readonly status: ApplicationStatus
   readonly lastSeenAtUtc: string | null
   readonly groups: readonly AccessTreeGroup[]
-  readonly users: readonly UserReference[]
+  readonly users: readonly AccessTreeUser[]
+  readonly roles: readonly ApplicationRole[]
 }
 
 export interface AccessTree {
@@ -343,6 +369,8 @@ export interface UserApplicationAccess {
   readonly status: ApplicationStatus
   readonly direct: boolean
   readonly viaGroups: readonly GroupReference[]
+  /** The user's roles in the application, from every grant together. */
+  readonly roles: readonly string[]
 }
 
 export interface UserAccess {
@@ -376,4 +404,41 @@ export interface PagePermissionMatrix {
   readonly pages: readonly PortalPage[]
   readonly groups: readonly GroupReference[]
   readonly grants: readonly PageGrant[]
+}
+
+// ---------------------------------------------------------------------------
+// Audit log.
+// ---------------------------------------------------------------------------
+
+export type AuditOutcome = 'success' | 'failure'
+
+/** An account, application or other subject named in an audit entry, as it was at the time. */
+export interface AuditSubject {
+  readonly type: string
+  readonly id: string
+  readonly label: string | null
+}
+
+export interface AuditEntry {
+  readonly id: string
+  readonly occurredAtUtc: string
+  /** Dotted action code, translated as `audit.action.<code>`. */
+  readonly action: string
+  readonly outcome: AuditOutcome
+  readonly actor: AuditSubject | null
+  readonly target: AuditSubject | null
+  readonly details: Readonly<Record<string, string | null>>
+  readonly ipAddress: string | null
+  readonly userAgent: string | null
+  readonly correlationId: string | null
+}
+
+export interface AuditFilter {
+  readonly search?: string
+  readonly category?: string
+  readonly outcome?: string
+  /** Only entries where this id is the actor or the target. */
+  readonly subject?: string
+  readonly from?: string
+  readonly to?: string
 }

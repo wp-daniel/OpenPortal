@@ -1,0 +1,135 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  # The client is built and checked by its own job; the .NET jobs skip the npm step of the build.
+  SkipClientBuild: true
+
+jobs:
+  client:
+    name: Client (lint, i18n, type-check, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/OpenPortal.Web/ClientApp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/OpenPortal.Web/ClientApp/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run build
+
+  dotnet:
+    name: .NET (build, tests on SQLite, migrations)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+      - run: dotnet tool restore
+      - run: dotnet build OpenPortal.slnx --configuration Release
+      - name: Unit tests
+        run: dotnet test tests/OpenPortal.Tests.Unit --configuration Release --no-build --logger "trx;LogFileName=unit.trx"
+      - name: Architecture tests
+        run: dotnet test tests/OpenPortal.Tests.Architecture --configuration Release --no-build --logger "trx;LogFileName=architecture.trx"
+      - name: Integration tests (SQLite)
+        run: dotnet test tests/OpenPortal.Tests.Integration --configuration Release --no-build --logger "trx;LogFileName=integration-sqlite.trx"
+      - name: Migrations match the model (both providers)
+        run: |
+          set -e
+          for context in IdentityDbContext ContentDbContext AccessDbContext AuditDbContext; do
+            dotnet ef migrations has-pending-model-changes --project src/OpenPortal.Web --context "$context" \
+              --configuration Release --no-build
+            dotnet ef migrations has-pending-model-changes --project src/OpenPortal.Migrations.PostgreSql \
+              --startup-project src/OpenPortal.Web --context "$context" --configuration Release --no-build \
+              -- --Database:Provider=PostgreSql "--ConnectionStrings:OpenPortal=Host=localhost;Database=design;Username=design;Password=design"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-sqlite
+          path: '**/TestResults/*.trx'
+
+  postgres:
+    name: .NET integration tests on PostgreSQL
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      OPENPORTAL_TEST_POSTGRES: Host=localhost;Port=5432;Username=postgres;Password=postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+      - run: dotnet test tests/OpenPortal.Tests.Integration --configuration Release --logger "trx;LogFileName=integration-postgres.trx"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-postgres
+          path: '**/TestResults/*.trx'
+
+  docker:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: openportal:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: The image starts and reports healthy
+        run: |
+          set -e
+          docker run -d --name portal -p 8080:8080 \
+            -e Identity__Cookie__RequireSecure=false \
+            openportal:ci
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/health/ready; then echo; exit 0; fi
+            sleep 2
+          done
+          docker logs portal
+          exit 1

@@ -1,6 +1,7 @@
 using System.Buffers.Text;
 using System.Security.Cryptography;
 using OpenIddict.Abstractions;
+using OpenPortal.Access.Application.Contracts;
 using OpenPortal.Access.Domain.Applications;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
@@ -79,6 +80,32 @@ internal sealed class OidcClientRegistry
         await _applications.UpdateAsync(client, descriptor, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Brings an existing client's permissions up to date when they lag behind what <see cref="Describe"/>
+    /// grants today, for example the scopes added in a later version. Returns true when the client changed.
+    /// </summary>
+    public async Task<bool> UpgradePermissionsAsync(PortalApplication application, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(application);
+
+        var client = await _applications.FindByClientIdAsync(application.ClientId, cancellationToken).ConfigureAwait(false);
+        if (client is null)
+        {
+            return false;
+        }
+
+        foreach (var permission in CurrentPermissions)
+        {
+            if (!await _applications.HasPermissionAsync(client, permission, cancellationToken).ConfigureAwait(false))
+            {
+                await SyncAsync(application, cancellationToken).ConfigureAwait(false);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>Deletes the client together with its authorizations and tokens.</summary>
     public async Task DeleteAsync(string clientId, CancellationToken cancellationToken)
     {
@@ -132,21 +159,29 @@ internal sealed class OidcClientRegistry
         // Authorization code with PKCE plus refresh tokens is the only flow offered: it is the right one for a
         // server-rendered or BFF application, and every other flow is a way around the access check.
         descriptor.Permissions.Clear();
-        descriptor.Permissions.UnionWith(
-        [
-            Permissions.Endpoints.Authorization,
-            Permissions.Endpoints.Token,
-            Permissions.Endpoints.EndSession,
-            Permissions.GrantTypes.AuthorizationCode,
-            Permissions.GrantTypes.RefreshToken,
-            Permissions.ResponseTypes.Code,
-            Permissions.Scopes.Email,
-            Permissions.Scopes.Profile,
-        ]);
+        descriptor.Permissions.UnionWith(CurrentPermissions);
 
         descriptor.Requirements.Clear();
         descriptor.Requirements.Add(Requirements.Features.ProofKeyForCodeExchange);
     }
+
+    /// <summary>
+    /// Authorization code with PKCE plus refresh tokens, and the profile, email, roles and groups scopes. Which
+    /// groups an application actually receives is decided by its own setting, not by the scope.
+    /// </summary>
+    private static readonly string[] CurrentPermissions =
+    [
+        Permissions.Endpoints.Authorization,
+        Permissions.Endpoints.Token,
+        Permissions.Endpoints.EndSession,
+        Permissions.GrantTypes.AuthorizationCode,
+        Permissions.GrantTypes.RefreshToken,
+        Permissions.ResponseTypes.Code,
+        Permissions.Scopes.Email,
+        Permissions.Scopes.Profile,
+        Permissions.Scopes.Roles,
+        Permissions.Prefixes.Scope + PortalScopes.Groups,
+    ];
 
     private static string NewSecret() => Base64Url.EncodeToString(RandomNumberGenerator.GetBytes(32));
 }

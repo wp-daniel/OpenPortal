@@ -225,6 +225,29 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                     b.ToTable("OpenIddictTokens", (string)null);
                 });
 
+            modelBuilder.Entity("OpenPortal.Access.Domain.Applications.ApplicationRole", b =>
+                {
+                    b.Property<Guid>("ApplicationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Key")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("ApplicationId", "Key");
+
+                    b.ToTable("ApplicationRoles", (string)null);
+                });
+
             modelBuilder.Entity("OpenPortal.Access.Domain.Applications.PortalApplication", b =>
                 {
                     b.Property<Guid>("Id")
@@ -259,6 +282,11 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GroupClaims")
+                        .IsRequired()
+                        .HasMaxLength(16)
                         .HasColumnType("TEXT");
 
                     b.Property<long?>("LastSeenAtUtc")
@@ -309,6 +337,10 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                     b.Property<long>("GrantedAtUtc")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Roles")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.HasKey("ApplicationId", "GroupId");
 
                     b.HasIndex("GroupId")
@@ -327,6 +359,10 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
 
                     b.Property<long>("GrantedAtUtc")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Roles")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.HasKey("ApplicationId", "UserId");
 
@@ -434,6 +470,15 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                     b.Navigation("Authorization");
                 });
 
+            modelBuilder.Entity("OpenPortal.Access.Domain.Applications.ApplicationRole", b =>
+                {
+                    b.HasOne("OpenPortal.Access.Domain.Applications.PortalApplication", null)
+                        .WithMany("Roles")
+                        .HasForeignKey("ApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("OpenPortal.Access.Domain.Grants.ApplicationGroupGrant", b =>
                 {
                     b.HasOne("OpenPortal.Access.Domain.Applications.PortalApplication", null)
@@ -486,6 +531,11 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
             modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreAuthorization<System.Guid>", b =>
                 {
                     b.Navigation("Tokens");
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Applications.PortalApplication", b =>
+                {
+                    b.Navigation("Roles");
                 });
 
             modelBuilder.Entity("OpenPortal.Access.Domain.Groups.Group", b =>

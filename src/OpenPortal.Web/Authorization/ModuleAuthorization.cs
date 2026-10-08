@@ -1,5 +1,7 @@
 using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Access.Domain;
+using OpenPortal.Audit.Application.Abstractions;
+using OpenPortal.Audit.Domain;
 using OpenPortal.Content.Application.Abstractions;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Identity.Domain.Users;
@@ -95,6 +97,22 @@ internal sealed class ContentEditAuthorization : IContentEditAuthorization
                 "content.edit_forbidden",
                 "Editing site content requires an administrator account or a page granted to one of your groups."));
     }
+}
+
+/// <summary>Answers the Audit module's authorization question: reading the log needs the audit page.</summary>
+internal sealed class AuditLogAuthorization : IAuditLogAuthorization
+{
+    private readonly CurrentPagePermissions _permissions;
+
+    public AuditLogAuthorization(CurrentPagePermissions permissions)
+    {
+        _permissions = permissions;
+    }
+
+    public async Task<Result> EnsureCanReadAsync(CancellationToken cancellationToken) =>
+        await _permissions.HoldsAnyAsync([PortalPages.Audit], cancellationToken).ConfigureAwait(false)
+            ? Result.Success()
+            : Result.Failure(AuditErrors.ReadForbidden);
 }
 
 /// <summary>Publishes the user's pages in the session: every page for an administrator, else their groups' pages.</summary>

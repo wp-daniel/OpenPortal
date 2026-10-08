@@ -11,6 +11,9 @@
     <ProjectReference Include="..\..\src\Modules\Access\OpenPortal.Access.Application\OpenPortal.Access.Application.csproj" />
     <ProjectReference Include="..\..\src\Modules\Access\OpenPortal.Access.Domain\OpenPortal.Access.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Access\OpenPortal.Access.Infrastructure\OpenPortal.Access.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Audit\OpenPortal.Audit.Application\OpenPortal.Audit.Application.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Audit\OpenPortal.Audit.Domain\OpenPortal.Audit.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Audit\OpenPortal.Audit.Infrastructure\OpenPortal.Audit.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Content\OpenPortal.Content.Application\OpenPortal.Content.Application.csproj" />
     <ProjectReference Include="..\..\src\Modules\Content\OpenPortal.Content.Domain\OpenPortal.Content.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Content\OpenPortal.Content.Infrastructure\OpenPortal.Content.Infrastructure.csproj" />

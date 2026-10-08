@@ -26,6 +26,8 @@ publish/
 # Secrets
 *.env
 .env.*
+# The template for docker compose holds placeholders only.
+!.env.example
 appsettings.Local.json
 appsettings.*.Local.json
 secrets.json

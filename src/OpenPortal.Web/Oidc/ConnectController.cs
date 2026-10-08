@@ -4,14 +4,19 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using OpenPortal.Web.Security;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
 using OpenIddict.Validation.AspNetCore;
 using OpenPortal.Access.Application.Abstractions;
+using AccessDecision = OpenPortal.Access.Application.Contracts.AccessDecision;
+using PortalScopes = OpenPortal.Access.Application.Contracts.PortalScopes;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Identity.Application.Contracts;
+using OpenPortal.SharedKernel.Auditing;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 using PortalAuthentication = OpenPortal.Identity.Application.Abstractions.IAuthenticationService;
 
@@ -35,19 +40,25 @@ namespace OpenPortal.Web.Oidc;
 [IgnoreAntiforgeryToken]
 public sealed class ConnectController : ControllerBase
 {
+    /// <summary>The claim carrying group names (not in OpenIddict's constants; the name most applications expect).</summary>
+    public const string GroupsClaim = "groups";
+
     private readonly IAccessEvaluator _access;
     private readonly IUserLookupService _users;
     private readonly PortalAuthentication _authentication;
     private readonly IOpenIddictApplicationManager _applications;
     private readonly IOpenIddictAuthorizationManager _authorizations;
+    private readonly IAuditTrail _audit;
 
     public ConnectController(
         IAccessEvaluator access,
         IUserLookupService users,
         PortalAuthentication authentication,
         IOpenIddictApplicationManager applications,
-        IOpenIddictAuthorizationManager authorizations)
+        IOpenIddictAuthorizationManager authorizations,
+        IAuditTrail audit)
     {
+        _audit = audit;
         _access = access;
         _users = users;
         _authentication = authentication;
@@ -94,6 +105,14 @@ public sealed class ConnectController : ControllerBase
         var decision = await _access.EvaluateAsync(user.Id, request.ClientId!, cancellationToken).ConfigureAwait(false);
         if (!decision.Allowed)
         {
+            await _audit.RecordAsync(
+                    AuditEvent.Failed(
+                        OidcAuditActions.SignIn,
+                        ApplicationSubject(request.ClientId!, decision.ApplicationName),
+                        new Dictionary<string, string?> { ["reason"] = "access_denied" }),
+                    cancellationToken)
+                .ConfigureAwait(false);
+
             // A page of the portal rather than an error sent back to the application: the user is better off
             // being told plainly, and the application has nothing useful to do with "access_denied" anyway.
             var app = Uri.EscapeDataString(decision.ApplicationName ?? request.ClientId ?? string.Empty);
@@ -103,7 +122,7 @@ public sealed class ConnectController : ControllerBase
         var client = await _applications.FindByClientIdAsync(request.ClientId!, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException("The client was validated by OpenIddict but cannot be found.");
 
-        var identity = BuildIdentity(user, request.GetScopes());
+        var identity = BuildIdentity(user, request.GetScopes(), decision);
 
         // A permanent authorization ties the refresh tokens to (user, client), which is what revocation
         // targets when access is withdrawn.
@@ -119,10 +138,19 @@ public sealed class ConnectController : ControllerBase
 
         identity.SetAuthorizationId(await _authorizations.GetIdAsync(authorization, cancellationToken).ConfigureAwait(false));
 
+        await _audit.RecordAsync(
+                AuditEvent.Succeeded(
+                    OidcAuditActions.SignIn,
+                    ApplicationSubject(request.ClientId!, decision.ApplicationName),
+                    decision.Roles.Count > 0 ? new Dictionary<string, string?> { ["roles"] = string.Join(", ", decision.Roles) } : null),
+                cancellationToken)
+            .ConfigureAwait(false);
+
         return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
 
     [HttpPost("~/connect/token")]
+    [EnableRateLimiting(RateLimitPolicies.Machine)]
     [Produces("application/json")]
     public async Task<IActionResult> ExchangeAsync(CancellationToken cancellationToken)
     {
@@ -145,17 +173,22 @@ public sealed class ConnectController : ControllerBase
         var user = await _users.FindAsync(userId, cancellationToken).ConfigureAwait(false);
         if (user is null || !user.IsActive)
         {
+            await RecordRefusalAsync(userId, user?.Email, request.ClientId!, applicationName: null, "account_inactive", cancellationToken).ConfigureAwait(false);
+
             return Refuse(Errors.InvalidGrant, "The account can no longer sign in.");
         }
 
         var decision = await _access.EvaluateAsync(userId, request.ClientId!, cancellationToken).ConfigureAwait(false);
         if (!decision.Allowed)
         {
+            await RecordRefusalAsync(userId, user.Email, request.ClientId!, decision.ApplicationName, "access_withdrawn", cancellationToken).ConfigureAwait(false);
+
             return Refuse(Errors.InvalidGrant, "Access to this application has been withdrawn.");
         }
 
-        // Rebuilt from the current account so a renamed user or changed email reaches the application.
-        var identity = BuildIdentity(user, stored.Principal!.GetScopes());
+        // Rebuilt from the current account and grants, so a renamed user, a changed email or a role given or
+        // taken away reaches the application at its next refresh.
+        var identity = BuildIdentity(user, stored.Principal!.GetScopes(), decision);
         identity.SetAuthorizationId(stored.Principal!.GetAuthorizationId());
 
         return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
@@ -193,6 +226,18 @@ public sealed class ConnectController : ControllerBase
         {
             claims[Claims.Name] = user.DisplayName;
             claims[Claims.PreferredUsername] = user.Email;
+        }
+
+        // Roles and groups as they were when the access token was issued (minutes ago at most): the token
+        // endpoint recomputes them on every refresh.
+        if (User.HasScope(PortalScopes.Roles))
+        {
+            claims[Claims.Role] = User.GetClaims(Claims.Role).ToArray();
+        }
+
+        if (User.HasScope(PortalScopes.Groups))
+        {
+            claims[GroupsClaim] = User.GetClaims(GroupsClaim).ToArray();
         }
 
         return Ok(claims);
@@ -242,7 +287,30 @@ public sealed class ConnectController : ControllerBase
         return found;
     }
 
-    private static ClaimsIdentity BuildIdentity(UserReferenceDto user, IEnumerable<string> scopes)
+    private Task RecordRefusalAsync(
+        Guid userId,
+        string? email,
+        string clientId,
+        string? applicationName,
+        string reason,
+        CancellationToken cancellationToken) =>
+        _audit.RecordAsync(
+            new AuditEvent
+            {
+                Action = OidcAuditActions.TokenRefused,
+                Outcome = AuditOutcome.Failure,
+
+                // Called by the application's server, not the user's browser, so the user is named explicitly.
+                Actor = new AuditSubject(AuditSubjectTypes.User, userId.ToString(), email),
+                Target = ApplicationSubject(clientId, applicationName),
+                Details = new Dictionary<string, string?> { ["reason"] = reason },
+            },
+            cancellationToken);
+
+    private static AuditSubject ApplicationSubject(string clientId, string? applicationName) =>
+        new(AuditSubjectTypes.Application, clientId, applicationName);
+
+    private static ClaimsIdentity BuildIdentity(UserReferenceDto user, IEnumerable<string> scopes, AccessDecision decision)
     {
         var identity = new ClaimsIdentity(
             authenticationType: TokenValidationParameters.DefaultAuthenticationType,
@@ -254,6 +322,11 @@ public sealed class ConnectController : ControllerBase
             .SetClaim(Claims.Name, user.DisplayName)
             .SetClaim(Claims.PreferredUsername, user.Email);
 
+        // The application's roles for this user, and the groups its setting lets it see. Several values make
+        // a JSON array in the token, one value a string; ASP.NET Core reads both as separate claims.
+        identity.SetClaims(Claims.Role, [.. decision.Roles]);
+        identity.SetClaims(GroupsClaim, [.. decision.Groups]);
+
         identity.SetScopes(scopes);
         identity.SetDestinations(claim => DestinationsFor(claim, identity));
 
@@ -261,8 +334,8 @@ public sealed class ConnectController : ControllerBase
     }
 
     /// <summary>
-    /// Every claim goes into the access token, which only the portal's userinfo endpoint reads. Profile and
-    /// email claims also go into the identity token when the application asked for that scope.
+    /// Every claim goes into the access token, which only the portal's userinfo endpoint reads. Profile, email,
+    /// role and group claims also go into the identity token when the application asked for that scope.
     /// </summary>
     private static IEnumerable<string> DestinationsFor(Claim claim, ClaimsIdentity identity)
     {
@@ -272,6 +345,8 @@ public sealed class ConnectController : ControllerBase
         {
             Claims.Name or Claims.PreferredUsername => Scopes.Profile,
             Claims.Email => Scopes.Email,
+            Claims.Role => PortalScopes.Roles,
+            GroupsClaim => PortalScopes.Groups,
             _ => null,
         };
 

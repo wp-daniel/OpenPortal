@@ -13,6 +13,7 @@ import { Switch } from '@/components/ui/switch'
 import { useI18n } from '@/i18n/useI18n'
 import { describeError } from '@/lib/errors'
 import { useAccessRefresh } from '@/lib/access'
+import { RoleBadges } from './RoleAssignment'
 import { ApplicationStatusBadge } from './shared'
 
 /**
@@ -113,6 +114,12 @@ export function UserAccessSheet({ user, onClose }: { user: UserSummary | null; o
                               ))}
                               {!entry && <span className="text-muted-foreground text-xs">{t('access.user.noAccess')}</span>}
                             </div>
+                            {entry && entry.roles.length > 0 && (
+                              <div className="flex flex-wrap items-center gap-1">
+                                <span className="text-muted-foreground text-xs">{t('access.user.roles')}</span>
+                                <RoleBadges roles={application.roles} keys={entry.roles} />
+                              </div>
+                            )}
                           </div>
                           <Switch
                             id={switchId}

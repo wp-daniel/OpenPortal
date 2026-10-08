@@ -6,7 +6,9 @@ using Microsoft.Extensions.Hosting;
 namespace OpenPortal.Tests.Integration;
 
 /// <summary>
-/// Boots the real host in memory against a throwaway SQLite file.
+/// Boots the real host in memory against a throwaway SQLite file, or a throwaway PostgreSQL database when the
+/// <c>OPENPORTAL_TEST_POSTGRES</c> environment variable holds a server connection string (CI runs the suite
+/// both ways, so a query that only one engine can run fails a build).
 /// <para>
 /// The alternative - starting the app with <c>dotnet run</c> and probing it with a script - cannot observe an
 /// authentication cookie being cleared, cannot distinguish "the filter rejected this" from "the route does
@@ -16,9 +18,16 @@ namespace OpenPortal.Tests.Integration;
 /// </summary>
 public sealed class OpenPortalFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    /// <summary>A PostgreSQL server to test against, e.g. <c>Host=localhost;Username=postgres;Password=postgres</c>.</summary>
+    public const string PostgresVariable = "OPENPORTAL_TEST_POSTGRES";
+
     private readonly string _databasePath = Path.Combine(
         Path.GetTempPath(),
         $"openportal-tests-{Guid.NewGuid():N}.db");
+
+    private readonly string? _postgresServer = Environment.GetEnvironmentVariable(PostgresVariable) is { Length: > 0 } server ? server : null;
+
+    private readonly string _postgresDatabase = $"openportal_tests_{Guid.NewGuid():N}";
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -27,8 +36,18 @@ public sealed class OpenPortalFactory : WebApplicationFactory<Program>, IAsyncLi
         // the difference between a two-minute and a two-hour failure to diagnose.
         builder.UseEnvironment("Development");
 
-        builder.UseSetting("Database:Provider", "Sqlite");
-        builder.UseSetting($"ConnectionStrings:OpenPortal", $"Data Source={_databasePath}");
+        if (_postgresServer is null)
+        {
+            builder.UseSetting("Database:Provider", "Sqlite");
+            builder.UseSetting("ConnectionStrings:OpenPortal", $"Data Source={_databasePath}");
+        }
+        else
+        {
+            // Migrating creates the database; DisposeAsync drops it.
+            builder.UseSetting("Database:Provider", "PostgreSql");
+            builder.UseSetting("ConnectionStrings:OpenPortal", $"{_postgresServer};Database={_postgresDatabase}");
+        }
+
         builder.UseSetting("Database:MigrateOnStartup", "true");
 
         // Each test provisions the accounts it needs, so the shared bootstrap administrator is off.
@@ -46,6 +65,12 @@ public sealed class OpenPortalFactory : WebApplicationFactory<Program>, IAsyncLi
         builder.UseSetting("DataProtection:KeysPath", _keysPath);
 
         builder.UseSetting("Access:ProvisioningKey", ProvisioningKey);
+
+        // Every test client shares one (missing) remote address, so the per-address limits would trip across
+        // tests. They are raised here; HardeningTests lowers them on a host of its own to prove they work.
+        builder.UseSetting("RateLimiting:SignIn:PermitLimit", "100000");
+        builder.UseSetting("RateLimiting:Machine:PermitLimit", "100000");
+        builder.UseSetting("RateLimiting:General:PermitLimit", "100000");
     }
 
     /// <summary>The provisioning key this host accepts from announcing applications.</summary>
@@ -101,8 +126,20 @@ public sealed class OpenPortalFactory : WebApplicationFactory<Program>, IAsyncLi
         response.StatusCode.ShouldBe(System.Net.HttpStatusCode.OK);
     }
 
-    public override ValueTask DisposeAsync()
+    public override async ValueTask DisposeAsync()
     {
+        await base.DisposeAsync();
+
+        if (_postgresServer is not null)
+        {
+            Npgsql.NpgsqlConnection.ClearAllPools();
+
+            await using var connection = new Npgsql.NpgsqlConnection($"{_postgresServer};Database=postgres");
+            await connection.OpenAsync();
+            await using var drop = new Npgsql.NpgsqlCommand($"DROP DATABASE IF EXISTS \"{_postgresDatabase}\" WITH (FORCE)", connection);
+            await drop.ExecuteNonQueryAsync();
+        }
+
         // The SQLite file and its write-ahead log are not removed when the connection pool is disposed, so
         // delete them explicitly; a failed test should not leave a database behind for the next run.
         foreach (var suffix in new[] { string.Empty, "-shm", "-wal" })
@@ -125,8 +162,6 @@ public sealed class OpenPortalFactory : WebApplicationFactory<Program>, IAsyncLi
         {
             // Best effort, as above (this includes the folder never having been created).
         }
-
-        return base.DisposeAsync();
     }
 }
 

@@ -216,6 +216,9 @@ namespace OpenPortal.Web.Persistence.Migrations.Identity
                         .HasMaxLength(60)
                         .HasColumnType("TEXT");
 
+                    b.Property<long?>("LastSignInAtUtc")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("INTEGER");
 

@@ -1,7 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using OpenPortal.Access.Application.Abstractions;
+using OpenPortal.Audit.Application.Abstractions;
 using OpenPortal.Content.Application.Abstractions;
 using OpenPortal.Identity.Application.Abstractions;
+using OpenPortal.SharedKernel.Auditing;
 
 namespace OpenPortal.Tests.Integration;
 
@@ -39,6 +41,10 @@ public sealed class CompositionTests(OpenPortalFactory factory) : IClassFixture<
         typeof(IUserAdministrationAuthorization),
         typeof(IUserPageSource),
         typeof(IContentEditAuthorization),
+        typeof(IAuditTrail),
+        typeof(IAuditLogService),
+        typeof(IAuditRequestContext),
+        typeof(IAuditLogAuthorization),
     };
 
     [Theory]

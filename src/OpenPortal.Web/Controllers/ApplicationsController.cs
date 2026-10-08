@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using OpenPortal.Web.Security;
 using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Access.Application.Contracts;
 using OpenPortal.Identity.Application.Abstractions;
@@ -59,6 +61,7 @@ public sealed class ApplicationAnnouncementsController : ControllerBase
     }
 
     [HttpPost("announce")]
+    [EnableRateLimiting(RateLimitPolicies.Machine)]
     [ProducesResponseType<AnnouncementResultDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]

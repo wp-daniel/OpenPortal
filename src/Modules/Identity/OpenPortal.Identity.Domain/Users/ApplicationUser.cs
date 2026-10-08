@@ -80,6 +80,18 @@ public sealed class ApplicationUser : IdentityUser<Guid>
     public DateTimeOffset? UpdatedAtUtc { get; private set; }
 
     /// <summary>
+    /// When the account last signed in to the portal with its password, or <see langword="null"/> if it never
+    /// has. Lets an administrator find dormant accounts.
+    /// </summary>
+    public DateTimeOffset? LastSignInAtUtc { get; private set; }
+
+    /// <summary>Records a successful sign-in. Not an edit of the account, so <see cref="UpdatedAtUtc"/> stays.</summary>
+    public void RecordSignIn(DateTimeOffset signedInAtUtc)
+    {
+        LastSignInAtUtc = signedInAtUtc;
+    }
+
+    /// <summary>
     /// When the profile picture (<see cref="UserAvatar"/>) last changed, or <see langword="null"/> when there
     /// is none. Lets the UI decide whether to request an image and version its URL without loading it.
     /// </summary>

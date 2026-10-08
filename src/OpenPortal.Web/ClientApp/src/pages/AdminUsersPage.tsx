@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { KeyRound, Loader2, Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react'
+import { History, KeyRound, Loader2, Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { z } from 'zod'
 import type { PasswordPolicy, UserSummary } from '@/api/types'
 import { userAdminApi } from '@/api/users'
@@ -43,6 +44,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useDebounced } from '@/hooks/useDebounced'
 import { useSession } from '@/hooks/useSession'
 import { notify } from '@/hooks/useToast'
+import { formatDate } from '@/i18n/store'
 import { useI18n } from '@/i18n/useI18n'
 import { useAccessRefresh } from '@/lib/access'
 import { describeError, traceIdOf } from '@/lib/errors'
@@ -58,7 +60,7 @@ import {
   type UserDetailsForm,
 } from '@/lib/userDetails'
 
-const STATUSES = ['active', 'locked', 'unconfirmed'] as const
+const STATUSES = ['active', 'locked', 'unconfirmed', 'inactive'] as const
 
 /**
  * Account management, for administrators and holders of the users page. Whether an account is an
@@ -76,8 +78,9 @@ export function AdminUsersPage() {
   const queryClient = useQueryClient()
   const refreshAccess = useAccessRefresh()
   // Only an administrator may grant the administrator role or change an administrator (the server enforces it).
-  const { session, isAdministrator } = useSession()
+  const { session, isAdministrator, canOpen } = useSession()
   const { t } = useI18n()
+  const canAudit = canOpen('audit')
   const appliedSearch = useDebounced(search.trim())
 
   const users = useQuery({
@@ -187,6 +190,7 @@ export function AdminUsersPage() {
                   <TableHead>{t('common.company')}</TableHead>
                   <TableHead>{t('users.administrator')}</TableHead>
                   <TableHead>{t('common.status')}</TableHead>
+                  <TableHead>{t('users.lastSignIn')}</TableHead>
                   <TableHead className="text-right">{t('common.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -236,6 +240,13 @@ export function AdminUsersPage() {
                           <Badge variant="warning">{t('users.unconfirmed')}</Badge>
                         )}
                       </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {user.lastSignInAtUtc ? (
+                          formatDate(user.lastSignInAtUtc, { dateStyle: 'medium', timeStyle: 'short' })
+                        ) : (
+                          <span className="text-muted-foreground">{t('users.neverSignedIn')}</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
@@ -255,6 +266,17 @@ export function AdminUsersPage() {
                             <KeyRound />
                             {t('users.access')}
                           </Button>
+                          {canAudit && (
+                            <Button variant="ghost" size="sm" asChild>
+                              <Link
+                                to={`/admin/audit?subject=${encodeURIComponent(user.id)}&label=${encodeURIComponent(user.email)}`}
+                                aria-label={t('users.activity')}
+                                title={t('users.activity')}
+                              >
+                                <History />
+                              </Link>
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"

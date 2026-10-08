@@ -77,6 +77,11 @@ internal sealed partial class OpenPortalAnnouncementService : BackgroundService
             redirectUris = new[] { baseUrl + options.CallbackPath },
             postLogoutRedirectUris = new[] { baseUrl + options.SignedOutCallbackPath },
             version = string.IsNullOrWhiteSpace(options.Version) ? OpenPortalClientExtensions.DefaultVersion() : options.Version,
+
+            // Left out when the application declares none, so roles an administrator defined are kept.
+            roles = options.Roles.Count == 0
+                ? null
+                : options.Roles.Select(role => new { key = role.Key, displayName = role.DisplayName, description = role.Description }).ToArray(),
         };
 
         try

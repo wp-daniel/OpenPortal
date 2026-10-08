@@ -73,6 +73,12 @@ Installed from NuGet, not copied into this repository.
 | [Polly](https://www.thepollyproject.org) (through OpenIddict's HTTP client) | BSD-3-Clause | © App vNext |
 | [SQLitePCLRaw](https://github.com/ericsink/SQLitePCL.raw) (through `Microsoft.EntityFrameworkCore.Sqlite`) | Apache-2.0 | © SourceGear, LLC |
 | [SQLite](https://sqlite.org) (native library bundled by SQLitePCLRaw) | Public domain | — |
+| [Npgsql](https://www.npgsql.org) (`Npgsql.EntityFrameworkCore.PostgreSQL` and `Npgsql`) | PostgreSQL License | © The Npgsql Development Team |
+
+The Docker image is built on Microsoft's `mcr.microsoft.com/dotnet/aspnet` image (MIT for the .NET parts; the
+Debian base carries its own package licenses) and uses `node` only to build the client, which does not ship in
+it. `docker-compose.yml` pulls the official `postgres` image (PostgreSQL License) at run time; it is not
+redistributed by this repository.
 
 OpenIddict and SQLitePCLRaw are Apache-2.0: if you redistribute them (for example in a published build), keep
 their license texts and any NOTICE they ship. `OpenPortal.Client`, the NuGet package for connecting other

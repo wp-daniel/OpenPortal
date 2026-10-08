@@ -43,12 +43,24 @@ OpenIddict, on SQLite by default, organised as a modular monolith whose boundari
 - User administration with server-side search and filters: names, phone, job title, company, department, address
 - Profile pictures, cropped and scaled in the browser, validated by content on the server
 - A password policy defined once on the server and published to the client, so forms never disagree with it
+- Last sign-in per account and an "inactive for 90 days" filter, to find dormant accounts
 
 **Single sign-on**
 - OpenID Connect provider (authorization code + PKCE + refresh tokens)
 - Per-application access for users and for groups; withdrawing access revokes tokens and is re-checked on every refresh
 - Applications announce themselves and wait for approval; a NuGet package (`OpenPortal.Client`) does the wiring
 - A launchpad on the dashboard with the applications each user may open
+- Application roles: each application declares the roles it checks, administrators assign them on grants (to
+  users or groups), and they reach the application as `role` claims (`User.IsInRole("sales")` just works); an
+  application may also receive the user's groups as `groups` claims, if its setting allows
+
+**Security and operations**
+- Audit log of sign-ins, account, group, access, application and content changes: who, what, on what, from
+  which address, with what outcome; filters, per-user history, CSV export, retention
+- Rate limits on sign-in, password changes, the token endpoint and the whole API (429 with `Retry-After`)
+- Content-Security-Policy, anti-framing and the other browser security headers on every response
+- `/health/live` and `/health/ready` for load balancers and orchestrators
+- SQLite or PostgreSQL; a Docker image, a compose file with PostgreSQL, and CI that tests on both databases
 
 **Experience**
 - English, Italian, Spanish and French, with the language saved per user; one `.resx` per language translates
@@ -57,10 +69,9 @@ OpenIddict, on SQLite by default, organised as a modular monolith whose boundari
 - Every error is `application/problem+json` with a stable `errorCode`
 
 **Engineering**
-- Modular monolith (Identity, Access, Content) with dependency rules checked by architecture tests
+- Modular monolith (Identity, Access, Content, Audit) with dependency rules checked by architecture tests
 - Operations return `Result` instead of throwing; bad input is a 400, never a 500
-- Integration tests over the real host on a temporary SQLite file
-- The database provider is one file away from PostgreSQL
+- Integration tests over the real host on a temporary SQLite file, or a throwaway PostgreSQL database
 
 ## Quick start
 
@@ -117,6 +128,9 @@ the portal decides who may:
 4. Under **Groups** put users in groups and switch the application on for the group, or give it to single
    users under **Access**, which shows the whole tree: application → groups → members, application → direct
    users.
+5. Roles: list them in the application's `OpenPortal:Roles` (or on the application's **Roles and claims** tab)
+   and assign them on each grant under **Access**. The application receives the user's roles as `role` claims
+   and, if its setting allows, their groups as `groups` claims; both are recomputed at every token refresh.
 
 A user without access is stopped at the portal. Withdrawing access revokes the application's tokens, and the
 token endpoint re-checks access on every refresh, so the user cannot sign in again and the tokens stop working
@@ -135,9 +149,29 @@ dotnet test tests/OpenPortal.Tests.Integration
 ```
 
 Integration tests boot the real host against a temporary SQLite file. Nothing binds a fixed port and no
-process is left behind.
+process is left behind. To run them on PostgreSQL instead, point `OPENPORTAL_TEST_POSTGRES` at a server; each
+test class gets its own database, dropped afterwards:
+
+```bash
+OPENPORTAL_TEST_POSTGRES="Host=localhost;Username=postgres;Password=postgres" dotnet test tests/OpenPortal.Tests.Integration
+```
+
+CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs the client checks, every suite on SQLite, the
+integration suite on PostgreSQL, a check that the migrations of both providers match the model, and builds and
+starts the Docker image.
 
 ## Publishing
+
+With Docker and PostgreSQL:
+
+```bash
+cp .env.example .env        # set the passwords and keys
+docker compose up -d --build
+```
+
+The compose file runs PostgreSQL, a one-shot `migrate` step (the image started with `--migrate`) and the portal
+on port 8080, which expects a TLS-terminating reverse proxy in front. The image alone runs one instance on SQLite
+(`docker run -p 8080:8080 -v openportal:/data openportal`). Without Docker:
 
 ```bash
 dotnet publish src/OpenPortal.Web -c Release -o publish
@@ -146,20 +180,25 @@ dotnet publish src/OpenPortal.Web -c Release -o publish
 The client is built as part of this, so `publish/wwwroot` contains the SPA. In production:
 
 - keep `Database:MigrateOnStartup` at `false` and apply migrations as a separate ordered step
-  (`dotnet ef database update`), because several instances migrating at once is a race;
-- keep `Identity:Cookie:RequireSecure` at `true` and terminate TLS in front of the app;
-- provide the token signing and encryption certificates (`Oidc:*`) and a shared `DataProtection:KeysPath`;
-- supply `ConnectionStrings:OpenPortal` and, if you move off SQLite, add the Npgsql package and wire
-  `UseNpgsql` in `DatabaseProviderSelector`.
+  (`dotnet OpenPortal.Web.dll --migrate`), because several instances migrating at once is a race;
+- keep `Identity:Cookie:RequireSecure` at `true`, terminate TLS in front of the app and set
+  `ReverseProxy:Enabled` so the client's address and scheme are the real ones;
+- provide the token signing and encryption certificates (`Oidc:*`, or `Oidc:CertificatesPath` for a folder the
+  portal fills itself) and a shared `DataProtection:KeysPath`.
+
+[`docs/deployment.md`](docs/deployment.md) covers PostgreSQL, Docker, the reverse proxy, health checks and
+adding migrations.
 
 ## Layout
 
 | Path | Contents |
 | --- | --- |
-| `src/OpenPortal.SharedKernel` | `Result`, `Error`, `IClock`, `TextRules` |
+| `src/OpenPortal.SharedKernel` | `Result`, `Error`, `IClock`, `TextRules`, `IAuditTrail` |
 | `src/Modules/Identity` | accounts, sessions, roles, user details and avatars — Domain / Application / Infrastructure |
 | `src/Modules/Access` | applications, groups and access grants, plus the OpenID Connect client store |
 | `src/Modules/Content` | a sample admin module (profile and projects) |
+| `src/Modules/Audit` | the audit log: storage, queries and retention of the events every module records |
+| `src/OpenPortal.Migrations.PostgreSql` | the PostgreSQL migrations (SQLite's are in `OpenPortal.Web`) |
 | `src/OpenPortal.Client` | NuGet package an application references to sign in through the portal |
 | `samples/OpenPortal.SampleApp` | a minimal application that uses `OpenPortal.Client` |
 | `src/OpenPortal.Web` | composition root, controllers, OIDC endpoints, middleware, migrations, the client |
@@ -191,8 +230,8 @@ every code exchange and refresh, so taking access away takes effect without wait
 | Section | Purpose |
 | --- | --- |
 | `ConnectionStrings:OpenPortal` | database connection string |
-| `Database:Provider` | `Sqlite`, or `PostgreSql` once Npgsql is added |
-| `Database:MigrateOnStartup` | apply migrations during startup; development only |
+| `Database:Provider` | `Sqlite` (default) or `PostgreSql` |
+| `Database:MigrateOnStartup` | apply migrations during startup; development and single-instance SQLite only |
 | `Identity:Password` | complexity policy, published to the client so forms can match it |
 | `Identity:Lockout` | failed-attempt thresholds |
 | `Identity:SignIn` | cookie name, lifetime, whether confirmation is required |
@@ -200,7 +239,11 @@ every code exchange and refresh, so taking access away takes effect without wait
 | `Localization` | default language and the languages offered (add one with a line here and a `Messages.<lang>.resx`) |
 | `BootstrapAdmin` | one-time first administrator |
 | `Access:ProvisioningKey` | shared key applications present when they announce themselves (user secrets); blank disables announcements |
-| `Oidc` | token signing/encryption certificates (`SigningCertificatePath`, `EncryptionCertificatePath` + passwords), token lifetimes; required outside Development |
+| `Oidc` | token signing/encryption certificates (`SigningCertificatePath`, `EncryptionCertificatePath` + passwords, or `CertificatesPath` for self-managed ones), token lifetimes; required outside Development |
+| `Audit:RetentionDays` | how long audit entries are kept (default 365; 0 keeps everything) |
+| `RateLimiting` | `Enabled`, and `PermitLimit`/`WindowSeconds` for `General` (per user or address), `SignIn` and `Machine` (per address) |
+| `ReverseProxy` | `Enabled`, `KnownProxies`, `KnownNetworks`, `ForwardLimit`: trust a proxy's `X-Forwarded-*` headers |
+| `SecurityHeaders:ContentSecurityPolicy` | replaces the default policy (this origin only) |
 | `DataProtection:KeysPath` | where the key ring lives (default `App_Data/keys`); share it between instances |
 | `Geo` | address suggestions: `Enabled`, `PostalCodeBaseUrl` ([Zippopotam.us](https://zippopotam.us)), `PlacesBaseUrl` ([Photon](https://photon.komoot.io)) |
 

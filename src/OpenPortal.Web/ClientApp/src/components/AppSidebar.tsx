@@ -4,6 +4,7 @@ import {
   ChevronRight,
   ChevronsUpDown,
   FileText,
+  History,
   LayoutDashboard,
   LogOut,
   ShieldCheck,
@@ -88,6 +89,11 @@ const adminBranches: readonly NavBranch[] = [
     labelKey: 'nav.applications',
     icon: AppWindow,
     children: [{ to: '/admin/applications', labelKey: 'nav.applications', page: 'applications' }],
+  },
+  {
+    labelKey: 'nav.security',
+    icon: History,
+    children: [{ to: '/admin/audit', labelKey: 'nav.audit', page: 'audit' }],
   },
   {
     labelKey: 'nav.content',

@@ -58,6 +58,8 @@ public static class AccessModuleServiceCollectionExtensions
         services.AddScoped<IPagePermissionService, PagePermissionService>();
         services.AddScoped<IPagePermissionEvaluator, PagePermissionEvaluator>();
 
+        services.AddHostedService<OidcClientUpgradeService>();
+
         return services;
     }
 }

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>OpenPortal.Audit.Application</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpenPortal.Audit.Domain\OpenPortal.Audit.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

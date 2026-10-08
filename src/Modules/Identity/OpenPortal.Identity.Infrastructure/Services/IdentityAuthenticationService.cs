@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using OpenPortal.Identity.Application.Abstractions;
+using OpenPortal.Identity.Application.Auditing;
 using OpenPortal.Identity.Application.Contracts;
 using OpenPortal.Identity.Domain.Users;
+using OpenPortal.SharedKernel.Auditing;
 using OpenPortal.SharedKernel.Results;
+using OpenPortal.SharedKernel.Time;
 
 namespace OpenPortal.Identity.Infrastructure.Services;
 
@@ -29,6 +32,8 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
     private readonly ICurrentUser _currentUser;
     private readonly IUserPageSource _pages;
     private readonly IOptions<IdentityOptions> _identityOptions;
+    private readonly IAuditTrail _audit;
+    private readonly IClock _clock;
     private readonly Lazy<string> _timingEqualisationHash;
 
     public IdentityAuthenticationService(
@@ -38,7 +43,9 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
         UserLookup userLookup,
         ICurrentUser currentUser,
         IUserPageSource pages,
-        IOptions<IdentityOptions> identityOptions)
+        IOptions<IdentityOptions> identityOptions,
+        IAuditTrail audit,
+        IClock clock)
     {
         _signInManager = signInManager;
         _userManager = userManager;
@@ -47,6 +54,8 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
         _currentUser = currentUser;
         _pages = pages;
         _identityOptions = identityOptions;
+        _audit = audit;
+        _clock = clock;
         _timingEqualisationHash = new Lazy<string>(
             () => _passwordHasher.HashPassword(TimingEqualisationUser, TimingEqualisationPassword),
             LazyThreadSafetyMode.ExecutionAndPublication);
@@ -90,6 +99,14 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
                 _timingEqualisationHash.Value,
                 request.Password);
 
+            // The address is recorded as typed (there is no account to name), so repeated guesses against
+            // unknown addresses are visible in the log too.
+            await RecordSignInAsync(
+                    new AuditSubject(AuditSubjectTypes.User, string.Empty, request.Email.Trim()),
+                    SignInFailureReasons.UnknownAccount,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
             return Result.Failure(UserErrors.InvalidCredentials);
         }
 
@@ -99,7 +116,24 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
             .PasswordSignInAsync(user, request.Password, isPersistent: request.RememberMe, lockoutOnFailure: true)
             .ConfigureAwait(false);
 
-        return signIn.Succeeded ? Result.Success() : Result.Failure(DescribeFailure(signIn));
+        var actor = user.ToAuditSubject();
+
+        if (!signIn.Succeeded)
+        {
+            await RecordSignInAsync(actor, FailureReason(signIn), cancellationToken).ConfigureAwait(false);
+
+            return Result.Failure(DescribeFailure(signIn));
+        }
+
+        user.RecordSignIn(_clock.UtcNow);
+
+        // The session is established either way; a missed timestamp only makes the account look idler than
+        // it is, which is not worth failing a sign-in over.
+        await _userManager.UpdateAsync(user).ConfigureAwait(false);
+
+        await RecordSignInAsync(actor, failureReason: null, cancellationToken).ConfigureAwait(false);
+
+        return Result.Success();
     }
 
     public async Task SignOutAsync(CancellationToken cancellationToken)
@@ -108,6 +142,12 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
 
         // Issues a sign-out cookie; it does not redirect, so no cancellation token is needed.
         await _signInManager.SignOutAsync().ConfigureAwait(false);
+
+        // The request still carries the caller's identity, so the trail names who signed out.
+        if (_currentUser.IsAuthenticated)
+        {
+            await _audit.RecordAsync(AuditEvent.Succeeded(IdentityAuditActions.SignOut), cancellationToken).ConfigureAwait(false);
+        }
     }
 
     public async Task<Result<SessionDto>> GetSessionAsync(CancellationToken cancellationToken)
@@ -143,6 +183,27 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
                 Pages: pages),
             PasswordPolicy: PasswordPolicy));
     }
+
+    private Task RecordSignInAsync(AuditSubject actor, string? failureReason, CancellationToken cancellationToken) =>
+        _audit.RecordAsync(
+            new AuditEvent
+            {
+                Action = IdentityAuditActions.SignIn,
+                Outcome = failureReason is null ? AuditOutcome.Success : AuditOutcome.Failure,
+
+                // The caller is not signed in yet (or not any more), so the account is named explicitly.
+                Actor = actor,
+                Details = failureReason is null ? null : new Dictionary<string, string?> { ["reason"] = failureReason },
+            },
+            cancellationToken);
+
+    private static string FailureReason(SignInResult signIn) => signIn switch
+    {
+        { IsLockedOut: true } => SignInFailureReasons.LockedOut,
+        { IsNotAllowed: true } => SignInFailureReasons.NotAllowed,
+        { RequiresTwoFactor: true } => SignInFailureReasons.TwoFactorRequired,
+        _ => SignInFailureReasons.InvalidPassword,
+    };
 
     private static Error DescribeFailure(SignInResult signIn) => signIn switch
     {

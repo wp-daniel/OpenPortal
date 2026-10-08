@@ -23,6 +23,8 @@ public sealed class AccessDbContext : DbContext
 
     public DbSet<PortalApplication> Applications => Set<PortalApplication>();
 
+    public DbSet<ApplicationRole> ApplicationRoles => Set<ApplicationRole>();
+
     public DbSet<Group> Groups => Set<Group>();
 
     public DbSet<GroupMember> GroupMembers => Set<GroupMember>();

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The PostgreSQL migrations of every module, apart from the SQLite ones in OpenPortal.Web.
+
+    A migration is written for one provider (column types, identity, defaults), so each provider keeps its own
+    set in its own assembly; DatabaseProviderSelector points EF Core at the right one. Generated code only:
+    add one with the command in docs/deployment.md, never by hand.
+  -->
+  <PropertyGroup>
+    <RootNamespace>OpenPortal.Migrations.PostgreSql</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Modules\Access\OpenPortal.Access.Infrastructure\OpenPortal.Access.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Audit\OpenPortal.Audit.Infrastructure\OpenPortal.Audit.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Content\OpenPortal.Content.Infrastructure\OpenPortal.Content.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Identity\OpenPortal.Identity.Infrastructure\OpenPortal.Identity.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+</Project>

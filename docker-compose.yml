@@ -1,0 +1,69 @@
+# OpenPortal with PostgreSQL.
+#
+#   cp .env.example .env      # then set the passwords and keys in .env
+#   docker compose up -d --build
+#
+# Three services: the database, a one-shot "migrate" step that brings the schema up to date (and creates the
+# first administrator from BOOTSTRAP_ADMIN_*), and the portal, which starts only once the migration succeeded.
+# Put a TLS-terminating reverse proxy in front of port 8080 (Caddy, Traefik, nginx…): the portal issues secure
+# cookies and https URLs, and REVERSE_PROXY_ENABLED lets it read the client's address and scheme from it.
+
+x-portal: &portal
+  build: .
+  image: openportal:local
+  environment: &portal-environment
+    Database__Provider: PostgreSql
+    ConnectionStrings__OpenPortal: "Host=db;Database=${POSTGRES_DB:-openportal};Username=${POSTGRES_USER:-openportal};Password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}"
+    Database__MigrateOnStartup: "false"
+    Access__ProvisioningKey: ${PROVISIONING_KEY:-}
+    Identity__Cookie__RequireSecure: ${COOKIE_REQUIRE_SECURE:-true}
+    ReverseProxy__Enabled: ${REVERSE_PROXY_ENABLED:-true}
+    Audit__RetentionDays: ${AUDIT_RETENTION_DAYS:-365}
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-openportal}
+      POSTGRES_USER: ${POSTGRES_USER:-openportal}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  migrate:
+    <<: *portal
+    command: ["--migrate"]
+    restart: "no"
+    environment:
+      <<: *portal-environment
+      # The migration step issues no tokens, so it needs no persistent keys.
+      Oidc__UseEphemeralKeys: "true"
+      BootstrapAdmin__Enabled: ${BOOTSTRAP_ADMIN_ENABLED:-false}
+      BootstrapAdmin__Email: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BootstrapAdmin__Password: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      BootstrapAdmin__DisplayName: ${BOOTSTRAP_ADMIN_DISPLAY_NAME:-Portal Administrator}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  portal:
+    <<: *portal
+    restart: unless-stopped
+    ports:
+      - "${PORTAL_PORT:-8080}:8080"
+    volumes:
+      # Data Protection keys and the token certificates: sessions and issued tokens survive restarts.
+      - portal-data:/data
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  db-data:
+  portal-data:

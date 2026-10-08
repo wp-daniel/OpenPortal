@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OpenPortal.Identity.Application.Abstractions;
+using OpenPortal.Identity.Application.Auditing;
 using OpenPortal.Identity.Application.Contracts;
 using OpenPortal.Identity.Domain.Users;
 using OpenPortal.Identity.Infrastructure.Persistence;
+using OpenPortal.SharedKernel.Auditing;
 using OpenPortal.SharedKernel.Results;
 using OpenPortal.SharedKernel.Time;
 
@@ -18,6 +20,7 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
     private readonly UserLookup _userLookup;
     private readonly AdministrationGuard _guard;
     private readonly IClock _clock;
+    private readonly IAuditTrail _audit;
 
     public IdentityUserAdministrationService(
         UserManager<ApplicationUser> userManager,
@@ -25,7 +28,8 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         ICurrentUser currentUser,
         UserLookup userLookup,
         AdministrationGuard guard,
-        IClock clock)
+        IClock clock,
+        IAuditTrail audit)
     {
         _userManager = userManager;
         _dbContext = dbContext;
@@ -33,6 +37,7 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         _userLookup = userLookup;
         _guard = guard;
         _clock = clock;
+        _audit = audit;
     }
 
     public async Task<Result<PagedResult<UserSummaryDto>>> ListUsersAsync(
@@ -74,11 +79,14 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         }
 
         var now = _clock.UtcNow;
+        var inactiveSince = now.AddDays(-UserStatusFilter.InactiveAfterDays);
         usersQuery = query.Status?.Trim().ToLowerInvariant() switch
         {
             UserStatusFilter.Locked => usersQuery.Where(user =>
                 user.LockoutEnabled && user.LockoutEnd != null && user.LockoutEnd > now),
             UserStatusFilter.Unconfirmed => usersQuery.Where(user => !user.EmailConfirmed),
+            UserStatusFilter.Inactive => usersQuery.Where(user =>
+                user.LastSignInAtUtc == null || user.LastSignInAtUtc < inactiveSince),
             UserStatusFilter.Active => usersQuery.Where(user =>
                 !(user.LockoutEnabled && user.LockoutEnd != null && user.LockoutEnd > now)),
             _ => usersQuery,
@@ -165,6 +173,14 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
             return Result<UserSummaryDto>.Failure(assigned.ToError(UserErrors.RoleAssignmentFailed));
         }
 
+        await _audit.RecordAsync(
+                AuditEvent.Succeeded(
+                    IdentityAuditActions.UserCreated,
+                    user.ToAuditSubject(),
+                    new Dictionary<string, string?> { ["administrator"] = request.IsAdministrator ? "true" : "false" }),
+                cancellationToken)
+            .ConfigureAwait(false);
+
         return Result<UserSummaryDto>.Success(ToSummary(user, roles, _clock.UtcNow));
     }
 
@@ -238,6 +254,21 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
             }
         }
 
+        await _audit.RecordAsync(AuditEvent.Succeeded(IdentityAuditActions.UserUpdated, user.ToAuditSubject()), cancellationToken)
+            .ConfigureAwait(false);
+
+        // A change of privilege is its own entry, so it stands out in the log rather than hiding in an edit.
+        var wasAdministrator = currentRoles.Contains(Roles.Administrator, StringComparer.Ordinal);
+        if (wasAdministrator != request.IsAdministrator)
+        {
+            await _audit.RecordAsync(
+                    AuditEvent.Succeeded(
+                        request.IsAdministrator ? IdentityAuditActions.AdministratorGranted : IdentityAuditActions.AdministratorRevoked,
+                        user.ToAuditSubject()),
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
         return Result<UserSummaryDto>.Success(ToSummary(user, effectiveRoles, _clock.UtcNow));
     }
 
@@ -277,9 +308,15 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
             .ResetPasswordAsync(lookup.Value, token, request.NewPassword)
             .ConfigureAwait(false);
 
-        return reset.Succeeded
-            ? Result.Success()
-            : Result.Failure(reset.ToError(UserErrors.SaveFailed));
+        if (!reset.Succeeded)
+        {
+            return Result.Failure(reset.ToError(UserErrors.SaveFailed));
+        }
+
+        await _audit.RecordAsync(AuditEvent.Succeeded(IdentityAuditActions.PasswordReset, lookup.Value.ToAuditSubject()), cancellationToken)
+            .ConfigureAwait(false);
+
+        return Result.Success();
     }
 
     public async Task<Result> DeleteUserAsync(Guid userId, CancellationToken cancellationToken)
@@ -308,12 +345,19 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
             return changeable;
         }
 
+        // Named before it goes: the entry keeps the email the account had.
+        var subject = lookup.Value.ToAuditSubject();
+
         // Roles, claims, logins and the picture go with the account (cascading keys in the Identity schema).
         var deleted = await _userManager.DeleteAsync(lookup.Value).ConfigureAwait(false);
+        if (!deleted.Succeeded)
+        {
+            return Result.Failure(deleted.ToError(UserErrors.DeleteFailed));
+        }
 
-        return deleted.Succeeded
-            ? Result.Success()
-            : Result.Failure(deleted.ToError(UserErrors.DeleteFailed));
+        await _audit.RecordAsync(AuditEvent.Succeeded(IdentityAuditActions.UserDeleted, subject), cancellationToken).ConfigureAwait(false);
+
+        return Result.Success();
     }
 
     /// <summary>
@@ -391,5 +435,6 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         City: user.City,
         PostalCode: user.PostalCode,
         Country: user.Country,
-        AvatarUpdatedAtUtc: user.AvatarUpdatedAtUtc);
+        AvatarUpdatedAtUtc: user.AvatarUpdatedAtUtc,
+        LastSignInAtUtc: user.LastSignInAtUtc);
 }

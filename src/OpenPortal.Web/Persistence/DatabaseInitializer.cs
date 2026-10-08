@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenPortal.Access.Infrastructure.Persistence;
+using OpenPortal.Audit.Infrastructure.Persistence;
 using OpenPortal.Content.Infrastructure.Persistence;
 using OpenPortal.Identity.Domain.Users;
 using OpenPortal.Identity.Infrastructure.Bootstrap;
@@ -65,6 +66,7 @@ public sealed class DatabaseInitializer
     private readonly IdentityDbContext _identityContext;
     private readonly ContentDbContext _contentContext;
     private readonly AccessDbContext _accessContext;
+    private readonly AuditDbContext _auditContext;
     private readonly IdentityDataSeeder _roleSeeder;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IOptions<DatabaseOptions> _databaseOptions;
@@ -76,6 +78,7 @@ public sealed class DatabaseInitializer
         IdentityDbContext identityContext,
         ContentDbContext contentContext,
         AccessDbContext accessContext,
+        AuditDbContext auditContext,
         IdentityDataSeeder roleSeeder,
         UserManager<ApplicationUser> userManager,
         IOptions<DatabaseOptions> databaseOptions,
@@ -86,6 +89,7 @@ public sealed class DatabaseInitializer
         _identityContext = identityContext;
         _contentContext = contentContext;
         _accessContext = accessContext;
+        _auditContext = auditContext;
         _roleSeeder = roleSeeder;
         _userManager = userManager;
         _databaseOptions = databaseOptions;
@@ -94,11 +98,16 @@ public sealed class DatabaseInitializer
         _logger = logger;
     }
 
-    public async Task InitialiseAsync(CancellationToken cancellationToken)
+    public Task InitialiseAsync(CancellationToken cancellationToken) =>
+        InitialiseAsync(forceMigrations: false, cancellationToken);
+
+    /// <param name="forceMigrations">Migrate even when <see cref="DatabaseOptions.MigrateOnStartup"/> is off (<c>--migrate</c>).</param>
+    /// <param name="cancellationToken">Stops the work.</param>
+    public async Task InitialiseAsync(bool forceMigrations, CancellationToken cancellationToken)
     {
         var database = DatabaseProviderSelector.Read(_databaseOptions);
 
-        if (database.MigrateOnStartup)
+        if (database.MigrateOnStartup || forceMigrations)
         {
             await MigrateAsync(cancellationToken).ConfigureAwait(false);
         }
@@ -117,6 +126,7 @@ public sealed class DatabaseInitializer
         await _identityContext.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
         await _contentContext.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
         await _accessContext.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
+        await _auditContext.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Database migrations applied.");
     }

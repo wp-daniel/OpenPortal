@@ -43,6 +43,9 @@ public sealed class PortalApplication
     public const int UrlMaxLength = 512;
     public const int VersionMaxLength = 64;
     public const int MaxRedirectUris = 10;
+    public const int MaxRoles = 50;
+
+    private readonly List<ApplicationRole> _roles = [];
 
     // Required by EF Core.
     private PortalApplication()
@@ -95,6 +98,12 @@ public sealed class PortalApplication
 
     /// <summary>When the application last announced itself; null for an application that never does.</summary>
     public DateTimeOffset? LastSeenAtUtc { get; private set; }
+
+    /// <summary>The roles this application understands, assigned to users and groups on their grants.</summary>
+    public IReadOnlyList<ApplicationRole> Roles => _roles;
+
+    /// <summary>Which of the user's groups the application receives in the <c>groups</c> claim.</summary>
+    public GroupClaimMode GroupClaims { get; private set; }
 
     /// <summary>
     /// True when the application has proposed redirect URIs that differ from the ones in force, so an
@@ -226,6 +235,136 @@ public sealed class PortalApplication
         LastSeenAtUtc = now;
 
         return Result.Success();
+    }
+
+    /// <summary>
+    /// Takes in the roles a running copy of the application declared.
+    /// <para>
+    /// A pending application takes them as they are. An approved one only gains the roles it did not have:
+    /// unlike a redirect URI, a new role grants nothing until an administrator assigns it, so there is no
+    /// reason to hold it back; but renaming or removing roles stays with the administrators, who may have
+    /// assigned them.
+    /// </para>
+    /// </summary>
+    public Result RecordAnnouncedRoles(IEnumerable<ApplicationRoleDetails> roles)
+    {
+        var validated = ValidateRoles(roles);
+        if (validated.IsFailure)
+        {
+            return Result.Failure(validated.Error);
+        }
+
+        if (Status == ApplicationStatus.Pending)
+        {
+            ReplaceRoles(validated.Value);
+            return Result.Success();
+        }
+
+        foreach (var role in validated.Value.Where(role => !HasRole(role.Key)))
+        {
+            if (_roles.Count >= MaxRoles)
+            {
+                break;
+            }
+
+            _roles.Add(new ApplicationRole(Id, role.Key!, role.DisplayName!, role.Description));
+        }
+
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Replaces the roles with <paramref name="roles"/>, matched by key: existing ones are renamed, missing
+    /// ones removed, new ones added. Returns the keys that were removed, so their assignments can go too.
+    /// </summary>
+    public Result<IReadOnlyList<string>> SetRoles(IEnumerable<ApplicationRoleDetails> roles, DateTimeOffset now)
+    {
+        var validated = ValidateRoles(roles);
+        if (validated.IsFailure)
+        {
+            return Result<IReadOnlyList<string>>.Failure(validated.Error);
+        }
+
+        var (removed, changed) = ReplaceRoles(validated.Value);
+        if (changed)
+        {
+            UpdatedAtUtc = now;
+        }
+
+        return Result<IReadOnlyList<string>>.Success(removed);
+    }
+
+    /// <summary>Chooses which groups the application receives in the <c>groups</c> claim.</summary>
+    public void SetGroupClaims(GroupClaimMode mode, DateTimeOffset now)
+    {
+        if (!Enum.IsDefined(mode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
+        }
+
+        if (GroupClaims != mode)
+        {
+            GroupClaims = mode;
+            UpdatedAtUtc = now;
+        }
+    }
+
+    public bool HasRole(string? key) =>
+        key is not null && _roles.Any(role => string.Equals(role.Key, key, StringComparison.Ordinal));
+
+    private (IReadOnlyList<string> Removed, bool Changed) ReplaceRoles(IReadOnlyList<ApplicationRoleDetails> roles)
+    {
+        var wanted = roles.ToDictionary(role => role.Key!, StringComparer.Ordinal);
+        var removed = _roles.Where(role => !wanted.ContainsKey(role.Key)).ToList();
+        var changed = removed.Count > 0;
+
+        foreach (var role in removed)
+        {
+            _roles.Remove(role);
+        }
+
+        foreach (var role in roles)
+        {
+            var existing = _roles.FirstOrDefault(candidate => candidate.Key == role.Key);
+            if (existing is null)
+            {
+                _roles.Add(new ApplicationRole(Id, role.Key!, role.DisplayName!, role.Description));
+                changed = true;
+            }
+            else
+            {
+                changed |= existing.Rename(role.DisplayName!, role.Description);
+            }
+        }
+
+        return (removed.Select(role => role.Key).ToList(), changed);
+    }
+
+    private static Result<IReadOnlyList<ApplicationRoleDetails>> ValidateRoles(IEnumerable<ApplicationRoleDetails> roles)
+    {
+        ArgumentNullException.ThrowIfNull(roles);
+
+        var validated = new List<ApplicationRoleDetails>();
+
+        foreach (var role in roles)
+        {
+            var checkedRole = ApplicationRole.Validate(role);
+            if (checkedRole.IsFailure)
+            {
+                return Result<IReadOnlyList<ApplicationRoleDetails>>.Failure(checkedRole.Error);
+            }
+
+            if (validated.Any(candidate => candidate.Key == checkedRole.Value.Key))
+            {
+                return Result<IReadOnlyList<ApplicationRoleDetails>>.Failure(AccessErrors.RoleKeyDuplicate);
+            }
+
+            validated.Add(checkedRole.Value);
+        }
+
+        return validated.Count > MaxRoles
+            ? Result<IReadOnlyList<ApplicationRoleDetails>>.Failure(AccessErrors.TooManyRoles)
+            : Result<IReadOnlyList<ApplicationRoleDetails>>.Success(validated);
     }
 
     /// <summary>Adopts the redirect URIs the application last proposed.</summary>

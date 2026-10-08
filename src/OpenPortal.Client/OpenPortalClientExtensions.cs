@@ -72,8 +72,19 @@ public static class OpenPortalClientExtensions
                 oidc.Scope.Add("email");
                 oidc.Scope.Add("offline_access");
 
-                // The identity token already carries the profile; the claim names stay as the portal sends them
-                // ("sub", "name", "email") instead of being rewritten to long WS-Federation URIs.
+                if (options.RequestRoles)
+                {
+                    oidc.Scope.Add("roles");
+                }
+
+                if (options.RequestGroups)
+                {
+                    oidc.Scope.Add("groups");
+                }
+
+                // The identity token already carries the profile, roles and groups; the claim names stay as the
+                // portal sends them ("sub", "name", "email", "role", "groups") instead of being rewritten to long
+                // WS-Federation URIs, and "role" is the role claim, so User.IsInRole works.
                 oidc.GetClaimsFromUserInfoEndpoint = false;
                 oidc.MapInboundClaims = false;
                 oidc.SaveTokens = true;

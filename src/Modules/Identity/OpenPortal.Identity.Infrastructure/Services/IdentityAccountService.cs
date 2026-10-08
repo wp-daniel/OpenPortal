@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Identity;
 using OpenPortal.Identity.Application.Abstractions;
+using OpenPortal.Identity.Application.Auditing;
 using OpenPortal.Identity.Application.Contracts;
 using OpenPortal.Identity.Domain.Users;
+using OpenPortal.SharedKernel.Auditing;
 using OpenPortal.SharedKernel.Results;
 using OpenPortal.SharedKernel.Text;
 using OpenPortal.SharedKernel.Time;
@@ -15,13 +17,16 @@ internal sealed class IdentityAccountService : IAccountService
     private readonly UserLookup _userLookup;
     private readonly IClock _clock;
     private readonly ILanguageCatalog _languages;
+    private readonly IAuditTrail _audit;
 
     public IdentityAccountService(
         UserManager<ApplicationUser> userManager,
         UserLookup userLookup,
         IClock clock,
-        ILanguageCatalog languages)
+        ILanguageCatalog languages,
+        IAuditTrail audit)
     {
+        _audit = audit;
         _languages = languages;
         _userManager = userManager;
         _userLookup = userLookup;
@@ -58,10 +63,14 @@ internal sealed class IdentityAccountService : IAccountService
         }
 
         var persisted = await _userManager.UpdateAsync(user).ConfigureAwait(false);
+        if (!persisted.Succeeded)
+        {
+            return Result<AccountProfileDto>.Failure(persisted.ToError(UserErrors.SaveFailed));
+        }
 
-        return persisted.Succeeded
-            ? await ToProfileAsync(user, cancellationToken).ConfigureAwait(false)
-            : Result<AccountProfileDto>.Failure(persisted.ToError(UserErrors.SaveFailed));
+        await _audit.RecordAsync(AuditEvent.Succeeded(IdentityAuditActions.ProfileUpdated), cancellationToken).ConfigureAwait(false);
+
+        return await ToProfileAsync(user, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Result<AccountProfileDto>> UpdateLanguageAsync(
@@ -114,9 +123,22 @@ internal sealed class IdentityAccountService : IAccountService
             .ChangePasswordAsync(lookup.Value, request.CurrentPassword, request.NewPassword)
             .ConfigureAwait(false);
 
-        return changed.Succeeded
+        var result = changed.Succeeded
             ? Result.Success()
             : Result.Failure(changed.ToError(UserErrors.CurrentPasswordIncorrect));
+
+        // A failure is recorded too: repeated wrong current passwords from a live session can mean someone
+        // else is at the keyboard.
+        await _audit.RecordAsync(
+                result.IsSuccess
+                    ? AuditEvent.Succeeded(IdentityAuditActions.PasswordChanged)
+                    : AuditEvent.Failed(
+                        IdentityAuditActions.PasswordChanged,
+                        details: new Dictionary<string, string?> { ["reason"] = result.Error.Code }),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return result;
     }
 
     private async Task<Result<AccountProfileDto>> ToProfileAsync(

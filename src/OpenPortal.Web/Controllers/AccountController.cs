@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using OpenPortal.Web.Security;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Identity.Application.Contracts;
 using OpenPortal.Web.Infrastructure;
@@ -81,6 +83,7 @@ public sealed class AccountController : ControllerBase
     /// </para>
     /// </summary>
     [HttpPost("change-password")]
+    [EnableRateLimiting(RateLimitPolicies.SignIn)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]

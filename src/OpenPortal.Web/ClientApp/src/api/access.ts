@@ -58,14 +58,15 @@ export const accessApi = {
 
   user: (userId: string, signal?: AbortSignal) => api.get<UserAccess>(`/api/admin/access/users/${userId}`, signal),
 
-  grantUser: (applicationId: string, userId: string) =>
-    api.put<void>(`/api/admin/access/applications/${applicationId}/users/${userId}`, {}),
+  /** Without `roles` an existing grant keeps its roles; with them, the grant carries exactly those. */
+  grantUser: (applicationId: string, userId: string, roles?: readonly string[]) =>
+    api.put<void>(`/api/admin/access/applications/${applicationId}/users/${userId}`, roles ? { roles } : {}),
 
   revokeUser: (applicationId: string, userId: string) =>
     api.delete<void>(`/api/admin/access/applications/${applicationId}/users/${userId}`),
 
-  grantGroup: (applicationId: string, groupId: string) =>
-    api.put<void>(`/api/admin/access/applications/${applicationId}/groups/${groupId}`, {}),
+  grantGroup: (applicationId: string, groupId: string, roles?: readonly string[]) =>
+    api.put<void>(`/api/admin/access/applications/${applicationId}/groups/${groupId}`, roles ? { roles } : {}),
 
   revokeGroup: (applicationId: string, groupId: string) =>
     api.delete<void>(`/api/admin/access/applications/${applicationId}/groups/${groupId}`),

@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using OpenPortal.Content.Application.Abstractions;
+using OpenPortal.Content.Application.Auditing;
 using OpenPortal.Content.Application.Contracts;
 using OpenPortal.Content.Domain;
 using OpenPortal.Content.Domain.Profiles;
 using OpenPortal.Content.Domain.Projects;
 using OpenPortal.Content.Infrastructure.Persistence;
+using OpenPortal.SharedKernel.Auditing;
 using OpenPortal.SharedKernel.Results;
 using OpenPortal.SharedKernel.Text;
 using OpenPortal.SharedKernel.Time;
@@ -24,12 +26,15 @@ internal sealed class ContentManagementService : IContentManagementService
     private readonly ContentDbContext _dbContext;
     private readonly IContentEditAuthorization _authorization;
     private readonly IClock _clock;
+    private readonly IAuditTrail _audit;
 
     public ContentManagementService(
         ContentDbContext dbContext,
         IContentEditAuthorization authorization,
-        IClock clock)
+        IClock clock,
+        IAuditTrail audit)
     {
+        _audit = audit;
         _dbContext = dbContext;
         _authorization = authorization;
         _clock = clock;
@@ -110,6 +115,13 @@ internal sealed class ContentManagementService : IContentManagementService
 
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        await _audit.RecordAsync(
+                AuditEvent.Succeeded(
+                    ContentAuditActions.ProfileUpdated,
+                    new AuditSubject(AuditSubjectTypes.Profile, profile.Id.ToString(), profile.DisplayName)),
+                cancellationToken)
+            .ConfigureAwait(false);
+
         return Result<ProfileDto>.Success(ToProfileDto(profile));
     }
 
@@ -174,6 +186,8 @@ internal sealed class ContentManagementService : IContentManagementService
             return Result<ManagedProjectDto>.Failure(ContentErrors.SlugAlreadyInUse);
         }
 
+        var isNew = project is null;
+
         if (project is null)
         {
             // Same reason as in SaveProfileAsync: an invalid name or slug on creation must be a 400, not the
@@ -220,6 +234,11 @@ internal sealed class ContentManagementService : IContentManagementService
 
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        await _audit.RecordAsync(
+                AuditEvent.Succeeded(isNew ? ContentAuditActions.ProjectCreated : ContentAuditActions.ProjectUpdated, Subject(project)),
+                cancellationToken)
+            .ConfigureAwait(false);
+
         return Result<ManagedProjectDto>.Success(ToManagedProjectDto(project));
     }
 
@@ -240,9 +259,18 @@ internal sealed class ContentManagementService : IContentManagementService
             return Result<ManagedProjectDto>.Failure(ContentErrors.ProjectNotFound);
         }
 
+        var wasPublished = project.IsPublished;
         project.SetPublished(isPublished, _clock.UtcNow);
 
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        if (wasPublished != isPublished)
+        {
+            await _audit.RecordAsync(
+                    AuditEvent.Succeeded(isPublished ? ContentAuditActions.ProjectPublished : ContentAuditActions.ProjectUnpublished, Subject(project)),
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
 
         return Result<ManagedProjectDto>.Success(ToManagedProjectDto(project));
     }
@@ -271,8 +299,14 @@ internal sealed class ContentManagementService : IContentManagementService
         // break another project's association. An orphan is harmless and can be pruned by a separate step.
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        await _audit.RecordAsync(AuditEvent.Succeeded(ContentAuditActions.ProjectDeleted, Subject(project)), cancellationToken)
+            .ConfigureAwait(false);
+
         return Result.Success();
     }
+
+    private static AuditSubject Subject(Project project) =>
+        new(AuditSubjectTypes.Project, project.Id.ToString(), project.Name);
 
     private Task<Profile?> LoadProfileAsync(CancellationToken cancellationToken) =>
         _dbContext.Profiles

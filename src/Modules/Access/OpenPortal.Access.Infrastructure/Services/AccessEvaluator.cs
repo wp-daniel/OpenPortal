@@ -27,13 +27,22 @@ internal sealed class AccessEvaluator : IAccessEvaluator
 
         if (application is null)
         {
-            return new AccessDecision(Allowed: false, ApplicationName: null);
+            return AccessDecision.Denied(applicationName: null);
         }
 
         var allowed = application.Status == ApplicationStatus.Active
             && await _access.HasGrantAsync(application.Id, userId, cancellationToken).ConfigureAwait(false);
 
-        return new AccessDecision(allowed, application.DisplayName);
+        if (!allowed)
+        {
+            return AccessDecision.Denied(application.DisplayName);
+        }
+
+        return new AccessDecision(
+            Allowed: true,
+            application.DisplayName,
+            await _access.RolesAsync(application, userId, cancellationToken).ConfigureAwait(false),
+            await _access.GroupClaimsAsync(application, userId, cancellationToken).ConfigureAwait(false));
     }
 
     public async Task<IReadOnlyList<LaunchpadItemDto>> GetLaunchpadAsync(Guid userId, CancellationToken cancellationToken)

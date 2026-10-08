@@ -1,0 +1,22 @@
+# Build outputs and local state never enter the image: the client is built inside it, and keys, databases and
+# secrets belong to the running container's volume and environment.
+**/bin/
+**/obj/
+**/node_modules/
+**/ClientApp/dist/
+src/OpenPortal.Web/wwwroot/assets/
+src/OpenPortal.Web/wwwroot/index.html
+**/App_Data/
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/TestResults/
+.git/
+.github/
+.vs/
+.vscode/
+.idea/
+*.env
+.env.*
+**/secrets.json
+**/appsettings.*.Local.json

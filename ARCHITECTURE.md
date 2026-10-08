@@ -7,8 +7,8 @@
 
 # Architecture
 
-OpenPortal is a modular monolith: one deployable ASP.NET Core host, a React client, and three business modules
-(Identity, Content, Access) that are isolated by convention and enforced by tests. It is also an OpenID Connect
+OpenPortal is a modular monolith: one deployable ASP.NET Core host, a React client, three business modules
+(Identity, Content, Access) and an Audit module, isolated by convention and enforced by tests. It is also an OpenID Connect
 provider, so other applications can sign their users in through it.
 
 The shape exists to make two specific promises cheap to keep:
@@ -16,7 +16,8 @@ The shape exists to make two specific promises cheap to keep:
 1. **The modules do not know about each other.** Identity, Content and Access could each be extracted, replaced
    or tested alone; where one needs something from another, the host supplies it through a port.
 2. **The database engine is a host-level decision.** No domain, application or module-infrastructure project
-   references a provider, so moving from SQLite to PostgreSQL touches one file.
+   references a provider; the host picks SQLite or PostgreSQL in one file, and each provider has its own
+   migrations.
 
 Both promises are checked by `OpenPortal.Tests.Architecture`. If a rule below is broken, a test fails and
 names the rule, rather than waiting for review to notice.
@@ -28,7 +29,7 @@ names the rule, rather than waiting for review to notice.
 ```
 OpenPortal.slnx
 src/
-  OpenPortal.SharedKernel/              Result, Error, IClock, TextRules
+  OpenPortal.SharedKernel/              Result, Error, IClock, TextRules, IAuditTrail
   Modules/
     Identity/
       OpenPortal.Identity.Domain/          ApplicationUser, Roles
@@ -43,8 +44,14 @@ src/
       OpenPortal.Access.Application/       IApplicationRegistryService, IGroupService, IAccessAdministrationService,
                                            IAccessEvaluator, IApplicationAnnouncementService, host ports
       OpenPortal.Access.Infrastructure/    AccessDbContext (+ OpenIddict tables), services, AddAccessModule
+    Audit/
+      OpenPortal.Audit.Domain/             AuditEntry
+      OpenPortal.Audit.Application/        IAuditLogService, host ports (IAuditRequestContext, IAuditLogAuthorization)
+      OpenPortal.Audit.Infrastructure/     AuditDbContext, IAuditTrail implementation, retention sweep, AddAuditModule
+  OpenPortal.Migrations.PostgreSql/     the PostgreSQL migrations of every module
   OpenPortal.Client/                    NuGet package for applications: OIDC sign-in + announcement
-  OpenPortal.Web/                       composition root: controllers, middleware, migrations, ClientApp, Oidc/
+  OpenPortal.Web/                       composition root: controllers, middleware, SQLite migrations, ClientApp, Oidc/,
+                                        Security/ (headers, rate limits, proxy), Health/, Auditing/
 samples/
   OpenPortal.SampleApp/                 minimal application signing in through the portal
 tests/
@@ -70,6 +77,7 @@ Web  ──────────────►  *.Infrastructure  ──► 
 | Application never references its own Infrastructure | `Application_projects_do_not_reference_their_own_infrastructure` |
 | Identity never references Content, and vice versa | `Identity_does_not_reference_Content`, `Content_does_not_reference_Identity` |
 | Access references neither Identity nor Content, and neither references Access | `Access_does_not_reference_Identity_or_Content`, `Identity_and_Content_do_not_reference_Access` |
+| Identity, Content and Access record audit events through the shared kernel and never reference Audit; Audit references none of them | `Modules_record_audit_events_without_referencing_the_Audit_module` |
 | The client package references nothing of the portal | `The_client_package_stands_alone` |
 | SharedKernel references no framework and no module | `SharedKernel_references_no_framework_or_module_assembly` |
 | DbContexts and repositories live only in Infrastructure | `Only_the_web_host_and_infrastructure_projects_use_EntityFrameworkCore`, `DbContexts_live_only_in_infrastructure_projects` |
@@ -221,10 +229,75 @@ client and returns its secret once (only a hash is stored). Later announcements 
 and may *propose* new redirect URIs, which an administrator must apply: accepting them on the application's
 word would let whoever holds the shared provisioning key redirect sign-ins anywhere.
 
+**Roles and groups in tokens.** An application defines the roles it understands (`ApplicationRole`: an
+immutable key such as `sales`, plus a name for administrators). Roles are assigned *on grants*: a user grant
+or a group grant carries role keys, so taking the grant away takes its roles too, and a user's roles in an
+application are the union over their own grant and their groups' grants (`AccessQueries.RolesAsync`). The
+token endpoint recomputes them, with the access check, at every code exchange and refresh, and emits them as
+`role` claims when the application asked for the `roles` scope; the identity token carries them, so
+`OpenPortal.Client` (role claim type `role`) makes `User.IsInRole` work. Groups are the portal's business by
+default: an application receives `groups` claims only if its `GroupClaims` setting is `granted` (the user's
+groups that grant it) or `all`, and it asked for the `groups` scope. An application announcing itself may
+declare its roles: a pending one takes them whole, an approved one only gains new ones, because renaming or
+removing a role an administrator may have assigned is the administrator's call. Removing a role strips it from
+every grant. Clients approved before roles existed get the new scope permissions at startup
+(`OidcClientUpgradeService`).
+
 **Keys.** Data Protection keys are persisted to `DataProtection:KeysPath` so sessions survive restarts and
 can be shared between instances (protect them at rest in production, e.g. `ProtectKeysWithCertificate`).
 Token signing and encryption use development certificates in Development, ephemeral keys in tests
-(`Oidc:UseEphemeralKeys`), and configured PKCS#12 certificates everywhere else; startup fails without them.
+(`Oidc:UseEphemeralKeys`), configured PKCS#12 certificates where given, or self-signed certificates the portal
+creates once in `Oidc:CertificatesPath` (a container volume); startup fails without any of them.
+
+---
+
+## Audit log (Audit module)
+
+Every module records what it changes, and the host records the OpenID Connect sign-ins, through one port in
+the shared kernel: `IAuditTrail.RecordAsync(AuditEvent)`. An event is an action code (`user.created`,
+`access.group_roles_changed`), an outcome, a target, optional facts (`Details`, never secrets) and, when the
+caller is not the signed-in user (a sign-in, an application's server), the actor. The Audit module implements
+the port and stores entries; the host's `IAuditRequestContext` adds the caller, their address and the request's
+trace id (the `traceId` an error response shows), so a reported failure can be found in the log.
+
+The design choices, in the order they matter:
+
+- **A port in the shared kernel, not a reference to Audit.** The modules stay independent of each other; an
+  architecture test checks it. Each module declares its action codes as constants (`IdentityAuditActions`,
+  `AccessAuditActions`, `ContentAuditActions`, `OidcAuditActions`), and a test checks every one has a label.
+- **Recorded after the change is committed, never inside a transaction**, so a rolled-back change is never
+  reported, and SQLite's single writer is not held by two connections at once.
+- **Best effort.** A failed write is logged and swallowed: the change already happened, and a 500 would invite
+  a retry of something that succeeded. The entry clips over-long values rather than refusing them.
+- **Snapshots, not references.** Labels (an email, an application name) are copied into the entry, so the log
+  reads the same after the subject is renamed or deleted.
+- **Only real changes.** Idempotent repeats (granting what is granted) and announcement heartbeats record
+  nothing; a privilege change (`user.administrator_granted`) is its own entry rather than a detail of an edit.
+
+Reading the log is the `audit` portal page, so it can be delegated to auditors. Entries older than
+`Audit:RetentionDays` are deleted once a day by `AuditRetentionService`. The same request also gives each
+account its `LastSignInAtUtc`, which the users list shows and filters on (inactive for 90 days).
+
+---
+
+## Hardening
+
+The protections every request passes through, in pipeline order (`Program.cs`):
+
+1. **Forwarded headers** (`ReverseProxy:*`), first, so everything after sees the client's address and scheme.
+   Off by default: trusting `X-Forwarded-For` from anyone would let a caller pick their own address.
+2. **Security headers** (`SecurityHeadersMiddleware`), set as the response starts so error pages and static
+   files get them too: a Content-Security-Policy allowing this origin only (`style-src 'unsafe-inline'` is the
+   one concession, for the toast library's injected stylesheet; scripts are never inline, which is why the
+   theme bootstrap is `public/boot.js`), `frame-ancestors 'none'` and `X-Frame-Options: DENY` against
+   clickjacking the sign-in page, `no-referrer`, a closed `Permissions-Policy`, and `Cache-Control: no-store` on
+   API answers. The OpenID Connect endpoints get only the anti-framing part: they answer other applications.
+3. **Rate limits** (`RateLimitingSetup`), after authentication so a signed-in caller is counted as themselves:
+   a generous global limit on `/api` and `/connect`, and stricter per-address ones on password checks
+   (complementing per-account lockout, which cannot stop one password tried against many accounts) and on
+   the machine endpoints (token, announcements). A refusal is 429 problem+json with `Retry-After`.
+4. **Health** (`/health/live`, `/health/ready`), outside the limits; readiness checks each module's database
+   and reports pending migrations as `Degraded`.
 
 ---
 
@@ -246,8 +319,8 @@ unpublished work. `Public_project_payload_does_not_leak_editor_fields` guards th
 
 ## Persistence
 
-Three `DbContext` instances, one per module (Identity, Content, Access). Each module owns its schema and its
-migrations; no context knows the others exist, and the Access context also holds the OpenIddict tables.
+Four `DbContext` instances, one per module (Identity, Content, Access, Audit). Each module owns its schema and
+its migrations; no context knows the others exist, and the Access context also holds the OpenIddict tables.
 
 **Provider selection** lives only in `DatabaseProviderSelector.Configure`. Modules register their contexts
 through a callback that receives a provider-agnostic `DbContextOptionsBuilder`:
@@ -256,16 +329,21 @@ through a callback that receives a provider-agnostic `DbContextOptionsBuilder`:
 services.AddContentModule(options => DatabaseProviderSelector.Configure(options, provider, connectionString));
 ```
 
-Setting `Database:Provider` to `PostgreSql` currently throws at startup with an instruction to add Npgsql,
-rather than failing at the first query.
+`Database:Provider` is `Sqlite` (the default) or `PostgreSql`. No query is provider-specific: text search
+compares upper-cased values on both sides rather than relying on `LIKE`, whose case sensitivity differs between
+the two engines.
 
 **SQLite compatibility.** SQLite cannot order by `DateTimeOffset`, so every context applies a value converter
 that maps to UTC ticks. This is provider-specific and lives in the Infrastructure layer, which is the only
 layer allowed to know the provider.
 
-**Migrations** are checked in under `src/OpenPortal.Web/Persistence/Migrations/{Identity,Content,Access}`. They run
-at startup only when `Database:MigrateOnStartup` is true (development); in production they belong in a
-separate, ordered deployment step, because several instances migrating concurrently is a race.
+**Migrations** exist once per provider, because a migration is written for one engine's column types: SQLite's
+under `src/OpenPortal.Web/Persistence/Migrations/{Identity,Content,Access,Audit}`, PostgreSQL's in their own
+assembly, `OpenPortal.Migrations.PostgreSql`, which the selector names as the migrations assembly. CI checks
+that neither set lags behind the model (`has-pending-model-changes`). Migrations run at startup only when
+`Database:MigrateOnStartup` is true (development, single-instance SQLite); in production they belong in a
+separate, ordered deployment step, because several instances migrating concurrently is a race:
+`OpenPortal.Web --migrate` applies them (with roles and the bootstrap administrator) and exits.
 
 ---
 
@@ -304,7 +382,7 @@ would resolve on 4xx and 5xx, and no error path in the app would be reachable.
 | --- | --- | --- |
 | `OpenPortal.Tests.Unit` | domain rules, validation, normalisation | plain xUnit, no host |
 | `OpenPortal.Tests.Architecture` | the dependency rules above | assembly references and type shapes |
-| `OpenPortal.Tests.Integration` | the whole stack over HTTP | `WebApplicationFactory<Program>` on a temporary SQLite file |
+| `OpenPortal.Tests.Integration` | the whole stack over HTTP | `WebApplicationFactory<Program>` on a temporary SQLite file, or a throwaway PostgreSQL database when `OPENPORTAL_TEST_POSTGRES` is set (CI runs both) |
 
 Integration tests boot the real host, apply the real migrations and exercise the real cookie and antiforgery
 behaviour. There are no port-binding or out-of-process smoke tests: a test that starts a server, curls a

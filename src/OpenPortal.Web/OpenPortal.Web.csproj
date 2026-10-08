@@ -10,8 +10,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Modules\Access\OpenPortal.Access.Infrastructure\OpenPortal.Access.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Audit\OpenPortal.Audit.Infrastructure\OpenPortal.Audit.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Content\OpenPortal.Content.Infrastructure\OpenPortal.Content.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Identity\OpenPortal.Identity.Infrastructure\OpenPortal.Identity.Infrastructure.csproj" />
+    <!-- PostgreSQL's migrations (and its provider) ship with the host; SQLite's live in this project. -->
+    <ProjectReference Include="..\OpenPortal.Migrations.PostgreSql\OpenPortal.Migrations.PostgreSql.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,6 +26,7 @@
       switch confined to Infrastructure/Persistence/DatabaseProviderSelector.cs.
     -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

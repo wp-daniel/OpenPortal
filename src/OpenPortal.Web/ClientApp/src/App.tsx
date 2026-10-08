@@ -14,6 +14,7 @@ import { AccessDeniedPage } from '@/pages/AccessDeniedPage'
 import { AccountPage } from '@/pages/AccountPage'
 import { AdminAccessPage } from '@/pages/AdminAccessPage'
 import { AdminApplicationsPage } from '@/pages/AdminApplicationsPage'
+import { AdminAuditPage } from '@/pages/AdminAuditPage'
 import { AdminGroupsPage } from '@/pages/AdminGroupsPage'
 import { AdminPagePermissionsPage } from '@/pages/AdminPagePermissionsPage'
 import { AdminUsersPage } from '@/pages/AdminUsersPage'
@@ -119,6 +120,10 @@ const router = createBrowserRouter([
                     path: 'admin/applications',
                     element: <AdminApplicationsPage />,
                     handle: page('applications', { labelKey: 'nav.applications' }),
+                  },
+                  {
+                    handle: crumbs({ labelKey: 'nav.security' }),
+                    children: [{ path: 'admin/audit', element: <AdminAuditPage />, handle: page('audit', { labelKey: 'nav.audit' }) }],
                   },
                   {
                     handle: crumbs({ labelKey: 'nav.content' }),

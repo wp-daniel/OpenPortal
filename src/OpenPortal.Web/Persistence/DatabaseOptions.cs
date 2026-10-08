@@ -10,11 +10,8 @@ public enum DatabaseProvider
     Sqlite = 0,
 
     /// <summary>
-    /// PostgreSQL. Reserved for when the deployment needs concurrent writers or managed backups.
-    /// <para>
-    /// The code path exists but the package is not referenced: adding Npgsql here is the whole of the
-    /// migration, which is the point of keeping the choice in the composition root.
-    /// </para>
+    /// PostgreSQL: for several instances, concurrent writers or managed backups. Connection string in the Npgsql
+    /// form, e.g. <c>Host=db;Database=openportal;Username=openportal;Password=…</c>.
     /// </summary>
     PostgreSql = 1,
 }

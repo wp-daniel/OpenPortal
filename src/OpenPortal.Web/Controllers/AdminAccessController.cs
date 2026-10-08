@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Access.Application.Contracts;
 using OpenPortal.SharedKernel.Results;
@@ -11,7 +12,7 @@ namespace OpenPortal.Web.Controllers;
 /// <summary>
 /// Application access grants, for administrators and holders of the access page (users and groups pages for
 /// their own part). Grants are idempotent PUT/DELETE pairs, so a retried request or a
-/// double click cannot fail or create a duplicate.
+/// double click cannot fail or create a duplicate. A PUT may carry the roles that come with the grant.
 /// </summary>
 [ApiController]
 [Route("api/admin/access")]
@@ -53,8 +54,12 @@ public sealed class AdminAccessController : ControllerBase
     [HttpPut("applications/{applicationId:guid}/users/{userId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GrantUserAsync(Guid applicationId, Guid userId, CancellationToken cancellationToken) =>
-        Respond(await _access.GrantUserAsync(applicationId, userId, cancellationToken).ConfigureAwait(false));
+    public async Task<IActionResult> GrantUserAsync(
+        Guid applicationId,
+        Guid userId,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] GrantRequest? request,
+        CancellationToken cancellationToken) =>
+        Respond(await _access.GrantUserAsync(applicationId, userId, request?.Roles, cancellationToken).ConfigureAwait(false));
 
     [RequirePortalPage(PortalPages.Access, PortalPages.Users)]
     [HttpDelete("applications/{applicationId:guid}/users/{userId:guid}")]
@@ -67,8 +72,12 @@ public sealed class AdminAccessController : ControllerBase
     [HttpPut("applications/{applicationId:guid}/groups/{groupId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GrantGroupAsync(Guid applicationId, Guid groupId, CancellationToken cancellationToken) =>
-        Respond(await _access.GrantGroupAsync(applicationId, groupId, cancellationToken).ConfigureAwait(false));
+    public async Task<IActionResult> GrantGroupAsync(
+        Guid applicationId,
+        Guid groupId,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] GrantRequest? request,
+        CancellationToken cancellationToken) =>
+        Respond(await _access.GrantGroupAsync(applicationId, groupId, request?.Roles, cancellationToken).ConfigureAwait(false));
 
     [RequirePortalPage(PortalPages.Access, PortalPages.Groups)]
     [HttpDelete("applications/{applicationId:guid}/groups/{groupId:guid}")]

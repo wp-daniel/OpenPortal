@@ -47,4 +47,35 @@ public sealed class OpenPortalClientOptions
 
     /// <summary>Set to false only for a portal running on plain http during development.</summary>
     public bool RequireHttpsMetadata { get; set; } = true;
+
+    /// <summary>
+    /// The roles this application checks (<c>User.IsInRole("sales")</c>). They are announced to the portal,
+    /// where administrators assign them to groups and users; the signed-in user's roles come back as
+    /// <c>role</c> claims. A role already in the portal is never renamed or removed by an announcement.
+    /// </summary>
+    public IList<OpenPortalRole> Roles { get; } = [];
+
+    /// <summary>
+    /// Asks for the <c>roles</c> scope, so the user's roles in this application arrive as <c>role</c> claims.
+    /// Turn off only against a portal older than the roles feature, which does not know the scope.
+    /// </summary>
+    public bool RequestRoles { get; set; } = true;
+
+    /// <summary>
+    /// Asks for the <c>groups</c> scope. Whether any group names arrive is the portal administrator's choice
+    /// (the application's "groups in tokens" setting); the scope only lets them.
+    /// </summary>
+    public bool RequestGroups { get; set; } = true;
+}
+
+/// <summary>A role the application checks, as it is announced to the portal.</summary>
+public sealed class OpenPortalRole
+{
+    /// <summary>What the application checks: lower-case letters, digits, <c>- _ . :</c>.</summary>
+    public string Key { get; set; } = string.Empty;
+
+    /// <summary>The name administrators see when they assign it. Defaults to the key.</summary>
+    public string? DisplayName { get; set; }
+
+    public string? Description { get; set; }
 }

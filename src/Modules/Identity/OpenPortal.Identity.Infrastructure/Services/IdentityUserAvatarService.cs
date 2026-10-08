@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OpenPortal.Identity.Application.Abstractions;
+using OpenPortal.Identity.Application.Auditing;
 using OpenPortal.Identity.Application.Contracts;
 using OpenPortal.Identity.Domain.Users;
 using OpenPortal.Identity.Infrastructure.Persistence;
+using OpenPortal.SharedKernel.Auditing;
 using OpenPortal.SharedKernel.Results;
 using OpenPortal.SharedKernel.Time;
 
@@ -18,6 +20,7 @@ internal sealed class IdentityUserAvatarService : IUserAvatarService
     private readonly UserLookup _userLookup;
     private readonly AdministrationGuard _guard;
     private readonly IClock _clock;
+    private readonly IAuditTrail _audit;
 
     public IdentityUserAvatarService(
         IdentityDbContext dbContext,
@@ -25,7 +28,8 @@ internal sealed class IdentityUserAvatarService : IUserAvatarService
         ICurrentUser currentUser,
         UserLookup userLookup,
         AdministrationGuard guard,
-        IClock clock)
+        IClock clock,
+        IAuditTrail audit)
     {
         _dbContext = dbContext;
         _userManager = userManager;
@@ -33,6 +37,7 @@ internal sealed class IdentityUserAvatarService : IUserAvatarService
         _userLookup = userLookup;
         _guard = guard;
         _clock = clock;
+        _audit = audit;
     }
 
     public async Task<Result<AvatarImageDto>> GetAsync(Guid userId, CancellationToken cancellationToken)
@@ -58,7 +63,11 @@ internal sealed class IdentityUserAvatarService : IUserAvatarService
 
         return lookup.IsFailure
             ? Result.Failure(lookup.Error)
-            : await SetAsync(lookup.Value, content, cancellationToken).ConfigureAwait(false);
+            : await AuditAsync(
+                await SetAsync(lookup.Value, content, cancellationToken).ConfigureAwait(false),
+                IdentityAuditActions.OwnAvatarChanged,
+                target: null,
+                cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Result> RemoveOwnAsync(CancellationToken cancellationToken)
@@ -67,7 +76,11 @@ internal sealed class IdentityUserAvatarService : IUserAvatarService
 
         return lookup.IsFailure
             ? Result.Failure(lookup.Error)
-            : await RemoveAsync(lookup.Value, cancellationToken).ConfigureAwait(false);
+            : await AuditAsync(
+                await RemoveAsync(lookup.Value, cancellationToken).ConfigureAwait(false),
+                IdentityAuditActions.OwnAvatarRemoved,
+                target: null,
+                cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Result> SetForUserAsync(Guid userId, byte[] content, CancellationToken cancellationToken)
@@ -82,7 +95,11 @@ internal sealed class IdentityUserAvatarService : IUserAvatarService
 
         return target.IsFailure
             ? Result.Failure(target.Error)
-            : await SetAsync(target.Value, content, cancellationToken).ConfigureAwait(false);
+            : await AuditAsync(
+                await SetAsync(target.Value, content, cancellationToken).ConfigureAwait(false),
+                IdentityAuditActions.AvatarChanged,
+                target.Value,
+                cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Result> RemoveForUserAsync(Guid userId, CancellationToken cancellationToken)
@@ -97,7 +114,22 @@ internal sealed class IdentityUserAvatarService : IUserAvatarService
 
         return target.IsFailure
             ? Result.Failure(target.Error)
-            : await RemoveAsync(target.Value, cancellationToken).ConfigureAwait(false);
+            : await AuditAsync(
+                await RemoveAsync(target.Value, cancellationToken).ConfigureAwait(false),
+                IdentityAuditActions.AvatarRemoved,
+                target.Value,
+                cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Records a change that succeeded and passes the result through.</summary>
+    private async Task<Result> AuditAsync(Result result, string action, ApplicationUser? target, CancellationToken cancellationToken)
+    {
+        if (result.IsSuccess)
+        {
+            await _audit.RecordAsync(AuditEvent.Succeeded(action, target?.ToAuditSubject()), cancellationToken).ConfigureAwait(false);
+        }
+
+        return result;
     }
 
     private async Task<Result<ApplicationUser>> FindChangeableAsync(Guid userId, CancellationToken cancellationToken)

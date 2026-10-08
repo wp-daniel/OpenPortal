@@ -110,6 +110,38 @@ public static class AccessErrors
     public static Error GroupNameInUse { get; } =
         Error.Conflict(Prefix + "group_name_in_use", "Another group already uses this name.");
 
+    public static Error RoleKeyRequired { get; } =
+        Error.Validation(Prefix + "role_key_required", "Every role needs a key.");
+
+    public static Error RoleKeyInvalid { get; } =
+        Error.Validation(
+            Prefix + "role_key_invalid",
+            $"A role key may only contain lower-case letters, digits, hyphens, underscores, dots and colons, start with a letter or a digit, and be at most {ApplicationRole.KeyMaxLength} characters long.");
+
+    public static Error RoleKeyDuplicate { get; } =
+        Error.Validation(Prefix + "role_key_duplicate", "Two roles have the same key.");
+
+    public static Error RoleNameTooLong { get; } =
+        Error.Validation(
+            Prefix + "role_name_too_long",
+            $"A role name must not exceed {ApplicationRole.DisplayNameMaxLength} characters.");
+
+    public static Error RoleDescriptionTooLong { get; } =
+        Error.Validation(
+            Prefix + "role_description_too_long",
+            $"A role description must not exceed {ApplicationRole.DescriptionMaxLength} characters.");
+
+    public static Error TooManyRoles { get; } =
+        Error.Validation(
+            Prefix + "too_many_roles",
+            $"An application may define at most {PortalApplication.MaxRoles} roles.");
+
+    public static Error RoleNotFound { get; } =
+        Error.Validation(Prefix + "role_not_found", "The application does not define one of the roles given.");
+
+    public static Error GroupClaimsInvalid { get; } =
+        Error.Validation(Prefix + "group_claims_invalid", "The groups claim setting must be none, granted or all.");
+
     public static Error ProvisioningKeyInvalid { get; } =
         Error.Unauthorized(Prefix + "provisioning_key_invalid", "The provisioning key is missing or not valid.");
 

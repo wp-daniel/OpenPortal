@@ -72,11 +72,24 @@ public interface IAccessAdministrationService
     /// <summary>The applications one user can open, each with the reasons it is allowed.</summary>
     Task<Result<UserAccessDto>> GetUserAccessAsync(Guid userId, CancellationToken cancellationToken);
 
-    Task<Result> GrantUserAsync(Guid applicationId, Guid userId, CancellationToken cancellationToken);
+    /// <summary>
+    /// Grants the application to the user. With <paramref name="roles"/>, the grant carries exactly those roles
+    /// (granting again changes only the roles); without, an existing grant keeps its roles.
+    /// </summary>
+    Task<Result> GrantUserAsync(
+        Guid applicationId,
+        Guid userId,
+        IReadOnlyList<string>? roles,
+        CancellationToken cancellationToken);
 
     Task<Result> RevokeUserAsync(Guid applicationId, Guid userId, CancellationToken cancellationToken);
 
-    Task<Result> GrantGroupAsync(Guid applicationId, Guid groupId, CancellationToken cancellationToken);
+    /// <summary>Grants the application to every member of the group; <paramref name="roles"/> as for users.</summary>
+    Task<Result> GrantGroupAsync(
+        Guid applicationId,
+        Guid groupId,
+        IReadOnlyList<string>? roles,
+        CancellationToken cancellationToken);
 
     Task<Result> RevokeGroupAsync(Guid applicationId, Guid groupId, CancellationToken cancellationToken);
 

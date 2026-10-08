@@ -8,19 +8,28 @@ using OpenPortal.Access.Domain.Groups;
 
 namespace OpenPortal.Access.Infrastructure.Persistence;
 
-internal sealed class PortalApplicationConfiguration : IEntityTypeConfiguration<PortalApplication>
+/// <summary>
+/// Short string lists that are always read whole (redirect URIs, role keys) are stored as one newline-separated
+/// column rather than a child table. Neither a URI nor a role key can contain a raw newline, which makes the
+/// separator unambiguous.
+/// </summary>
+internal static class StringListConversion
 {
-    // Redirect URI lists are small and always read whole, so they are stored as one newline-separated column
-    // rather than a child table. A URI cannot contain a raw newline, which makes the separator unambiguous.
-    private static readonly ValueConverter<IReadOnlyList<string>, string> UriListConverter = new(
-        uris => string.Join('\n', uris),
+    public static readonly ValueConverter<IReadOnlyList<string>, string> Converter = new(
+        values => string.Join('\n', values),
         stored => stored.Split('\n', StringSplitOptions.RemoveEmptyEntries));
 
-    private static readonly ValueComparer<IReadOnlyList<string>> UriListComparer = new(
+    public static readonly ValueComparer<IReadOnlyList<string>> Comparer = new(
         (left, right) => (left ?? Array.Empty<string>()).SequenceEqual(right ?? Array.Empty<string>()),
-        uris => uris.Aggregate(0, (hash, uri) => HashCode.Combine(hash, uri.GetHashCode(StringComparison.Ordinal))),
-        uris => uris.ToArray());
+        values => values.Aggregate(0, (hash, value) => HashCode.Combine(hash, value.GetHashCode(StringComparison.Ordinal))),
+        values => values.ToArray());
 
+    public static PropertyBuilder<IReadOnlyList<string>> AsStringList(this PropertyBuilder<IReadOnlyList<string>> property) =>
+        property.IsRequired().HasConversion(Converter, Comparer);
+}
+
+internal sealed class PortalApplicationConfiguration : IEntityTypeConfiguration<PortalApplication>
+{
     public void Configure(EntityTypeBuilder<PortalApplication> builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -65,18 +74,48 @@ internal sealed class PortalApplicationConfiguration : IEntityTypeConfiguration<
                      nameof(PortalApplication.AnnouncedPostLogoutRedirectUris),
                  })
         {
-            builder.Property<IReadOnlyList<string>>(list)
-                .IsRequired()
-                .HasConversion(UriListConverter, UriListComparer);
+            builder.Property<IReadOnlyList<string>>(list).AsStringList();
         }
 
+        builder.Property(application => application.GroupClaims)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(16);
+
         builder.Ignore(application => application.HasManifestChanges);
+
+        builder.HasMany(application => application.Roles)
+            .WithOne()
+            .HasForeignKey(role => role.ApplicationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Metadata.FindNavigation(nameof(PortalApplication.Roles))!
+            .SetPropertyAccessMode(PropertyAccessMode.Field);
+
+        // Roles are few and needed wherever an application is shown or a token is issued.
+        builder.Navigation(application => application.Roles).AutoInclude();
 
         // The client id is what OpenIddict looks clients up by, and what a deployed application is configured
         // with. The domain lower-cases it, so a plain unique index is case-insensitive in effect.
         builder.HasIndex(application => application.ClientId)
             .IsUnique()
             .HasDatabaseName("IX_Applications_ClientId");
+    }
+}
+
+internal sealed class ApplicationRoleConfiguration : IEntityTypeConfiguration<ApplicationRole>
+{
+    public void Configure(EntityTypeBuilder<ApplicationRole> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("ApplicationRoles");
+
+        builder.HasKey(role => new { role.ApplicationId, role.Key });
+
+        builder.Property(role => role.Key).IsRequired().HasMaxLength(ApplicationRole.KeyMaxLength);
+        builder.Property(role => role.DisplayName).IsRequired().HasMaxLength(ApplicationRole.DisplayNameMaxLength);
+        builder.Property(role => role.Description).HasMaxLength(ApplicationRole.DescriptionMaxLength);
     }
 }
 
@@ -141,6 +180,8 @@ internal sealed class ApplicationUserGrantConfiguration : IEntityTypeConfigurati
 
         builder.HasKey(grant => new { grant.ApplicationId, grant.UserId });
 
+        builder.Property(grant => grant.Roles).AsStringList();
+
         builder.HasOne<PortalApplication>()
             .WithMany()
             .HasForeignKey(grant => grant.ApplicationId)
@@ -160,6 +201,8 @@ internal sealed class ApplicationGroupGrantConfiguration : IEntityTypeConfigurat
         builder.ToTable("ApplicationGroupGrants");
 
         builder.HasKey(grant => new { grant.ApplicationId, grant.GroupId });
+
+        builder.Property(grant => grant.Roles).AsStringList();
 
         builder.HasOne<PortalApplication>()
             .WithMany()

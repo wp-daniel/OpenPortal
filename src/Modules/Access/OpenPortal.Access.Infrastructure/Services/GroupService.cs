@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using OpenPortal.Access.Application.Abstractions;
+using OpenPortal.Access.Application.Auditing;
 using OpenPortal.Access.Application.Contracts;
 using OpenPortal.Access.Domain;
 using OpenPortal.Access.Domain.Groups;
 using OpenPortal.Access.Infrastructure.Persistence;
+using OpenPortal.SharedKernel.Auditing;
 using OpenPortal.SharedKernel.Results;
 using OpenPortal.SharedKernel.Time;
 
@@ -18,6 +20,7 @@ internal sealed class GroupService : IGroupService
     private readonly IAccessAdminAuthorization _authorization;
     private readonly IPortalPageCatalog _catalog;
     private readonly IClock _clock;
+    private readonly IAuditTrail _audit;
 
     public GroupService(
         AccessDbContext db,
@@ -25,8 +28,10 @@ internal sealed class GroupService : IGroupService
         IUserDirectory directory,
         IAccessAdminAuthorization authorization,
         IPortalPageCatalog catalog,
-        IClock clock)
+        IClock clock,
+        IAuditTrail audit)
     {
+        _audit = audit;
         _db = db;
         _access = access;
         _directory = directory;
@@ -110,6 +115,9 @@ internal sealed class GroupService : IGroupService
         _db.Groups.Add(created.Value);
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        await _audit.RecordAsync(AuditEvent.Succeeded(AccessAuditActions.GroupCreated, created.Value.ToAuditSubject()), cancellationToken)
+            .ConfigureAwait(false);
+
         return Result<GroupDetailDto>.Success(await ToDetailAsync(created.Value, cancellationToken).ConfigureAwait(false));
     }
 
@@ -147,6 +155,9 @@ internal sealed class GroupService : IGroupService
 
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        await _audit.RecordAsync(AuditEvent.Succeeded(AccessAuditActions.GroupUpdated, group.ToAuditSubject()), cancellationToken)
+            .ConfigureAwait(false);
+
         return Result<GroupDetailDto>.Success(await ToDetailAsync(group, cancellationToken).ConfigureAwait(false));
     }
 
@@ -176,6 +187,14 @@ internal sealed class GroupService : IGroupService
             await _access.RevokeIfNoLongerAllowedAsync(application, memberIds, cancellationToken).ConfigureAwait(false);
         }
 
+        await _audit.RecordAsync(
+                AuditEvent.Succeeded(
+                    AccessAuditActions.GroupDeleted,
+                    group.ToAuditSubject(),
+                    AccessAudit.Details(("members", memberIds.Length.ToString(System.Globalization.CultureInfo.InvariantCulture)))),
+                cancellationToken)
+            .ConfigureAwait(false);
+
         return Result.Success();
     }
 
@@ -194,7 +213,7 @@ internal sealed class GroupService : IGroupService
         }
 
         var users = await _directory.FindAsync([userId], cancellationToken).ConfigureAwait(false);
-        if (!users.ContainsKey(userId))
+        if (!users.TryGetValue(userId, out var user))
         {
             return Result<GroupDetailDto>.Failure(AccessErrors.UserNotFound);
         }
@@ -202,6 +221,14 @@ internal sealed class GroupService : IGroupService
         if (group.AddMember(userId, _clock.UtcNow))
         {
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            await _audit.RecordAsync(
+                    AuditEvent.Succeeded(
+                        AccessAuditActions.GroupMemberAdded,
+                        new AuditSubject(AuditSubjectTypes.User, userId.ToString(), user.Email),
+                        AccessAudit.Details(("group", group.Name), ("groupId", group.Id.ToString()))),
+                    cancellationToken)
+                .ConfigureAwait(false);
         }
 
         return Result<GroupDetailDto>.Success(await ToDetailAsync(group, cancellationToken).ConfigureAwait(false));
@@ -232,6 +259,14 @@ internal sealed class GroupService : IGroupService
             {
                 await _access.RevokeIfNoLongerAllowedAsync(application, [userId], cancellationToken).ConfigureAwait(false);
             }
+
+            await _audit.RecordAsync(
+                    AuditEvent.Succeeded(
+                        AccessAuditActions.GroupMemberRemoved,
+                        await _directory.UserSubjectAsync(userId, cancellationToken).ConfigureAwait(false),
+                        AccessAudit.Details(("group", group.Name), ("groupId", group.Id.ToString()))),
+                    cancellationToken)
+                .ConfigureAwait(false);
         }
 
         return Result<GroupDetailDto>.Success(await ToDetailAsync(group, cancellationToken).ConfigureAwait(false));

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>OpenPortal.Audit.Domain</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\OpenPortal.SharedKernel\OpenPortal.SharedKernel.csproj" />
+  </ItemGroup>
+
+</Project>

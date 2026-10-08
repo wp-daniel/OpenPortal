@@ -1,4 +1,5 @@
 using System.Security.Cryptography.X509Certificates;
+using OpenPortal.Access.Application.Contracts;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace OpenPortal.Web.Oidc;
@@ -23,6 +24,17 @@ public sealed class OidcServerOptions
     public string? EncryptionCertificatePath { get; set; }
 
     public string? EncryptionCertificatePassword { get; set; }
+
+    /// <summary>
+    /// A folder where the portal keeps its own self-signed signing and encryption certificates, creating them on
+    /// first start. For a container: point it at a persistent volume (next to the Data Protection keys) and the
+    /// keys survive restarts and are shared by every instance mounting it. Ignored when both certificate paths
+    /// are set. Protect the folder like the Data Protection keys: whoever reads it can mint tokens.
+    /// </summary>
+    public string? CertificatesPath { get; set; }
+
+    /// <summary>Optional password for the certificates kept in <see cref="CertificatesPath"/>.</summary>
+    public string? CertificatesPassword { get; set; }
 
     /// <summary>
     /// Kept short on purpose: an application finds out that access was revoked when it next refreshes,
@@ -66,7 +78,22 @@ public static class OidcServerSetup
                     .AllowRefreshTokenFlow()
                     .RequireProofKeyForCodeExchange();
 
-                server.RegisterScopes(Scopes.OpenId, Scopes.Email, Scopes.Profile, Scopes.OfflineAccess);
+                server.RegisterScopes(
+                    Scopes.OpenId,
+                    Scopes.Email,
+                    Scopes.Profile,
+                    Scopes.OfflineAccess,
+                    PortalScopes.Roles,
+                    PortalScopes.Groups);
+
+                // Advertised in the discovery document, so a client library knows what to expect.
+                server.RegisterClaims(
+                    Claims.Subject,
+                    Claims.Name,
+                    Claims.PreferredUsername,
+                    Claims.Email,
+                    Claims.Role,
+                    ConnectController.GroupsClaim);
 
                 server.SetAccessTokenLifetime(TimeSpan.FromMinutes(options.AccessTokenLifetimeMinutes))
                     .SetRefreshTokenLifetime(TimeSpan.FromDays(options.RefreshTokenLifetimeDays));
@@ -114,6 +141,13 @@ public static class OidcServerSetup
             return;
         }
 
+        if (!string.IsNullOrWhiteSpace(options.CertificatesPath))
+        {
+            server.AddSigningCertificate(StoredCertificates.LoadOrCreate(options.CertificatesPath, "signing", X509KeyUsageFlags.DigitalSignature, options.CertificatesPassword))
+                .AddEncryptionCertificate(StoredCertificates.LoadOrCreate(options.CertificatesPath, "encryption", X509KeyUsageFlags.KeyEncipherment, options.CertificatesPassword));
+            return;
+        }
+
         if (environment.IsDevelopment())
         {
             // Self-signed certificates kept in the current user's certificate store, created on first run.
@@ -124,6 +158,7 @@ public static class OidcServerSetup
         throw new InvalidOperationException(
             "The OpenID Connect server has no keys. Set Oidc:SigningCertificatePath and "
             + "Oidc:EncryptionCertificatePath (PKCS#12 files, passwords in Oidc:*CertificatePassword), "
+            + "or Oidc:CertificatesPath (a persistent folder where the portal creates its own), "
             + "or Oidc:UseEphemeralKeys=true for a throwaway instance.");
     }
 

@@ -33,6 +33,12 @@ public static class Architecture
 
     public static Assembly AccessInfrastructure { get; } = typeof(Access.Infrastructure.Persistence.AccessDbContext).Assembly;
 
+    public static Assembly AuditDomain { get; } = typeof(Audit.Domain.AuditEntry).Assembly;
+
+    public static Assembly AuditApplication { get; } = typeof(Audit.Application.Abstractions.IAuditLogService).Assembly;
+
+    public static Assembly AuditInfrastructure { get; } = typeof(Audit.Infrastructure.Persistence.AuditDbContext).Assembly;
+
     public static Assembly Web { get; } = typeof(OpenPortal.Web.AntiforgeryDefaults).Assembly;
 }
 
@@ -45,7 +51,7 @@ public sealed class LayeringTests
     [Fact]
     public void Domain_projects_do_not_reference_EntityFrameworkCore()
     {
-        var offenders = new[] { Architecture.IdentityDomain, Architecture.ContentDomain, Architecture.AccessDomain }
+        var offenders = new[] { Architecture.IdentityDomain, Architecture.ContentDomain, Architecture.AccessDomain, Architecture.AuditDomain }
             .SelectMany(assembly => assembly.GetReferencedAssemblies())
             .Select(reference => reference.Name)
             .Where(name => name!.StartsWith("Microsoft.EntityFrameworkCore", StringComparison.Ordinal))
@@ -58,7 +64,7 @@ public sealed class LayeringTests
     [Fact]
     public void Domain_projects_do_not_reference_AspNetCore()
     {
-        var offenders = new[] { Architecture.IdentityDomain, Architecture.ContentDomain, Architecture.AccessDomain }
+        var offenders = new[] { Architecture.IdentityDomain, Architecture.ContentDomain, Architecture.AccessDomain, Architecture.AuditDomain }
             .SelectMany(assembly => assembly.GetReferencedAssemblies())
             .Select(reference => reference.Name!)
             .Where(name => name.StartsWith("Microsoft.AspNetCore", StringComparison.Ordinal))
@@ -71,7 +77,7 @@ public sealed class LayeringTests
     [Fact]
     public void Application_projects_do_not_reference_EntityFrameworkCore()
     {
-        var offenders = new[] { Architecture.IdentityApplication, Architecture.ContentApplication, Architecture.AccessApplication }
+        var offenders = new[] { Architecture.IdentityApplication, Architecture.ContentApplication, Architecture.AccessApplication, Architecture.AuditApplication }
             .SelectMany(assembly => assembly.GetReferencedAssemblies())
             .Select(reference => reference.Name)
             .Where(name => name!.StartsWith("Microsoft.EntityFrameworkCore", StringComparison.Ordinal))
@@ -89,6 +95,7 @@ public sealed class LayeringTests
             (Architecture.IdentityApplication, Architecture.IdentityInfrastructure),
             (Architecture.ContentApplication, Architecture.ContentInfrastructure),
             (Architecture.AccessApplication, Architecture.AccessInfrastructure),
+            (Architecture.AuditApplication, Architecture.AuditInfrastructure),
         };
 
         foreach (var (application, infrastructure) in pairs)
@@ -161,6 +168,38 @@ public sealed class LayeringTests
     }
 
     [Fact]
+    public void Modules_record_audit_events_without_referencing_the_Audit_module()
+    {
+        // Identity, Content and Access write to IAuditTrail (shared kernel); only the host composes the Audit
+        // module that stores the events, and the Audit module knows none of them.
+        var modules = new[]
+        {
+            Architecture.IdentityDomain, Architecture.IdentityApplication, Architecture.IdentityInfrastructure,
+            Architecture.ContentDomain, Architecture.ContentApplication, Architecture.ContentInfrastructure,
+            Architecture.AccessDomain, Architecture.AccessApplication, Architecture.AccessInfrastructure,
+        };
+
+        var audit = new[] { Architecture.AuditDomain, Architecture.AuditApplication, Architecture.AuditInfrastructure }
+            .Select(assembly => assembly.GetName().Name)
+            .ToArray();
+
+        foreach (var assembly in modules)
+        {
+            assembly.GetReferencedAssemblies().Select(reference => reference.Name).Intersect(audit).ShouldBeEmpty();
+        }
+
+        foreach (var assembly in new[] { Architecture.AuditDomain, Architecture.AuditApplication, Architecture.AuditInfrastructure })
+        {
+            var referenced = assembly.GetReferencedAssemblies().Select(reference => reference.Name).ToArray();
+
+            foreach (var module in modules)
+            {
+                referenced.ShouldNotContain(module.GetName().Name);
+            }
+        }
+    }
+
+    [Fact]
     public void Content_does_not_reference_Identity()
     {
         foreach (var assembly in new[] { Architecture.ContentDomain, Architecture.ContentApplication, Architecture.ContentInfrastructure })
@@ -188,6 +227,8 @@ public sealed class LayeringTests
             Architecture.ContentApplication.GetName().Name,
             Architecture.AccessDomain.GetName().Name,
             Architecture.AccessApplication.GetName().Name,
+            Architecture.AuditDomain.GetName().Name,
+            Architecture.AuditApplication.GetName().Name,
         };
 
         var referenced = Architecture.SharedKernel
@@ -203,7 +244,7 @@ public sealed class LayeringTests
     {
         // Naming rule rather than a reference check: it catches a stray DbContext placed in an Application
         // project even when that project has not yet taken a package reference to make it compile.
-        var offenders = new[] { Architecture.IdentityApplication, Architecture.ContentApplication, Architecture.AccessApplication }
+        var offenders = new[] { Architecture.IdentityApplication, Architecture.ContentApplication, Architecture.AccessApplication, Architecture.AuditApplication }
             .SelectMany(assembly => assembly.GetTypes())
             .Where(type => type.Name.EndsWith("DbContext", StringComparison.Ordinal)
                 || type.Name.EndsWith("Repository", StringComparison.Ordinal))
@@ -219,7 +260,7 @@ public sealed class LayeringTests
         // Every service implementation is internal, so nothing outside its own module can name the concrete
         // type. The only way to obtain one is through the interface the Application layer published, which is
         // what makes the module substitutable and what stops the host taking a shortcut to the concrete type.
-        var implementations = new[] { Architecture.ContentInfrastructure, Architecture.IdentityInfrastructure, Architecture.AccessInfrastructure }
+        var implementations = new[] { Architecture.ContentInfrastructure, Architecture.IdentityInfrastructure, Architecture.AccessInfrastructure, Architecture.AuditInfrastructure }
             .SelectMany(assembly => assembly.GetTypes())
             .Where(type => type.Name.EndsWith("Service", StringComparison.Ordinal))
             .Where(type => type is { IsClass: true, IsAbstract: false })
@@ -242,7 +283,7 @@ public sealed class LayeringTests
     {
         // The host references the Infrastructure projects, so their registration surface is the seam the host
         // actually binds to. One public AddXModule per module keeps that seam discoverable.
-        var entryPoints = new[] { Architecture.ContentInfrastructure, Architecture.IdentityInfrastructure, Architecture.AccessInfrastructure }
+        var entryPoints = new[] { Architecture.ContentInfrastructure, Architecture.IdentityInfrastructure, Architecture.AccessInfrastructure, Architecture.AuditInfrastructure }
             .SelectMany(assembly => assembly.GetTypes())
             .Where(type => type is { IsPublic: true, IsAbstract: true, IsSealed: true })
             .Where(type => type.GetMethods(BindingFlags.Public | BindingFlags.Static)
@@ -265,6 +306,7 @@ public sealed class NamingConventionTests
             Architecture.IdentityInfrastructure.GetName().Name!,
             Architecture.ContentInfrastructure.GetName().Name!,
             Architecture.AccessInfrastructure.GetName().Name!,
+            Architecture.AuditInfrastructure.GetName().Name!,
         };
 
         var owningAssemblies = new[]
@@ -272,6 +314,7 @@ public sealed class NamingConventionTests
                 Architecture.IdentityDomain, Architecture.IdentityApplication, Architecture.IdentityInfrastructure,
                 Architecture.ContentDomain, Architecture.ContentApplication, Architecture.ContentInfrastructure,
                 Architecture.AccessDomain, Architecture.AccessApplication, Architecture.AccessInfrastructure,
+                Architecture.AuditDomain, Architecture.AuditApplication, Architecture.AuditInfrastructure,
                 Architecture.Web,
             }
             .Where(assembly => assembly.GetTypes().Any(type => type.Name.EndsWith("DbContext", StringComparison.Ordinal)))

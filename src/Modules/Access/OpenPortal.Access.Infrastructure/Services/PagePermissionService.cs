@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using OpenPortal.Access.Application.Abstractions;
+using OpenPortal.Access.Application.Auditing;
 using OpenPortal.Access.Application.Contracts;
 using OpenPortal.Access.Domain;
 using OpenPortal.Access.Domain.Grants;
 using OpenPortal.Access.Infrastructure.Persistence;
+using OpenPortal.SharedKernel.Auditing;
 using OpenPortal.SharedKernel.Results;
 using OpenPortal.SharedKernel.Time;
 
@@ -16,13 +18,16 @@ internal sealed class PagePermissionService : IPagePermissionService
     private readonly IPortalPageCatalog _catalog;
     private readonly IAccessAdminAuthorization _authorization;
     private readonly IClock _clock;
+    private readonly IAuditTrail _audit;
 
     public PagePermissionService(
         AccessDbContext db,
         IPortalPageCatalog catalog,
         IAccessAdminAuthorization authorization,
-        IClock clock)
+        IClock clock,
+        IAuditTrail audit)
     {
+        _audit = audit;
         _db = db;
         _catalog = catalog;
         _authorization = authorization;
@@ -79,6 +84,8 @@ internal sealed class PagePermissionService : IPagePermissionService
         _db.PageGrants.Add(grant.Value);
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        await RecordAsync(AccessAuditActions.PageGranted, groupId, AccessAudit.Details(("page", pageKey)), cancellationToken).ConfigureAwait(false);
+
         return Result.Success();
     }
 
@@ -95,6 +102,8 @@ internal sealed class PagePermissionService : IPagePermissionService
         {
             _db.PageGrants.Remove(grant);
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            await RecordAsync(AccessAuditActions.PageRevoked, groupId, AccessAudit.Details(("page", pageKey)), cancellationToken).ConfigureAwait(false);
         }
 
         return Result.Success();
@@ -120,10 +129,13 @@ internal sealed class PagePermissionService : IPagePermissionService
             .ConfigureAwait(false);
 
         // Grants on keys the host no longer declares are left alone: they grant nothing and are not shown.
-        _db.PageGrants.RemoveRange(current.Where(grant => _catalog.IsKnown(grant.PageKey) && !wanted.Contains(grant.PageKey)));
+        var removed = current.Where(grant => _catalog.IsKnown(grant.PageKey) && !wanted.Contains(grant.PageKey)).ToList();
+        _db.PageGrants.RemoveRange(removed);
+
+        var added = wanted.Where(key => current.All(grant => grant.PageKey != key)).Order(StringComparer.Ordinal).ToList();
 
         var now = _clock.UtcNow;
-        foreach (var key in wanted.Where(key => current.All(grant => grant.PageKey != key)))
+        foreach (var key in added)
         {
             var grant = PageGroupGrant.Create(key, groupId, now);
             if (grant.IsFailure)
@@ -134,9 +146,37 @@ internal sealed class PagePermissionService : IPagePermissionService
             _db.PageGrants.Add(grant.Value);
         }
 
+        if (removed.Count == 0 && added.Count == 0)
+        {
+            return Result.Success();
+        }
+
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        await RecordAsync(
+                AccessAuditActions.GroupPagesChanged,
+                groupId,
+                AccessAudit.Details(
+                    ("added", added.Count > 0 ? string.Join(", ", added) : null),
+                    ("removed", removed.Count > 0 ? string.Join(", ", removed.Select(grant => grant.PageKey).Order(StringComparer.Ordinal)) : null)),
+                cancellationToken)
+            .ConfigureAwait(false);
+
         return Result.Success();
+    }
+
+    private async Task RecordAsync(string action, Guid groupId, Dictionary<string, string?> details, CancellationToken cancellationToken)
+    {
+        var name = await _db.Groups
+            .Where(group => group.Id == groupId)
+            .Select(group => group.Name)
+            .SingleOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        await _audit.RecordAsync(
+                AuditEvent.Succeeded(action, new AuditSubject(AuditSubjectTypes.Group, groupId.ToString(), name), details),
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private Task<Result> ValidateAsync(string pageKey, Guid groupId, CancellationToken cancellationToken) =>

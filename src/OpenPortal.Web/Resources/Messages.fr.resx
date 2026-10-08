@@ -618,4 +618,144 @@
   <data name="error.identity.delete_failed" xml:space="preserve"><value>Le compte n&apos;a pas pu être supprimé.</value></data>
   <data name="error.identity.save_failed" xml:space="preserve"><value>Le compte n&apos;a pas pu être enregistré.</value></data>
   <data name="error.identity.role_assignment_failed" xml:space="preserve"><value>Le compte a été créé mais ses rôles n&apos;ont pas pu être attribués ; il a donc été supprimé.</value></data>
+  <data name="nav.security" xml:space="preserve"><value>Sécurité</value></data>
+  <data name="nav.audit" xml:space="preserve"><value>Journal d'audit</value></data>
+  <data name="users.lastSignIn" xml:space="preserve"><value>Dernière connexion</value></data>
+  <data name="users.neverSignedIn" xml:space="preserve"><value>Jamais</value></data>
+  <data name="users.activity" xml:space="preserve"><value>Activité</value></data>
+  <data name="users.status.inactive" xml:space="preserve"><value>Inactifs (plus de 90 jours)</value></data>
+  <data name="audit.title" xml:space="preserve"><value>Journal d'audit</value></data>
+  <data name="audit.description" xml:space="preserve"><value>Qui a fait quoi, sur quoi, d'où et avec quel résultat : connexions, modifications des comptes, des accès et des applications.</value></data>
+  <data name="audit.export" xml:space="preserve"><value>Exporter en CSV</value></data>
+  <data name="audit.entries" xml:space="preserve"><value>Événements</value></data>
+  <data name="audit.subjectFilter" xml:space="preserve"><value>Uniquement les événements concernant {name}</value></data>
+  <data name="audit.subjectClear" xml:space="preserve"><value>Afficher tout le monde</value></data>
+  <data name="audit.subjectHistory" xml:space="preserve"><value>Tous les événements de cet utilisateur</value></data>
+  <data name="audit.searchPlaceholder" xml:space="preserve"><value>Rechercher des personnes, des cibles, des adresses…</value></data>
+  <data name="audit.category.label" xml:space="preserve"><value>Domaine</value></data>
+  <data name="audit.category.auth" xml:space="preserve"><value>Connexion</value></data>
+  <data name="audit.category.account" xml:space="preserve"><value>Compte personnel</value></data>
+  <data name="audit.category.user" xml:space="preserve"><value>Utilisateurs</value></data>
+  <data name="audit.category.group" xml:space="preserve"><value>Groupes</value></data>
+  <data name="audit.category.access" xml:space="preserve"><value>Accès aux applications</value></data>
+  <data name="audit.category.pages" xml:space="preserve"><value>Autorisations de page</value></data>
+  <data name="audit.category.application" xml:space="preserve"><value>Applications</value></data>
+  <data name="audit.category.oidc" xml:space="preserve"><value>Connexions aux applications</value></data>
+  <data name="audit.category.content" xml:space="preserve"><value>Contenu</value></data>
+  <data name="audit.outcome.label" xml:space="preserve"><value>Résultat</value></data>
+  <data name="audit.outcome.success" xml:space="preserve"><value>Réussi</value></data>
+  <data name="audit.outcome.failure" xml:space="preserve"><value>Échoué</value></data>
+  <data name="audit.period.label" xml:space="preserve"><value>Période</value></data>
+  <data name="audit.period.24h" xml:space="preserve"><value>Dernières 24 heures</value></data>
+  <data name="audit.period.7d" xml:space="preserve"><value>7 derniers jours</value></data>
+  <data name="audit.period.30d" xml:space="preserve"><value>30 derniers jours</value></data>
+  <data name="audit.period.90d" xml:space="preserve"><value>90 derniers jours</value></data>
+  <data name="audit.noMatch" xml:space="preserve"><value>Aucun événement ne correspond à ces filtres.</value></data>
+  <data name="audit.caption" xml:space="preserve"><value>Événements d'audit, du plus récent</value></data>
+  <data name="audit.pagination" xml:space="preserve"><value>Pages du journal</value></data>
+  <data name="audit.column.when" xml:space="preserve"><value>Quand</value></data>
+  <data name="audit.column.actor" xml:space="preserve"><value>Qui</value></data>
+  <data name="audit.column.action" xml:space="preserve"><value>Quoi</value></data>
+  <data name="audit.column.target" xml:space="preserve"><value>Sur</value></data>
+  <data name="audit.column.address" xml:space="preserve"><value>Adresse IP</value></data>
+  <data name="audit.anonymous" xml:space="preserve"><value>Anonyme ou système</value></data>
+  <data name="audit.subject.user" xml:space="preserve"><value>Utilisateur</value></data>
+  <data name="audit.subject.application" xml:space="preserve"><value>Application</value></data>
+  <data name="audit.subject.group" xml:space="preserve"><value>Groupe</value></data>
+  <data name="audit.subject.page" xml:space="preserve"><value>Page</value></data>
+  <data name="audit.subject.profile" xml:space="preserve"><value>Profil</value></data>
+  <data name="audit.subject.project" xml:space="preserve"><value>Projet</value></data>
+  <data name="audit.field.code" xml:space="preserve"><value>Code de l'action</value></data>
+  <data name="audit.field.userAgent" xml:space="preserve"><value>Navigateur ou client</value></data>
+  <data name="audit.field.correlationId" xml:space="preserve"><value>Identifiant de requête (traceId)</value></data>
+  <data name="audit.field.details" xml:space="preserve"><value>Détails</value></data>
+  <data name="audit.action.auth.sign_in" xml:space="preserve"><value>Connexion</value></data>
+  <data name="audit.action.auth.sign_out" xml:space="preserve"><value>Déconnexion</value></data>
+  <data name="audit.action.account.profile_updated" xml:space="preserve"><value>Profil personnel modifié</value></data>
+  <data name="audit.action.account.password_changed" xml:space="preserve"><value>Mot de passe personnel changé</value></data>
+  <data name="audit.action.account.avatar_changed" xml:space="preserve"><value>Photo personnelle changée</value></data>
+  <data name="audit.action.account.avatar_removed" xml:space="preserve"><value>Photo personnelle supprimée</value></data>
+  <data name="audit.action.user.created" xml:space="preserve"><value>Compte créé</value></data>
+  <data name="audit.action.user.updated" xml:space="preserve"><value>Compte modifié</value></data>
+  <data name="audit.action.user.administrator_granted" xml:space="preserve"><value>Promu administrateur</value></data>
+  <data name="audit.action.user.administrator_revoked" xml:space="preserve"><value>Retiré des administrateurs</value></data>
+  <data name="audit.action.user.password_reset" xml:space="preserve"><value>Mot de passe réinitialisé</value></data>
+  <data name="audit.action.user.deleted" xml:space="preserve"><value>Compte supprimé</value></data>
+  <data name="audit.action.user.avatar_changed" xml:space="preserve"><value>Photo d'un utilisateur changée</value></data>
+  <data name="audit.action.user.avatar_removed" xml:space="preserve"><value>Photo d'un utilisateur supprimée</value></data>
+  <data name="audit.action.application.created" xml:space="preserve"><value>Application enregistrée</value></data>
+  <data name="audit.action.application.announced" xml:space="preserve"><value>Application annoncée</value></data>
+  <data name="audit.action.application.updated" xml:space="preserve"><value>Application modifiée</value></data>
+  <data name="audit.action.application.roles_changed" xml:space="preserve"><value>Rôles d'une application modifiés</value></data>
+  <data name="audit.action.application.approved" xml:space="preserve"><value>Application approuvée</value></data>
+  <data name="audit.action.application.secret_regenerated" xml:space="preserve"><value>Nouveau secret client émis</value></data>
+  <data name="audit.action.application.manifest_applied" xml:space="preserve"><value>URI de redirection proposés appliqués</value></data>
+  <data name="audit.action.application.disabled" xml:space="preserve"><value>Application désactivée</value></data>
+  <data name="audit.action.application.enabled" xml:space="preserve"><value>Application réactivée</value></data>
+  <data name="audit.action.application.deleted" xml:space="preserve"><value>Application supprimée</value></data>
+  <data name="audit.action.group.created" xml:space="preserve"><value>Groupe créé</value></data>
+  <data name="audit.action.group.updated" xml:space="preserve"><value>Groupe modifié</value></data>
+  <data name="audit.action.group.deleted" xml:space="preserve"><value>Groupe supprimé</value></data>
+  <data name="audit.action.group.member_added" xml:space="preserve"><value>Ajouté à un groupe</value></data>
+  <data name="audit.action.group.member_removed" xml:space="preserve"><value>Retiré d'un groupe</value></data>
+  <data name="audit.action.access.user_granted" xml:space="preserve"><value>Application accordée à un utilisateur</value></data>
+  <data name="audit.action.access.user_revoked" xml:space="preserve"><value>Application retirée à un utilisateur</value></data>
+  <data name="audit.action.access.user_roles_changed" xml:space="preserve"><value>Rôles d'un utilisateur modifiés</value></data>
+  <data name="audit.action.access.group_granted" xml:space="preserve"><value>Application accordée à un groupe</value></data>
+  <data name="audit.action.access.group_revoked" xml:space="preserve"><value>Application retirée à un groupe</value></data>
+  <data name="audit.action.access.group_roles_changed" xml:space="preserve"><value>Rôles d'un groupe modifiés</value></data>
+  <data name="audit.action.pages.granted" xml:space="preserve"><value>Page accordée à un groupe</value></data>
+  <data name="audit.action.pages.revoked" xml:space="preserve"><value>Page retirée à un groupe</value></data>
+  <data name="audit.action.pages.group_pages_changed" xml:space="preserve"><value>Pages d'un groupe modifiées</value></data>
+  <data name="audit.action.oidc.sign_in" xml:space="preserve"><value>Connexion à une application</value></data>
+  <data name="audit.action.oidc.token_refused" xml:space="preserve"><value>Session de l'application refusée</value></data>
+  <data name="audit.action.content.profile_updated" xml:space="preserve"><value>Profil du site modifié</value></data>
+  <data name="audit.action.content.project_created" xml:space="preserve"><value>Projet créé</value></data>
+  <data name="audit.action.content.project_updated" xml:space="preserve"><value>Projet modifié</value></data>
+  <data name="audit.action.content.project_published" xml:space="preserve"><value>Projet publié</value></data>
+  <data name="audit.action.content.project_unpublished" xml:space="preserve"><value>Projet dépublié</value></data>
+  <data name="audit.action.content.project_deleted" xml:space="preserve"><value>Projet supprimé</value></data>
+  <data name="applications.tab.general" xml:space="preserve"><value>Général</value></data>
+  <data name="applications.tab.roles" xml:space="preserve"><value>Rôles et claims</value></data>
+  <data name="applications.roles.title" xml:space="preserve"><value>Rôles</value></data>
+  <data name="applications.roles.hint" xml:space="preserve"><value>Les rôles que cette application vérifie. Attribuez-les à des groupes ou des utilisateurs sur la page Accès ; l'application les reçoit comme claims role (scope « roles »). Une application qui utilise OpenPortal.Client peut les déclarer elle-même.</value></data>
+  <data name="applications.roles.empty" xml:space="preserve"><value>Aucun rôle pour l'instant.</value></data>
+  <data name="applications.roles.key" xml:space="preserve"><value>Clé</value></data>
+  <data name="applications.roles.keyLocked" xml:space="preserve"><value>La clé d'un rôle enregistré ne peut pas changer : l'application la vérifie.</value></data>
+  <data name="applications.roles.name" xml:space="preserve"><value>Nom</value></data>
+  <data name="applications.roles.description" xml:space="preserve"><value>Description (facultative)</value></data>
+  <data name="applications.roles.remove" xml:space="preserve"><value>Supprimer le rôle</value></data>
+  <data name="applications.roles.add" xml:space="preserve"><value>Ajouter un rôle</value></data>
+  <data name="applications.roles.removeHint" xml:space="preserve"><value>Supprimer un rôle le retire aussi de tous les groupes et utilisateurs qui l'avaient.</value></data>
+  <data name="applications.roles.tooMany" xml:space="preserve"><value>Au maximum {max} rôles.</value></data>
+  <data name="applications.roles.keyInvalid" xml:space="preserve"><value>Les clés de rôle utilisent des minuscules, des chiffres, - _ . : et commencent par une lettre ou un chiffre (64 caractères au maximum).</value></data>
+  <data name="applications.roles.nameMax" xml:space="preserve"><value>Les noms de rôle font au maximum {max} caractères.</value></data>
+  <data name="applications.roles.descriptionMax" xml:space="preserve"><value>Les descriptions de rôle font au maximum {max} caractères.</value></data>
+  <data name="applications.roles.keyDuplicate" xml:space="preserve"><value>Deux rôles ont la même clé.</value></data>
+  <data name="applications.groupClaims.title" xml:space="preserve"><value>Groupes dans les jetons</value></data>
+  <data name="applications.groupClaims.hint" xml:space="preserve"><value>Quels groupes de l'utilisateur l'application reçoit comme claims groups (scope « groups »).</value></data>
+  <data name="applications.groupClaims.none" xml:space="preserve"><value>Aucun</value></data>
+  <data name="applications.groupClaims.noneHint" xml:space="preserve"><value>Les noms de groupe restent dans le portail.</value></data>
+  <data name="applications.groupClaims.granted" xml:space="preserve"><value>Groupes ayant accès à cette application</value></data>
+  <data name="applications.groupClaims.grantedHint" xml:space="preserve"><value>Uniquement les groupes de l'utilisateur par lesquels il peut l'ouvrir.</value></data>
+  <data name="applications.groupClaims.all" xml:space="preserve"><value>Tous les groupes de l'utilisateur</value></data>
+  <data name="applications.groupClaims.allHint" xml:space="preserve"><value>Pour les applications qui associent les groupes du portail à leurs propres équipes.</value></data>
+  <data name="access.roles.title" xml:space="preserve"><value>Rôles dans l'application</value></data>
+  <data name="access.roles.hint" xml:space="preserve"><value>Les rôles de {name} dans cette application. L'application voit le changement au prochain renouvellement du jeton.</value></data>
+  <data name="access.roles.grantHint" xml:space="preserve"><value>Facultatif : les rôles qui accompagnent cet accès.</value></data>
+  <data name="access.roles.edit" xml:space="preserve"><value>Rôles</value></data>
+  <data name="access.roles.editNamed" xml:space="preserve"><value>Rôles de {name}</value></data>
+  <data name="access.roles.none" xml:space="preserve"><value>Aucun rôle</value></data>
+  <data name="access.user.roles" xml:space="preserve"><value>Rôles :</value></data>
+  <data name="error.audit.read_forbidden" xml:space="preserve"><value>La lecture du journal d'audit nécessite un compte administrateur ou la page d'audit.</value></data>
+  <data name="error.access.role_key_required" xml:space="preserve"><value>Chaque rôle a besoin d'une clé.</value></data>
+  <data name="error.access.role_key_invalid" xml:space="preserve"><value>Une clé de rôle ne peut contenir que des minuscules, des chiffres, des tirets, des tirets bas, des points et des deux-points, doit commencer par une lettre ou un chiffre et faire au maximum 64 caractères.</value></data>
+  <data name="error.access.role_key_duplicate" xml:space="preserve"><value>Deux rôles ont la même clé.</value></data>
+  <data name="error.access.role_name_too_long" xml:space="preserve"><value>Le nom d'un rôle ne doit pas dépasser 80 caractères.</value></data>
+  <data name="error.access.role_description_too_long" xml:space="preserve"><value>La description d'un rôle ne doit pas dépasser 300 caractères.</value></data>
+  <data name="error.access.too_many_roles" xml:space="preserve"><value>Une application peut définir au maximum 50 rôles.</value></data>
+  <data name="error.access.role_not_found" xml:space="preserve"><value>L'application ne définit pas l'un des rôles indiqués.</value></data>
+  <data name="error.access.group_claims_invalid" xml:space="preserve"><value>Le réglage des groupes dans les jetons doit être none, granted ou all.</value></data>
+  <data name="audit.pageOf_one" xml:space="preserve"><value>Page {page} sur {total} ({count} événement)</value></data>
+  <data name="audit.pageOf_other" xml:space="preserve"><value>Page {page} sur {total} ({count} événements)</value></data>
 </root>
