@@ -25,6 +25,9 @@ export const userAdminApi = {
   resetPassword: (userId: string, newPassword: string) =>
     api.post<void>(`/api/admin/users/${userId}/reset-password`, { newPassword }),
 
+  /** Turns two-factor off for an account that lost its authenticator; its sessions end. */
+  resetTwoFactor: (userId: string) => api.delete<void>(`/api/admin/users/${userId}/two-factor`),
+
   uploadAvatar: (userId: string, image: Blob) => api.put<void>(`/api/admin/users/${userId}/avatar`, avatarForm(image)),
 
   removeAvatar: (userId: string) => api.delete<void>(`/api/admin/users/${userId}/avatar`),

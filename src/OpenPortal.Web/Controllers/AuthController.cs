@@ -81,6 +81,32 @@ public sealed class AuthController : ControllerBase
             : Ok(SessionDto.AnonymousFor(_authentication.PasswordPolicy));
     }
 
+    /// <summary>
+    /// Completes a sign-in that <c>login</c> answered with <c>identity.two_factor_required</c>, using a code
+    /// from the authenticator app or a recovery code.
+    /// </summary>
+    [HttpPost("login/two-factor")]
+    [EnableRateLimiting(RateLimitPolicies.SignIn)]
+    [ProducesResponseType<SessionDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<SessionDto>> LoginWithTwoFactorAsync(
+        [FromBody] TwoFactorLoginRequest request,
+        CancellationToken cancellationToken)
+    {
+        var signedIn = await _authentication.SignInWithTwoFactorAsync(request, cancellationToken).ConfigureAwait(false);
+        if (signedIn.IsFailure)
+        {
+            return ProblemResults.FromResult(HttpContext, signedIn);
+        }
+
+        var session = await _authentication.GetSessionAsync(cancellationToken).ConfigureAwait(false);
+
+        return session.IsSuccess
+            ? Ok(session.Value)
+            : Ok(SessionDto.AnonymousFor(_authentication.PasswordPolicy));
+    }
+
     /// <summary>Terminates the session and clears its cookie.</summary>
     [HttpPost("logout")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

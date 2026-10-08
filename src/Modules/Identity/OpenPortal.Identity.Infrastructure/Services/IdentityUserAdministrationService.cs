@@ -319,6 +319,44 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         return Result.Success();
     }
 
+    public async Task<Result> ResetTwoFactorAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var guard = await _guard.EnsureCanAsync(UserAdministrationOperation.ManageUsers, cancellationToken).ConfigureAwait(false);
+        if (guard.IsFailure)
+        {
+            return guard;
+        }
+
+        var lookup = await _userLookup.FindAsync(userId, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
+        {
+            return Result.Failure(lookup.Error);
+        }
+
+        var changeable = await _guard.EnsureMayChangeAsync(lookup.Value).ConfigureAwait(false);
+        if (changeable.IsFailure)
+        {
+            return changeable;
+        }
+
+        // Nothing to undo: no stamp rotation (which would end the user's sessions) and no audit entry.
+        if (!lookup.Value.TwoFactorEnabled)
+        {
+            return Result.Success();
+        }
+
+        var cleared = await TwoFactorEnrolment.ClearAsync(_userManager, lookup.Value).ConfigureAwait(false);
+        if (cleared.IsFailure)
+        {
+            return cleared;
+        }
+
+        await _audit.RecordAsync(AuditEvent.Succeeded(IdentityAuditActions.TwoFactorReset, lookup.Value.ToAuditSubject()), cancellationToken)
+            .ConfigureAwait(false);
+
+        return Result.Success();
+    }
+
     public async Task<Result> DeleteUserAsync(Guid userId, CancellationToken cancellationToken)
     {
         var guard = await _guard.EnsureCanAsync(UserAdministrationOperation.ManageUsers, cancellationToken).ConfigureAwait(false);
@@ -436,5 +474,6 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         PostalCode: user.PostalCode,
         Country: user.Country,
         AvatarUpdatedAtUtc: user.AvatarUpdatedAtUtc,
-        LastSignInAtUtc: user.LastSignInAtUtc);
+        LastSignInAtUtc: user.LastSignInAtUtc,
+        TwoFactorEnabled: user.TwoFactorEnabled);
 }

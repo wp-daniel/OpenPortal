@@ -22,6 +22,27 @@ public static class UserErrors
     public static Error TwoFactorRequired { get; } =
         Error.Unauthorized(Prefix + "two_factor_required", "The account requires an additional verification step.");
 
+    public static Error TwoFactorCodeInvalid { get; } =
+        Error.Unauthorized(Prefix + "two_factor_code_invalid", "The verification code is not valid.");
+
+    public static Error TwoFactorSessionExpired { get; } =
+        Error.Unauthorized(Prefix + "two_factor_session_expired", "The sign-in attempt expired. Enter your email and password again.");
+
+    public static Error TwoFactorSetupCodeInvalid { get; } =
+        Error.Validation(Prefix + "two_factor_setup_code_invalid", "The code does not match the authenticator app. Check the time on the phone and try again.");
+
+    public static Error TwoFactorUnavailable { get; } =
+        Error.Conflict(Prefix + "two_factor_unavailable", "Two-factor authentication is turned off for this portal.");
+
+    public static Error TwoFactorAlreadyEnabled { get; } =
+        Error.Conflict(Prefix + "two_factor_already_enabled", "Two-factor authentication is already on for this account.");
+
+    public static Error TwoFactorNotEnabled { get; } =
+        Error.Conflict(Prefix + "two_factor_not_enabled", "Two-factor authentication is not on for this account.");
+
+    public static Error TwoFactorIssuerInvalid { get; } =
+        Error.Validation(Prefix + "two_factor_issuer_invalid", "The name shown in authenticator apps must be 1 to 64 characters and contain no colon.");
+
     public static Error NotAuthenticated { get; } =
         Error.Unauthorized(Prefix + "not_authenticated", "No authenticated session was found.");
 

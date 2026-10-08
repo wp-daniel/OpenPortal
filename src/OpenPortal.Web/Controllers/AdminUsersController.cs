@@ -120,6 +120,21 @@ public sealed class AdminUsersController : ControllerBase
             : ProblemResults.FromResult(HttpContext, reset);
     }
 
+    /// <summary>Turns two-factor authentication off for an account that lost its authenticator, ending its sessions.</summary>
+    [RequirePortalPage(PortalPages.Users)]
+    [HttpDelete("{userId:guid}/two-factor")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ResetTwoFactorAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var reset = await _users.ResetTwoFactorAsync(userId, cancellationToken).ConfigureAwait(false);
+
+        return reset.IsSuccess
+            ? NoContent()
+            : ProblemResults.FromResult(HttpContext, reset);
+    }
+
     /// <summary>
     /// Deletes an account, then what the Access module holds about it (group memberships, direct grants and
     /// tokens). Nobody can delete themselves; only an administrator can delete an administrator.

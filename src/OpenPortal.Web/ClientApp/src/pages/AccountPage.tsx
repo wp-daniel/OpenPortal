@@ -10,6 +10,7 @@ import { FormField } from '@/components/FormField'
 import { PageHeader } from '@/components/PageHeader'
 import { Section } from '@/components/Section'
 import { LoadingState } from '@/components/StatePanels'
+import { TwoFactorSection } from '@/components/TwoFactorSection'
 import { UserDetailsFields } from '@/components/UserDetailsFields'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -92,8 +93,9 @@ export function AccountPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="security" className="pt-4">
+        <TabsContent value="security" className="space-y-6 pt-4">
           <PasswordForm policy={session.passwordPolicy} />
+          <TwoFactorSection />
         </TabsContent>
 
         <TabsContent value="details" className="pt-4">

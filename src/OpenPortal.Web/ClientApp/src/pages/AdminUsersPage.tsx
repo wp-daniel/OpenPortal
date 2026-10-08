@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { History, KeyRound, Loader2, Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react'
+import { History, KeyRound, Loader2, Pencil, Plus, ShieldCheck, ShieldOff, Smartphone, Trash2 } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { z } from 'zod'
@@ -75,6 +75,7 @@ export function AdminUsersPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<UserSummary | null>(null)
   const [deleting, setDeleting] = useState<UserSummary | null>(null)
+  const [resettingTwoFactor, setResettingTwoFactor] = useState<UserSummary | null>(null)
   const queryClient = useQueryClient()
   const refreshAccess = useAccessRefresh()
   // Only an administrator may grant the administrator role or change an administrator (the server enforces it).
@@ -103,6 +104,15 @@ export function AdminUsersPage() {
       setDeleting(null)
       notify.success(t('users.deleted'), user.email)
       await Promise.all([refresh(), refreshAccess()])
+    },
+  })
+
+  const resetTwoFactor = useMutation({
+    mutationFn: (user: UserSummary) => userAdminApi.resetTwoFactor(user.id),
+    onSuccess: async (_result, user) => {
+      setResettingTwoFactor(null)
+      notify.success(t('users.twoFactorReset.done'), user.email)
+      await refresh()
     },
   })
 
@@ -232,13 +242,21 @@ export function AdminUsersPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {user.isLockedOut ? (
-                          <Badge variant="warning">{t('users.lockedOut')}</Badge>
-                        ) : user.emailConfirmed ? (
-                          <Badge variant="success">{t('users.active')}</Badge>
-                        ) : (
-                          <Badge variant="warning">{t('users.unconfirmed')}</Badge>
-                        )}
+                        <div className="flex flex-wrap gap-1">
+                          {user.isLockedOut ? (
+                            <Badge variant="warning">{t('users.lockedOut')}</Badge>
+                          ) : user.emailConfirmed ? (
+                            <Badge variant="success">{t('users.active')}</Badge>
+                          ) : (
+                            <Badge variant="warning">{t('users.unconfirmed')}</Badge>
+                          )}
+                          {user.twoFactorEnabled && (
+                            <Badge variant="outline" title={t('users.twoFactorOn')}>
+                              <Smartphone />
+                              {t('users.twoFactorBadge')}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         {user.lastSignInAtUtc ? (
@@ -275,6 +293,18 @@ export function AdminUsersPage() {
                               >
                                 <History />
                               </Link>
+                            </Button>
+                          )}
+                          {user.twoFactorEnabled && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              aria-label={t('users.twoFactorReset.open')}
+                              disabled={locked}
+                              title={locked ? t('users.administratorOnly') : t('users.twoFactorReset.open')}
+                              onClick={() => setResettingTwoFactor(user)}
+                            >
+                              <ShieldOff />
                             </Button>
                           )}
                           <Button
@@ -323,6 +353,32 @@ export function AdminUsersPage() {
       />
 
       <UserAccessSheet user={accessUser} onClose={() => setAccessUser(null)} />
+
+      <AlertDialog open={resettingTwoFactor !== null} onOpenChange={(open) => !open && setResettingTwoFactor(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('users.twoFactorReset.title', { name: resettingTwoFactor?.displayName ?? '' })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>{t('users.twoFactorReset.description')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={resetTwoFactor.isPending}
+              onClick={(event) => {
+                event.preventDefault()
+                if (resettingTwoFactor) {
+                  resetTwoFactor.mutate(resettingTwoFactor)
+                }
+              }}
+            >
+              {t('users.twoFactorReset.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={deleting !== null} onOpenChange={(open) => !open && setDeleting(null)}>
         <AlertDialogContent>

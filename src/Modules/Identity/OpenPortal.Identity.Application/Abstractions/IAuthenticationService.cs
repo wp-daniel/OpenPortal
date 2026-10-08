@@ -22,6 +22,13 @@ public interface IAuthenticationService
     /// </returns>
     Task<Result> SignInAsync(LoginRequest request, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Completes a sign-in that <see cref="SignInAsync"/> answered with <c>identity.two_factor_required</c>,
+    /// using an authenticator code or a recovery code. The pending attempt lives in a short-lived cookie set by
+    /// the first step; once it has expired the caller starts again with the password.
+    /// </summary>
+    Task<Result> SignInWithTwoFactorAsync(TwoFactorLoginRequest request, CancellationToken cancellationToken);
+
     /// <summary>Terminates the current session and clears its authentication cookie.</summary>
     Task SignOutAsync(CancellationToken cancellationToken);
 

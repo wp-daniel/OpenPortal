@@ -20,6 +20,13 @@ public static class IdentityAuditActions
 
     public const string OwnAvatarRemoved = "account.avatar_removed";
 
+    public const string TwoFactorEnabled = "account.two_factor_enabled";
+
+    /// <summary>A failure is a wrong password.</summary>
+    public const string TwoFactorDisabled = "account.two_factor_disabled";
+
+    public const string RecoveryCodesGenerated = "account.recovery_codes_generated";
+
     public const string UserCreated = "user.created";
 
     public const string UserUpdated = "user.updated";
@@ -35,6 +42,19 @@ public static class IdentityAuditActions
     public const string AvatarChanged = "user.avatar_changed";
 
     public const string AvatarRemoved = "user.avatar_removed";
+
+    /// <summary>An administrator turned two-factor authentication off for an account (a lost phone).</summary>
+    public const string TwoFactorReset = "user.two_factor_reset";
+
+    /// <summary>The portal's security settings changed. Details carry the new values.</summary>
+    public const string SecuritySettingsUpdated = "settings.security_updated";
+}
+
+/// <summary>Values of the <c>method</c> detail on a sign-in that needed a second factor.</summary>
+public static class SignInMethods
+{
+    public const string Authenticator = "authenticator";
+    public const string RecoveryCode = "recovery_code";
 }
 
 /// <summary>Values of the <c>reason</c> detail on a failed sign-in.</summary>
@@ -44,5 +64,5 @@ public static class SignInFailureReasons
     public const string InvalidPassword = "invalid_password";
     public const string LockedOut = "locked_out";
     public const string NotAllowed = "not_allowed";
-    public const string TwoFactorRequired = "two_factor_required";
+    public const string InvalidCode = "invalid_code";
 }

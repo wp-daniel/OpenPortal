@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using OpenPortal.Identity.Domain.Settings;
 using OpenPortal.Identity.Domain.Users;
 
 namespace OpenPortal.Identity.Infrastructure.Persistence;
@@ -25,6 +26,8 @@ public sealed class IdentityDbContext : IdentityDbContext<ApplicationUser, Ident
 
     public DbSet<UserAvatar> UserAvatars => Set<UserAvatar>();
 
+    public DbSet<SecuritySettings> SecuritySettings => Set<SecuritySettings>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -33,6 +36,7 @@ public sealed class IdentityDbContext : IdentityDbContext<ApplicationUser, Ident
 
         builder.ApplyConfiguration(new ApplicationUserConfiguration());
         builder.ApplyConfiguration(new UserAvatarConfiguration());
+        builder.ApplyConfiguration(new SecuritySettingsConfiguration());
 
         builder.Entity<IdentityRole<Guid>>().ToTable("Roles");
         builder.Entity<IdentityUserRole<Guid>>().ToTable("UserRoles");

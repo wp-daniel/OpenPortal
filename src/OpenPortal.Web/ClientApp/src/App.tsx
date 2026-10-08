@@ -15,6 +15,7 @@ import { AccountPage } from '@/pages/AccountPage'
 import { AdminAccessPage } from '@/pages/AdminAccessPage'
 import { AdminApplicationsPage } from '@/pages/AdminApplicationsPage'
 import { AdminAuditPage } from '@/pages/AdminAuditPage'
+import { AdminSettingsPage } from '@/pages/AdminSettingsPage'
 import { AdminGroupsPage } from '@/pages/AdminGroupsPage'
 import { AdminPagePermissionsPage } from '@/pages/AdminPagePermissionsPage'
 import { AdminUsersPage } from '@/pages/AdminUsersPage'
@@ -123,7 +124,11 @@ const router = createBrowserRouter([
                   },
                   {
                     handle: crumbs({ labelKey: 'nav.security' }),
-                    children: [{ path: 'admin/audit', element: <AdminAuditPage />, handle: page('audit', { labelKey: 'nav.audit' }) }],
+                    children: [
+                      { path: 'admin/audit', element: <AdminAuditPage />, handle: page('audit', { labelKey: 'nav.audit' }) },
+                      // No page: portal settings are for administrators only.
+                      { path: 'admin/settings', element: <AdminSettingsPage />, handle: crumbs({ labelKey: 'nav.settings' }) },
+                    ],
                   },
                   {
                     handle: crumbs({ labelKey: 'nav.content' }),

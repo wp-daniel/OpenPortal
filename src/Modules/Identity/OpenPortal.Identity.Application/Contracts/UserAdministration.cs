@@ -23,7 +23,8 @@ public sealed record UserSummaryDto(
     string? PostalCode,
     string? Country,
     DateTimeOffset? AvatarUpdatedAtUtc,
-    DateTimeOffset? LastSignInAtUtc);
+    DateTimeOffset? LastSignInAtUtc,
+    bool TwoFactorEnabled);
 
 /// <summary>Filter and paging parameters for the administration user list.</summary>
 public sealed class UserListQuery

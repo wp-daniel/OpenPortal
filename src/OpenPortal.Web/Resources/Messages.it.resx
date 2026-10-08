@@ -758,4 +758,98 @@
   <data name="error.access.group_claims_invalid" xml:space="preserve"><value>L'impostazione dei gruppi nei token deve essere none, granted o all.</value></data>
   <data name="audit.pageOf_one" xml:space="preserve"><value>Pagina {page} di {total} ({count} evento)</value></data>
   <data name="audit.pageOf_other" xml:space="preserve"><value>Pagina {page} di {total} ({count} eventi)</value></data>
+  <data name="nav.settings" xml:space="preserve"><value>Impostazioni portale</value></data>
+  <data name="signIn.twoFactor.title" xml:space="preserve"><value>Verifica in due passaggi</value></data>
+  <data name="signIn.twoFactor.description" xml:space="preserve"><value>Inserisci il codice di 6 cifre dell’app di autenticazione.</value></data>
+  <data name="signIn.twoFactor.recoveryDescription" xml:space="preserve"><value>Inserisci uno dei codici di recupero salvati quando hai configurato l’app. Ogni codice vale una volta sola.</value></data>
+  <data name="signIn.twoFactor.codeLabel" xml:space="preserve"><value>Codice di verifica</value></data>
+  <data name="signIn.twoFactor.recoveryLabel" xml:space="preserve"><value>Codice di recupero</value></data>
+  <data name="signIn.twoFactor.rememberBrowser" xml:space="preserve"><value>Non chiedere più su questo browser</value></data>
+  <data name="signIn.twoFactor.verify" xml:space="preserve"><value>Verifica</value></data>
+  <data name="signIn.twoFactor.verifying" xml:space="preserve"><value>Verifica in corso…</value></data>
+  <data name="signIn.twoFactor.back" xml:space="preserve"><value>Indietro</value></data>
+  <data name="signIn.twoFactor.useApp" xml:space="preserve"><value>Usa l’app di autenticazione</value></data>
+  <data name="signIn.twoFactor.useRecovery" xml:space="preserve"><value>Usa un codice di recupero</value></data>
+  <data name="signIn.twoFactor.invalid" xml:space="preserve"><value>Codice non valido. Controlla l’ora del telefono e riprova.</value></data>
+  <data name="signIn.twoFactor.recoveryInvalid" xml:space="preserve"><value>Codice di recupero non valido o già usato.</value></data>
+  <data name="signIn.twoFactor.required" xml:space="preserve"><value>Inserisci tutte le 6 cifre.</value></data>
+  <data name="signIn.twoFactor.recoveryRequired" xml:space="preserve"><value>Inserisci un codice di recupero.</value></data>
+  <data name="signIn.twoFactor.expired" xml:space="preserve"><value>L’accesso ha richiesto troppo tempo. Inserisci di nuovo email e password.</value></data>
+  <data name="twoFactor.title" xml:space="preserve"><value>Autenticazione a due fattori</value></data>
+  <data name="twoFactor.description" xml:space="preserve"><value>All’accesso viene chiesto anche un codice da un’app di autenticazione sul telefono (Google Authenticator, Microsoft Authenticator, 1Password, …).</value></data>
+  <data name="twoFactor.on" xml:space="preserve"><value>Attiva</value></data>
+  <data name="twoFactor.off" xml:space="preserve"><value>Non attiva</value></data>
+  <data name="twoFactor.suspendedTitle" xml:space="preserve"><value>Disattivata per il portale</value></data>
+  <data name="twoFactor.suspendedDescription" xml:space="preserve"><value>Un amministratore ha disattivato l’autenticazione a due fattori, quindi per ora l’accesso non chiede il codice. L’app resta configurata e verrà richiesta di nuovo quando sarà riattivata.</value></data>
+  <data name="twoFactor.codesLeft_one" xml:space="preserve"><value>{count} codice di recupero rimasto</value></data>
+  <data name="twoFactor.codesLeft_other" xml:space="preserve"><value>{count} codici di recupero rimasti</value></data>
+  <data name="twoFactor.regenerate" xml:space="preserve"><value>Nuovi codici di recupero</value></data>
+  <data name="twoFactor.disable" xml:space="preserve"><value>Disattiva</value></data>
+  <data name="twoFactor.setUp" xml:space="preserve"><value>Configura app di autenticazione</value></data>
+  <data name="twoFactor.setupTitle" xml:space="preserve"><value>Configura l’app di autenticazione</value></data>
+  <data name="twoFactor.setupDescription" xml:space="preserve"><value>Tre passaggi; non serve installare altro.</value></data>
+  <data name="twoFactor.step.install" xml:space="preserve"><value>Installa un’app di autenticazione sul telefono, se non ne hai già una.</value></data>
+  <data name="twoFactor.step.scan" xml:space="preserve"><value>Inquadra il codice QR con l’app (oppure digita la chiave qui sotto).</value></data>
+  <data name="twoFactor.step.code" xml:space="preserve"><value>Inserisci il codice di 6 cifre mostrato dall’app.</value></data>
+  <data name="twoFactor.qrLabel" xml:space="preserve"><value>Codice QR per l’app di autenticazione</value></data>
+  <data name="twoFactor.keyHint" xml:space="preserve"><value>Non riesci a inquadrarlo? Digita questa chiave nell’app:</value></data>
+  <data name="twoFactor.keyLabel" xml:space="preserve"><value>Chiave di configurazione</value></data>
+  <data name="twoFactor.copyKey" xml:space="preserve"><value>Copia la chiave</value></data>
+  <data name="twoFactor.keyCopied" xml:space="preserve"><value>Chiave copiata</value></data>
+  <data name="twoFactor.copyFailed" xml:space="preserve"><value>Copia non riuscita; seleziona il testo e copialo a mano.</value></data>
+  <data name="twoFactor.activate" xml:space="preserve"><value>Attiva</value></data>
+  <data name="twoFactor.enabled" xml:space="preserve"><value>Autenticazione a due fattori attivata</value></data>
+  <data name="twoFactor.enableFailed" xml:space="preserve"><value>Impossibile attivare l’autenticazione a due fattori</value></data>
+  <data name="twoFactor.setupInvalid" xml:space="preserve"><value>Il codice non corrisponde. Controlla l’ora del telefono e prova il codice successivo.</value></data>
+  <data name="twoFactor.codesTitle" xml:space="preserve"><value>I tuoi codici di recupero</value></data>
+  <data name="twoFactor.codesDescription" xml:space="preserve"><value>Usane uno per accedere se perdi il telefono. Ogni codice vale una volta sola.</value></data>
+  <data name="twoFactor.codesOnceTitle" xml:space="preserve"><value>Salvali adesso</value></data>
+  <data name="twoFactor.codesOnceDescription" xml:space="preserve"><value>Vengono mostrati solo questa volta. Conservali in un posto sicuro, per esempio un gestore di password.</value></data>
+  <data name="twoFactor.copyCodes" xml:space="preserve"><value>Copia</value></data>
+  <data name="twoFactor.codesCopied" xml:space="preserve"><value>Codici di recupero copiati</value></data>
+  <data name="twoFactor.downloadCodes" xml:space="preserve"><value>Scarica</value></data>
+  <data name="twoFactor.done" xml:space="preserve"><value>Li ho salvati</value></data>
+  <data name="twoFactor.disableTitle" xml:space="preserve"><value>Disattivare l’autenticazione a due fattori?</value></data>
+  <data name="twoFactor.disableDescription" xml:space="preserve"><value>L’accesso chiederà solo la password. L’app e i codici di recupero smettono di funzionare; puoi riconfigurarla quando vuoi.</value></data>
+  <data name="twoFactor.regenerateTitle" xml:space="preserve"><value>Creare nuovi codici di recupero?</value></data>
+  <data name="twoFactor.regenerateDescription" xml:space="preserve"><value>I codici attuali smettono di funzionare e ne vengono mostrati dieci nuovi.</value></data>
+  <data name="twoFactor.disabled" xml:space="preserve"><value>Autenticazione a due fattori disattivata</value></data>
+  <data name="twoFactor.passwordIncorrect" xml:space="preserve"><value>La password non è corretta.</value></data>
+  <data name="twoFactor.actionFailed" xml:space="preserve"><value>Impossibile completare l’operazione</value></data>
+  <data name="settings.title" xml:space="preserve"><value>Impostazioni portale</value></data>
+  <data name="settings.description" xml:space="preserve"><value>Impostazioni valide per tutto il portale. Solo gli amministratori possono modificarle.</value></data>
+  <data name="settings.security" xml:space="preserve"><value>Sicurezza dell’accesso</value></data>
+  <data name="settings.securityDescription" xml:space="preserve"><value>Come le persone dimostrano chi sono quando accedono al portale e alle applicazioni che lo usano.</value></data>
+  <data name="settings.twoFactor" xml:space="preserve"><value>Autenticazione a due fattori (app di autenticazione)</value></data>
+  <data name="settings.twoFactorDescription" xml:space="preserve"><value>Ogni utente può aggiungere un’app di autenticazione dalla pagina Account; all’accesso verrà chiesto anche il suo codice. Nessuna configurazione fuori dal portale. Disattivandola i codici non vengono più chiesti, ma le configurazioni degli utenti restano.</value></data>
+  <data name="settings.issuer" xml:space="preserve"><value>Nome mostrato nelle app di autenticazione</value></data>
+  <data name="settings.issuerHint" xml:space="preserve"><value>Compare accanto all’email dell’utente nell’app. Vale per le app configurate da ora in poi.</value></data>
+  <data name="settings.issuerRequired" xml:space="preserve"><value>Inserisci un nome.</value></data>
+  <data name="settings.issuerInvalid" xml:space="preserve"><value>Usa al massimo 64 caratteri, senza due punti.</value></data>
+  <data name="settings.saved" xml:space="preserve"><value>Impostazioni salvate</value></data>
+  <data name="settings.saveFailed" xml:space="preserve"><value>Impossibile salvare le impostazioni</value></data>
+  <data name="users.twoFactorBadge" xml:space="preserve"><value>2FA</value></data>
+  <data name="users.twoFactorOn" xml:space="preserve"><value>Accede con un’app di autenticazione</value></data>
+  <data name="users.twoFactorReset.open" xml:space="preserve"><value>Reimposta autenticazione a due fattori</value></data>
+  <data name="users.twoFactorReset.title" xml:space="preserve"><value>Reimpostare l’autenticazione a due fattori di {name}?</value></data>
+  <data name="users.twoFactorReset.description" xml:space="preserve"><value>Da usare quando l’utente ha perso il telefono. App e codici di recupero smettono di funzionare, l’utente viene disconnesso ovunque e potrà accedere con la password e riconfigurare l’app.</value></data>
+  <data name="users.twoFactorReset.confirm" xml:space="preserve"><value>Reimposta</value></data>
+  <data name="users.twoFactorReset.done" xml:space="preserve"><value>Autenticazione a due fattori reimpostata</value></data>
+  <data name="error.identity.two_factor_code_invalid" xml:space="preserve"><value>Il codice di verifica non è valido.</value></data>
+  <data name="error.identity.two_factor_session_expired" xml:space="preserve"><value>Il tentativo di accesso è scaduto. Inserisci di nuovo email e password.</value></data>
+  <data name="error.identity.two_factor_setup_code_invalid" xml:space="preserve"><value>Il codice non corrisponde all’app di autenticazione. Controlla l’ora del telefono e riprova.</value></data>
+  <data name="error.identity.two_factor_unavailable" xml:space="preserve"><value>L’autenticazione a due fattori è disattivata per questo portale.</value></data>
+  <data name="error.identity.two_factor_already_enabled" xml:space="preserve"><value>L’autenticazione a due fattori è già attiva per questo account.</value></data>
+  <data name="error.identity.two_factor_not_enabled" xml:space="preserve"><value>L’autenticazione a due fattori non è attiva per questo account.</value></data>
+  <data name="error.identity.two_factor_issuer_invalid" xml:space="preserve"><value>Il nome mostrato nelle app di autenticazione deve avere da 1 a 64 caratteri, senza due punti.</value></data>
+  <data name="validation.twoFactorCode.required" xml:space="preserve"><value>Il codice di verifica è obbligatorio.</value></data>
+  <data name="validation.twoFactorCode.max" xml:space="preserve"><value>Il codice di verifica è troppo lungo.</value></data>
+  <data name="validation.twoFactorIssuer.required" xml:space="preserve"><value>Il nome per le app di autenticazione è obbligatorio.</value></data>
+  <data name="validation.twoFactorIssuer.max" xml:space="preserve"><value>Il nome per le app di autenticazione non può superare 64 caratteri.</value></data>
+  <data name="audit.action.account.two_factor_enabled" xml:space="preserve"><value>Ha attivato l’autenticazione a due fattori</value></data>
+  <data name="audit.action.account.two_factor_disabled" xml:space="preserve"><value>Ha disattivato l’autenticazione a due fattori</value></data>
+  <data name="audit.action.account.recovery_codes_generated" xml:space="preserve"><value>Ha creato nuovi codici di recupero</value></data>
+  <data name="audit.action.user.two_factor_reset" xml:space="preserve"><value>Ha reimpostato l’autenticazione a due fattori</value></data>
+  <data name="audit.action.settings.security_updated" xml:space="preserve"><value>Ha modificato le impostazioni di sicurezza dell’accesso</value></data>
+  <data name="audit.category.settings" xml:space="preserve"><value>Impostazioni portale</value></data>
 </root>

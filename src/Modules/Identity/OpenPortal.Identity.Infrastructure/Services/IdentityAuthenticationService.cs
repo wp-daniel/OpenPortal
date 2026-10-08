@@ -116,24 +116,78 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
             .PasswordSignInAsync(user, request.Password, isPersistent: request.RememberMe, lockoutOnFailure: true)
             .ConfigureAwait(false);
 
-        var actor = user.ToAuditSubject();
+        // The password was right but the second step is still to come: that step records the outcome, so a
+        // correct password is not logged as a failed sign-in.
+        if (signIn.RequiresTwoFactor)
+        {
+            return Result.Failure(UserErrors.TwoFactorRequired);
+        }
 
         if (!signIn.Succeeded)
         {
-            await RecordSignInAsync(actor, FailureReason(signIn), cancellationToken).ConfigureAwait(false);
+            await RecordSignInAsync(user.ToAuditSubject(), FailureReason(signIn), cancellationToken).ConfigureAwait(false);
 
             return Result.Failure(DescribeFailure(signIn));
         }
 
+        await CompleteSignInAsync(user, method: null, cancellationToken).ConfigureAwait(false);
+
+        return Result.Success();
+    }
+
+    public async Task<Result> SignInWithTwoFactorAsync(TwoFactorLoginRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Read from the short-lived cookie the password step wrote; gone once it expires.
+        var user = await _signInManager.GetTwoFactorAuthenticationUserAsync().ConfigureAwait(false);
+        if (user is null)
+        {
+            return Result.Failure(UserErrors.TwoFactorSessionExpired);
+        }
+
+        // Recovery codes keep their dash ("XXXXX-XXXXX", upper case); app codes are digits however they were typed.
+        var code = request.UseRecoveryCode
+            ? request.Code.Replace(" ", string.Empty, StringComparison.Ordinal).ToUpperInvariant()
+            : IdentityTwoFactorService.NormaliseCode(request.Code);
+
+        // Both count a wrong code as a failed attempt, so guessing codes runs into the same lockout as guessing
+        // passwords. A recovery code is consumed by a successful use. Neither overload accepts a token.
+        var signIn = request.UseRecoveryCode
+            ? await _signInManager.TwoFactorRecoveryCodeSignInAsync(code).ConfigureAwait(false)
+            : await _signInManager
+                .TwoFactorAuthenticatorSignInAsync(code, request.RememberMe, request.RememberBrowser)
+                .ConfigureAwait(false);
+
+        var method = request.UseRecoveryCode ? SignInMethods.RecoveryCode : SignInMethods.Authenticator;
+
+        if (!signIn.Succeeded)
+        {
+            await RecordSignInAsync(
+                    user.ToAuditSubject(),
+                    signIn.IsLockedOut ? SignInFailureReasons.LockedOut : SignInFailureReasons.InvalidCode,
+                    cancellationToken,
+                    method)
+                .ConfigureAwait(false);
+
+            return Result.Failure(signIn.IsLockedOut ? UserErrors.AccountLockedOut : UserErrors.TwoFactorCodeInvalid);
+        }
+
+        await CompleteSignInAsync(user, method, cancellationToken).ConfigureAwait(false);
+
+        return Result.Success();
+    }
+
+    private async Task CompleteSignInAsync(ApplicationUser user, string? method, CancellationToken cancellationToken)
+    {
         user.RecordSignIn(_clock.UtcNow);
 
         // The session is established either way; a missed timestamp only makes the account look idler than
         // it is, which is not worth failing a sign-in over.
         await _userManager.UpdateAsync(user).ConfigureAwait(false);
 
-        await RecordSignInAsync(actor, failureReason: null, cancellationToken).ConfigureAwait(false);
-
-        return Result.Success();
+        await RecordSignInAsync(user.ToAuditSubject(), failureReason: null, cancellationToken, method).ConfigureAwait(false);
     }
 
     public async Task SignOutAsync(CancellationToken cancellationToken)
@@ -184,8 +238,26 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
             PasswordPolicy: PasswordPolicy));
     }
 
-    private Task RecordSignInAsync(AuditSubject actor, string? failureReason, CancellationToken cancellationToken) =>
-        _audit.RecordAsync(
+    private Task RecordSignInAsync(
+        AuditSubject actor,
+        string? failureReason,
+        CancellationToken cancellationToken,
+        string? method = null)
+    {
+        var details = new Dictionary<string, string?>();
+
+        if (failureReason is not null)
+        {
+            details["reason"] = failureReason;
+        }
+
+        // Only present when a second factor was asked for, so the log shows which sign-ins used one.
+        if (method is not null)
+        {
+            details["method"] = method;
+        }
+
+        return _audit.RecordAsync(
             new AuditEvent
             {
                 Action = IdentityAuditActions.SignIn,
@@ -193,15 +265,15 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
 
                 // The caller is not signed in yet (or not any more), so the account is named explicitly.
                 Actor = actor,
-                Details = failureReason is null ? null : new Dictionary<string, string?> { ["reason"] = failureReason },
+                Details = details.Count == 0 ? null : details,
             },
             cancellationToken);
+    }
 
     private static string FailureReason(SignInResult signIn) => signIn switch
     {
         { IsLockedOut: true } => SignInFailureReasons.LockedOut,
         { IsNotAllowed: true } => SignInFailureReasons.NotAllowed,
-        { RequiresTwoFactor: true } => SignInFailureReasons.TwoFactorRequired,
         _ => SignInFailureReasons.InvalidPassword,
     };
 
@@ -209,7 +281,6 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
     {
         { IsLockedOut: true } => UserErrors.AccountLockedOut,
         { IsNotAllowed: true } => UserErrors.AccountNotAllowed,
-        { RequiresTwoFactor: true } => UserErrors.TwoFactorRequired,
         _ => UserErrors.InvalidCredentials,
     };
 }

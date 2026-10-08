@@ -46,6 +46,12 @@ public interface IUserAdministrationService
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Turns two-factor authentication off for an account whose owner lost their authenticator, discarding the
+    /// key and recovery codes. Rotates the security stamp, so the account's sessions end.
+    /// </summary>
+    Task<Result> ResetTwoFactorAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Deletes an account. Nobody can delete themselves, and only an administrator can delete an
     /// administrator. What other modules hold about the user (groups, grants) is the host's to remove.
     /// </summary>

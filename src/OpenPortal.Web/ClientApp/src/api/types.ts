@@ -115,6 +115,8 @@ export interface UserSummary extends UserDetails {
   readonly avatarUpdatedAtUtc: string | null
   /** The last portal sign-in with a password; null if the account never signed in. */
   readonly lastSignInAtUtc: string | null
+  /** Whether the account has an authenticator app enrolled. */
+  readonly twoFactorEnabled: boolean
 }
 
 export interface PagedResult<T> {
@@ -441,4 +443,45 @@ export interface AuditFilter {
   readonly subject?: string
   readonly from?: string
   readonly to?: string
+}
+
+// ---------------------------------------------------------------------------
+// Two-factor authentication (authenticator app) and the portal's security settings.
+// ---------------------------------------------------------------------------
+
+export interface TwoFactorStatus {
+  /** Whether the portal offers two-factor authentication (an administrator's setting). */
+  readonly available: boolean
+  /** Whether this account has an authenticator app enrolled. */
+  readonly enabled: boolean
+  readonly recoveryCodesLeft: number
+}
+
+export interface TwoFactorSetup {
+  /** The key in groups of four, for typing into the app. */
+  readonly sharedKey: string
+  /** The same key as an otpauth URI, rendered as a QR code. */
+  readonly authenticatorUri: string
+}
+
+export interface RecoveryCodes {
+  readonly codes: readonly string[]
+}
+
+export interface TwoFactorLoginRequest {
+  readonly code: string
+  readonly useRecoveryCode: boolean
+  readonly rememberMe: boolean
+  readonly rememberBrowser: boolean
+}
+
+export interface SecuritySettings {
+  readonly twoFactorEnabled: boolean
+  readonly twoFactorIssuer: string
+  readonly updatedAtUtc: string | null
+}
+
+export interface UpdateSecuritySettingsRequest {
+  readonly twoFactorEnabled: boolean
+  readonly twoFactorIssuer: string
 }

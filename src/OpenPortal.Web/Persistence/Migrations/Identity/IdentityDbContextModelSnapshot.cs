@@ -147,6 +147,27 @@ namespace OpenPortal.Web.Persistence.Migrations.Identity
                     b.ToTable("UserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Settings.SecuritySettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("TwoFactorEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TwoFactorIssuer")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("UpdatedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SecuritySettings", (string)null);
+                });
+
             modelBuilder.Entity("OpenPortal.Identity.Domain.Users.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")

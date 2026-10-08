@@ -23,10 +23,79 @@ namespace OpenPortal.Web.Controllers;
 public sealed class AccountController : ControllerBase
 {
     private readonly IAccountService _account;
+    private readonly ITwoFactorService _twoFactor;
 
-    public AccountController(IAccountService account)
+    public AccountController(IAccountService account, ITwoFactorService twoFactor)
     {
         _account = account;
+        _twoFactor = twoFactor;
+    }
+
+    /// <summary>Whether the portal offers two-factor authentication and whether this account uses it.</summary>
+    [HttpGet("two-factor")]
+    [ProducesResponseType<TwoFactorStatusDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<TwoFactorStatusDto>> GetTwoFactorAsync(CancellationToken cancellationToken)
+    {
+        var status = await _twoFactor.GetStatusAsync(cancellationToken).ConfigureAwait(false);
+
+        return status.IsSuccess ? Ok(status.Value) : ProblemResults.FromResult(HttpContext, status);
+    }
+
+    /// <summary>Returns the key (and otpauth URI for the QR code) to add to an authenticator app.</summary>
+    [HttpPost("two-factor/setup")]
+    [ProducesResponseType<TwoFactorSetupDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<TwoFactorSetupDto>> BeginTwoFactorSetupAsync(CancellationToken cancellationToken)
+    {
+        var setup = await _twoFactor.BeginSetupAsync(cancellationToken).ConfigureAwait(false);
+
+        return setup.IsSuccess ? Ok(setup.Value) : ProblemResults.FromResult(HttpContext, setup);
+    }
+
+    /// <summary>Turns two-factor on with a code from the app; the response holds the recovery codes, shown once.</summary>
+    [HttpPost("two-factor/enable")]
+    [EnableRateLimiting(RateLimitPolicies.SignIn)]
+    [ProducesResponseType<RecoveryCodesDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<RecoveryCodesDto>> EnableTwoFactorAsync(
+        [FromBody] EnableTwoFactorRequest request,
+        CancellationToken cancellationToken)
+    {
+        var enabled = await _twoFactor.EnableAsync(request, cancellationToken).ConfigureAwait(false);
+
+        return enabled.IsSuccess ? Ok(enabled.Value) : ProblemResults.FromResult(HttpContext, enabled);
+    }
+
+    /// <summary>Turns two-factor off after checking the password.</summary>
+    [HttpPost("two-factor/disable")]
+    [EnableRateLimiting(RateLimitPolicies.SignIn)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DisableTwoFactorAsync(
+        [FromBody] TwoFactorPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var disabled = await _twoFactor.DisableAsync(request, cancellationToken).ConfigureAwait(false);
+
+        return disabled.IsSuccess ? NoContent() : ProblemResults.FromResult(HttpContext, disabled);
+    }
+
+    /// <summary>Replaces every recovery code after checking the password.</summary>
+    [HttpPost("two-factor/recovery-codes")]
+    [EnableRateLimiting(RateLimitPolicies.SignIn)]
+    [ProducesResponseType<RecoveryCodesDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<RecoveryCodesDto>> RegenerateRecoveryCodesAsync(
+        [FromBody] TwoFactorPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var codes = await _twoFactor.RegenerateRecoveryCodesAsync(request, cancellationToken).ConfigureAwait(false);
+
+        return codes.IsSuccess ? Ok(codes.Value) : ProblemResults.FromResult(HttpContext, codes);
     }
 
     /// <summary>Returns the signed-in account's profile.</summary>

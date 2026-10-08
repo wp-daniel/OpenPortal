@@ -758,4 +758,98 @@
   <data name="error.access.group_claims_invalid" xml:space="preserve"><value>The groups claim setting must be none, granted or all.</value></data>
   <data name="audit.pageOf_one" xml:space="preserve"><value>Page {page} of {total} ({count} event)</value></data>
   <data name="audit.pageOf_other" xml:space="preserve"><value>Page {page} of {total} ({count} events)</value></data>
+  <data name="nav.settings" xml:space="preserve"><value>Portal settings</value></data>
+  <data name="signIn.twoFactor.title" xml:space="preserve"><value>Two-step verification</value></data>
+  <data name="signIn.twoFactor.description" xml:space="preserve"><value>Enter the 6-digit code from your authenticator app.</value></data>
+  <data name="signIn.twoFactor.recoveryDescription" xml:space="preserve"><value>Enter one of the recovery codes you saved when you set up the app. Each code works once.</value></data>
+  <data name="signIn.twoFactor.codeLabel" xml:space="preserve"><value>Verification code</value></data>
+  <data name="signIn.twoFactor.recoveryLabel" xml:space="preserve"><value>Recovery code</value></data>
+  <data name="signIn.twoFactor.rememberBrowser" xml:space="preserve"><value>Don’t ask again on this browser</value></data>
+  <data name="signIn.twoFactor.verify" xml:space="preserve"><value>Verify</value></data>
+  <data name="signIn.twoFactor.verifying" xml:space="preserve"><value>Verifying…</value></data>
+  <data name="signIn.twoFactor.back" xml:space="preserve"><value>Back</value></data>
+  <data name="signIn.twoFactor.useApp" xml:space="preserve"><value>Use the authenticator app</value></data>
+  <data name="signIn.twoFactor.useRecovery" xml:space="preserve"><value>Use a recovery code</value></data>
+  <data name="signIn.twoFactor.invalid" xml:space="preserve"><value>That code is not valid. Check the time on your phone and try again.</value></data>
+  <data name="signIn.twoFactor.recoveryInvalid" xml:space="preserve"><value>That recovery code is not valid or was already used.</value></data>
+  <data name="signIn.twoFactor.required" xml:space="preserve"><value>Enter all 6 digits.</value></data>
+  <data name="signIn.twoFactor.recoveryRequired" xml:space="preserve"><value>Enter a recovery code.</value></data>
+  <data name="signIn.twoFactor.expired" xml:space="preserve"><value>The sign-in took too long. Enter your email and password again.</value></data>
+  <data name="twoFactor.title" xml:space="preserve"><value>Two-factor authentication</value></data>
+  <data name="twoFactor.description" xml:space="preserve"><value>Sign-in also asks for a code from an authenticator app on your phone (Google Authenticator, Microsoft Authenticator, 1Password, …).</value></data>
+  <data name="twoFactor.on" xml:space="preserve"><value>On</value></data>
+  <data name="twoFactor.off" xml:space="preserve"><value>Off</value></data>
+  <data name="twoFactor.suspendedTitle" xml:space="preserve"><value>Turned off for the portal</value></data>
+  <data name="twoFactor.suspendedDescription" xml:space="preserve"><value>An administrator turned two-factor authentication off, so sign-in does not ask for your code for now. Your app stays set up and will be asked for again when it is turned back on.</value></data>
+  <data name="twoFactor.codesLeft_one" xml:space="preserve"><value>{count} recovery code left</value></data>
+  <data name="twoFactor.codesLeft_other" xml:space="preserve"><value>{count} recovery codes left</value></data>
+  <data name="twoFactor.regenerate" xml:space="preserve"><value>New recovery codes</value></data>
+  <data name="twoFactor.disable" xml:space="preserve"><value>Turn off</value></data>
+  <data name="twoFactor.setUp" xml:space="preserve"><value>Set up authenticator app</value></data>
+  <data name="twoFactor.setupTitle" xml:space="preserve"><value>Set up your authenticator app</value></data>
+  <data name="twoFactor.setupDescription" xml:space="preserve"><value>Three steps; nothing else to install on the portal.</value></data>
+  <data name="twoFactor.step.install" xml:space="preserve"><value>Install an authenticator app on your phone, if you don’t have one yet.</value></data>
+  <data name="twoFactor.step.scan" xml:space="preserve"><value>Scan the QR code with the app (or type the key below).</value></data>
+  <data name="twoFactor.step.code" xml:space="preserve"><value>Enter the 6-digit code the app shows.</value></data>
+  <data name="twoFactor.qrLabel" xml:space="preserve"><value>QR code for the authenticator app</value></data>
+  <data name="twoFactor.keyHint" xml:space="preserve"><value>Can’t scan? Type this key into the app:</value></data>
+  <data name="twoFactor.keyLabel" xml:space="preserve"><value>Setup key</value></data>
+  <data name="twoFactor.copyKey" xml:space="preserve"><value>Copy the key</value></data>
+  <data name="twoFactor.keyCopied" xml:space="preserve"><value>Key copied</value></data>
+  <data name="twoFactor.copyFailed" xml:space="preserve"><value>Could not copy; select the text and copy it by hand.</value></data>
+  <data name="twoFactor.activate" xml:space="preserve"><value>Turn on</value></data>
+  <data name="twoFactor.enabled" xml:space="preserve"><value>Two-factor authentication is on</value></data>
+  <data name="twoFactor.enableFailed" xml:space="preserve"><value>Two-factor authentication could not be turned on</value></data>
+  <data name="twoFactor.setupInvalid" xml:space="preserve"><value>The code doesn’t match. Check the time on your phone and try the next code.</value></data>
+  <data name="twoFactor.codesTitle" xml:space="preserve"><value>Your recovery codes</value></data>
+  <data name="twoFactor.codesDescription" xml:space="preserve"><value>Use one of these to sign in if you lose your phone. Each code works once.</value></data>
+  <data name="twoFactor.codesOnceTitle" xml:space="preserve"><value>Save them now</value></data>
+  <data name="twoFactor.codesOnceDescription" xml:space="preserve"><value>They are shown only this once. Keep them somewhere safe, such as a password manager.</value></data>
+  <data name="twoFactor.copyCodes" xml:space="preserve"><value>Copy</value></data>
+  <data name="twoFactor.codesCopied" xml:space="preserve"><value>Recovery codes copied</value></data>
+  <data name="twoFactor.downloadCodes" xml:space="preserve"><value>Download</value></data>
+  <data name="twoFactor.done" xml:space="preserve"><value>I saved them</value></data>
+  <data name="twoFactor.disableTitle" xml:space="preserve"><value>Turn off two-factor authentication?</value></data>
+  <data name="twoFactor.disableDescription" xml:space="preserve"><value>Sign-in will ask for your password only. The app and the recovery codes stop working; you can set it up again at any time.</value></data>
+  <data name="twoFactor.regenerateTitle" xml:space="preserve"><value>Create new recovery codes?</value></data>
+  <data name="twoFactor.regenerateDescription" xml:space="preserve"><value>Your current recovery codes stop working and ten new ones are shown.</value></data>
+  <data name="twoFactor.disabled" xml:space="preserve"><value>Two-factor authentication is off</value></data>
+  <data name="twoFactor.passwordIncorrect" xml:space="preserve"><value>The password is not correct.</value></data>
+  <data name="twoFactor.actionFailed" xml:space="preserve"><value>The change could not be made</value></data>
+  <data name="settings.title" xml:space="preserve"><value>Portal settings</value></data>
+  <data name="settings.description" xml:space="preserve"><value>Settings that apply to the whole portal. Only administrators can change them.</value></data>
+  <data name="settings.security" xml:space="preserve"><value>Sign-in security</value></data>
+  <data name="settings.securityDescription" xml:space="preserve"><value>How people prove who they are when they sign in to the portal and to the applications that use it.</value></data>
+  <data name="settings.twoFactor" xml:space="preserve"><value>Two-factor authentication (authenticator app)</value></data>
+  <data name="settings.twoFactorDescription" xml:space="preserve"><value>Lets each user add an authenticator app from their account page; sign-in then also asks for its code. Nothing to configure outside the portal. Turning it off stops asking for codes but keeps every user’s setup.</value></data>
+  <data name="settings.issuer" xml:space="preserve"><value>Name shown in authenticator apps</value></data>
+  <data name="settings.issuerHint" xml:space="preserve"><value>Shown next to the user’s email in the app. Applies to apps set up from now on.</value></data>
+  <data name="settings.issuerRequired" xml:space="preserve"><value>Enter a name.</value></data>
+  <data name="settings.issuerInvalid" xml:space="preserve"><value>Use at most 64 characters and no colon.</value></data>
+  <data name="settings.saved" xml:space="preserve"><value>Settings saved</value></data>
+  <data name="settings.saveFailed" xml:space="preserve"><value>The settings could not be saved</value></data>
+  <data name="users.twoFactorBadge" xml:space="preserve"><value>2FA</value></data>
+  <data name="users.twoFactorOn" xml:space="preserve"><value>Signs in with an authenticator app</value></data>
+  <data name="users.twoFactorReset.open" xml:space="preserve"><value>Reset two-factor authentication</value></data>
+  <data name="users.twoFactorReset.title" xml:space="preserve"><value>Reset two-factor authentication for {name}?</value></data>
+  <data name="users.twoFactorReset.description" xml:space="preserve"><value>Use this when the user lost their phone. Their authenticator app and recovery codes stop working, they are signed out everywhere and can sign in with their password, then set up the app again.</value></data>
+  <data name="users.twoFactorReset.confirm" xml:space="preserve"><value>Reset</value></data>
+  <data name="users.twoFactorReset.done" xml:space="preserve"><value>Two-factor authentication reset</value></data>
+  <data name="error.identity.two_factor_code_invalid" xml:space="preserve"><value>The verification code is not valid.</value></data>
+  <data name="error.identity.two_factor_session_expired" xml:space="preserve"><value>The sign-in attempt expired. Enter your email and password again.</value></data>
+  <data name="error.identity.two_factor_setup_code_invalid" xml:space="preserve"><value>The code does not match the authenticator app. Check the time on the phone and try again.</value></data>
+  <data name="error.identity.two_factor_unavailable" xml:space="preserve"><value>Two-factor authentication is turned off for this portal.</value></data>
+  <data name="error.identity.two_factor_already_enabled" xml:space="preserve"><value>Two-factor authentication is already on for this account.</value></data>
+  <data name="error.identity.two_factor_not_enabled" xml:space="preserve"><value>Two-factor authentication is not on for this account.</value></data>
+  <data name="error.identity.two_factor_issuer_invalid" xml:space="preserve"><value>The name shown in authenticator apps must be 1 to 64 characters and contain no colon.</value></data>
+  <data name="validation.twoFactorCode.required" xml:space="preserve"><value>A verification code is required.</value></data>
+  <data name="validation.twoFactorCode.max" xml:space="preserve"><value>The verification code is too long.</value></data>
+  <data name="validation.twoFactorIssuer.required" xml:space="preserve"><value>A name for authenticator apps is required.</value></data>
+  <data name="validation.twoFactorIssuer.max" xml:space="preserve"><value>The name for authenticator apps must not exceed 64 characters.</value></data>
+  <data name="audit.action.account.two_factor_enabled" xml:space="preserve"><value>Turned on two-factor authentication</value></data>
+  <data name="audit.action.account.two_factor_disabled" xml:space="preserve"><value>Turned off two-factor authentication</value></data>
+  <data name="audit.action.account.recovery_codes_generated" xml:space="preserve"><value>Created new recovery codes</value></data>
+  <data name="audit.action.user.two_factor_reset" xml:space="preserve"><value>Reset two-factor authentication</value></data>
+  <data name="audit.action.settings.security_updated" xml:space="preserve"><value>Changed sign-in security settings</value></data>
+  <data name="audit.category.settings" xml:space="preserve"><value>Portal settings</value></data>
 </root>

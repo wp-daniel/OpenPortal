@@ -60,6 +60,9 @@ public static class IdentityModuleServiceCollectionExtensions
         services.AddScoped<IUserAdministrationService, IdentityUserAdministrationService>();
         services.AddScoped<IUserLookupService, IdentityUserLookupService>();
         services.AddScoped<IUserAvatarService, IdentityUserAvatarService>();
+        services.AddScoped<ITwoFactorService, IdentityTwoFactorService>();
+        services.AddScoped<ISecuritySettingsService, IdentitySecuritySettingsService>();
+        services.AddScoped<SecuritySettingsStore>();
         services.AddScoped<IdentityDataSeeder>();
 
         services.TryAddSingleton<IClock, SystemClock>();
@@ -68,7 +71,10 @@ public static class IdentityModuleServiceCollectionExtensions
             .AddIdentityCore<ApplicationUser>()
             .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<IdentityDbContext>()
-            .AddSignInManager()
+            // Asks for the second factor only while the portal's security setting has it on.
+            .AddSignInManager<PortalSignInManager>()
+
+            // Includes the authenticator (TOTP) provider: keys live in the user store, nothing external.
             .AddDefaultTokenProviders();
 
         // Registered after AddIdentityCore so these values take precedence over its defaults.
@@ -95,8 +101,8 @@ public static class IdentityModuleServiceCollectionExtensions
 
         // StoreOptions.ProtectPersonalData is deliberately left off. Turning it on makes the user store
         // require IPersonalDataProtector, whose implementation depends on ILookupProtectorKeyRing - a type
-        // with no public implementation or registration extension. The protection it adds covers the
-        // security stamp inside authenticator-app and email-change tokens, neither of which this host uses.
+        // with no public implementation or registration extension. Authenticator keys and recovery codes are
+        // therefore stored as the framework writes them, in the UserTokens table.
 
         identity.Password.RequiredLength = module.Password.RequiredLength;
         identity.Password.RequiredUniqueChars = module.Password.RequiredUniqueChars;

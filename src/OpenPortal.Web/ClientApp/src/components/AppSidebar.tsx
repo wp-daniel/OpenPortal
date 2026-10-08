@@ -93,7 +93,10 @@ const adminBranches: readonly NavBranch[] = [
   {
     labelKey: 'nav.security',
     icon: History,
-    children: [{ to: '/admin/audit', labelKey: 'nav.audit', page: 'audit' }],
+    children: [
+      { to: '/admin/audit', labelKey: 'nav.audit', page: 'audit' },
+      { to: '/admin/settings', labelKey: 'nav.settings' },
+    ],
   },
   {
     labelKey: 'nav.content',

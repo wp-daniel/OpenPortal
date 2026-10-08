@@ -29,6 +29,8 @@ These end up in the files the portal serves to browsers (`wwwroot`).
 | [flag-icons](https://github.com/lipis/flag-icons) (country flag SVGs, served by the portal itself) | MIT | © 2013 Panayiotis Lipiridis |
 | [Radix UI](https://www.radix-ui.com) (`radix-ui`) | MIT | © 2022 WorkOS |
 | [cmdk](https://cmdk.paco.me) | MIT | © 2022 Paco Coursey |
+| [input-otp](https://input-otp.rodz.dev) (the code boxes of shadcn's `InputOTP`) | MIT | © 2024 Guilherme Rodz |
+| [qrcode.react](https://github.com/zpao/qrcode.react) (two-factor setup QR code, drawn in the browser) | ISC | © 2015 Paul O’Shannessy |
 | [Sonner](https://sonner.emilkowal.ski) | MIT | © 2023 Emil Kowalski |
 | [Lucide](https://lucide.dev) (`lucide-react`) | ISC | © 2026 Lucide Icons and Contributors (some icons derived from Feather, © 2013-present Cole Bemis, MIT) |
 | [class-variance-authority](https://cva.style) | Apache-2.0 | © 2022 Joe Bell |
