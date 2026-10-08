@@ -28,7 +28,7 @@ jobs:
       run:
         working-directory: src/OpenPortal.Web/ClientApp
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -42,7 +42,7 @@ jobs:
     name: .NET (build, tests on SQLite, migrations)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
@@ -93,7 +93,7 @@ jobs:
     env:
       OPENPORTAL_TEST_POSTGRES: Host=localhost;Port=5432;Username=postgres;Password=postgres
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
