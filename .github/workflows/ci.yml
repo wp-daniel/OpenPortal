@@ -68,7 +68,7 @@ jobs:
               --startup-project src/OpenPortal.Web --context "$context" --configuration Release --no-build \
               -- --Database:Provider=PostgreSql "--ConnectionStrings:OpenPortal=Host=localhost;Database=design;Username=design;Password=design"
           done
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: test-results-sqlite
@@ -102,7 +102,7 @@ jobs:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
       - run: dotnet test tests/OpenPortal.Tests.Integration --configuration Release --logger "trx;LogFileName=integration-postgres.trx"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: test-results-postgres
