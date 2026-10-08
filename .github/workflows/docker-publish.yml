@@ -1,10 +1,13 @@
 name: Publish image
 
-# Publishes the image to GitHub Container Registry for a version tag (v1.2.3), as ghcr.io/<owner>/openportal
-# with the version, major.minor and latest tags. Nothing is published for ordinary pushes.
+# Publishes the image to GitHub Container Registry as ghcr.io/<owner>/openportal.
+#
+# Manual only for now (Actions tab, "Run workflow", choosing a version tag such as v1.2.3): no push or tag
+# builds or publishes an image. To publish on every version tag again, add under "on:"
+#   push:
+#     tags: ['v*.*.*']
 on:
-  push:
-    tags: ['v*.*.*']
+  workflow_dispatch:
 
 permissions:
   contents: read

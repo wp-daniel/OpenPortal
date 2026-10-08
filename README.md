@@ -157,8 +157,9 @@ OPENPORTAL_TEST_POSTGRES="Host=localhost;Username=postgres;Password=postgres" do
 ```
 
 CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs the client checks, every suite on SQLite, the
-integration suite on PostgreSQL, a check that the migrations of both providers match the model, and builds and
-starts the Docker image.
+integration suite on PostgreSQL, and a check that the migrations of both providers match the model. The Docker
+image is not built by CI for now; [`docker-publish.yml`](.github/workflows/docker-publish.yml) builds and publishes
+it when run by hand.
 
 ## Publishing
 
