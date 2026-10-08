@@ -28,7 +28,7 @@ jobs:
       run:
         working-directory: src/OpenPortal.Web/ClientApp
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -42,7 +42,7 @@ jobs:
     name: .NET (build, tests on SQLite, migrations)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
@@ -68,7 +68,7 @@ jobs:
               --startup-project src/OpenPortal.Web --context "$context" --configuration Release --no-build \
               -- --Database:Provider=PostgreSql "--ConnectionStrings:OpenPortal=Host=localhost;Database=design;Username=design;Password=design"
           done
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results-sqlite
@@ -93,7 +93,7 @@ jobs:
     env:
       OPENPORTAL_TEST_POSTGRES: Host=localhost;Port=5432;Username=postgres;Password=postgres
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
@@ -102,7 +102,7 @@ jobs:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
       - run: dotnet test tests/OpenPortal.Tests.Integration --configuration Release --logger "trx;LogFileName=integration-postgres.trx"
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results-postgres
