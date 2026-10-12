@@ -106,6 +106,12 @@ public sealed class PortalApplication
     public GroupClaimMode GroupClaims { get; private set; }
 
     /// <summary>
+    /// The application API scopes (<see cref="ApplicationApiScopes"/>) its backend may request with client
+    /// credentials. Empty, the default, means the application cannot obtain a token of its own.
+    /// </summary>
+    public IReadOnlyList<string> ApiScopes { get; private set; } = [];
+
+    /// <summary>
     /// True when the application has proposed redirect URIs that differ from the ones in force, so an
     /// administrator should review them.
     /// </summary>
@@ -308,6 +314,48 @@ public sealed class PortalApplication
             UpdatedAtUtc = now;
         }
     }
+
+    /// <summary>
+    /// Chooses what the application's backend may do with a token of its own. Creating users implies managing
+    /// access, because an account the application created is useless to it until it is granted.
+    /// </summary>
+    public Result SetApiScopes(IEnumerable<string>? scopes, DateTimeOffset now)
+    {
+        var wanted = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var scope in scopes ?? [])
+        {
+            var normalised = TextRules.Normalise(scope)?.ToLowerInvariant();
+            if (normalised is null)
+            {
+                continue;
+            }
+
+            if (!ApplicationApiScopes.IsKnown(normalised))
+            {
+                return Result.Failure(AccessErrors.ApiScopeInvalid);
+            }
+
+            wanted.Add(normalised);
+        }
+
+        if (wanted.Contains(ApplicationApiScopes.UsersCreate) && !wanted.Contains(ApplicationApiScopes.AccessManage))
+        {
+            return Result.Failure(AccessErrors.ApiScopeRequiresAccessManage);
+        }
+
+        var ordered = ApplicationApiScopes.All.Where(wanted.Contains).ToList();
+        if (!ordered.SequenceEqual(ApiScopes, StringComparer.Ordinal))
+        {
+            ApiScopes = ordered;
+            UpdatedAtUtc = now;
+        }
+
+        return Result.Success();
+    }
+
+    public bool HasApiScope(string? scope) =>
+        scope is not null && ApiScopes.Contains(scope, StringComparer.Ordinal);
 
     public bool HasRole(string? key) =>
         key is not null && _roles.Any(role => string.Equals(role.Key, key, StringComparison.Ordinal));

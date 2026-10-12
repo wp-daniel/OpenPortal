@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace OpenPortal.Access.Application.Contracts;
 
 // ---------------------------------------------------------------------------
@@ -12,6 +14,7 @@ namespace OpenPortal.Access.Application.Contracts;
 /// <param name="GroupCount">Groups granted access.</param>
 /// <param name="Roles">The roles the application understands.</param>
 /// <param name="GroupClaims"><c>none</c>, <c>granted</c> or <c>all</c>: which groups reach the application in its tokens.</param>
+/// <param name="ApiScopes">Application API scopes its backend may request with client credentials; empty for none.</param>
 public sealed record ApplicationDto(
     Guid Id,
     string ClientId,
@@ -32,7 +35,8 @@ public sealed record ApplicationDto(
     int UserCount,
     int GroupCount,
     IReadOnlyList<ApplicationRoleDto> Roles,
-    string GroupClaims);
+    string GroupClaims,
+    IReadOnlyList<string> ApiScopes);
 
 /// <summary>A role an application understands. The key is what reaches the application in the <c>role</c> claim.</summary>
 public sealed record ApplicationRoleDto(string Key, string? DisplayName, string? Description);
@@ -54,6 +58,7 @@ public sealed record ApplicationSecretDto(ApplicationDto Application, string Cli
 /// <summary>Field set for registering an application by hand.</summary>
 /// <param name="Roles">The roles the application understands; none when absent.</param>
 /// <param name="GroupClaims"><c>none</c> (the default), <c>granted</c> or <c>all</c>.</param>
+/// <param name="ApiScopes">Application API scopes for the application's backend; none when absent.</param>
 public sealed record CreateApplicationRequest(
     string ClientId,
     string DisplayName,
@@ -62,7 +67,8 @@ public sealed record CreateApplicationRequest(
     IReadOnlyList<string>? RedirectUris,
     IReadOnlyList<string>? PostLogoutRedirectUris,
     IReadOnlyList<ApplicationRoleDto>? Roles = null,
-    string? GroupClaims = null);
+    string? GroupClaims = null,
+    IReadOnlyList<string>? ApiScopes = null);
 
 /// <summary>Field set for editing an application. The client id cannot change.</summary>
 /// <param name="Roles">
@@ -70,6 +76,7 @@ public sealed record CreateApplicationRequest(
 /// roles as they are.
 /// </param>
 /// <param name="GroupClaims"><c>none</c>, <c>granted</c> or <c>all</c>; absent leaves it as it is.</param>
+/// <param name="ApiScopes">The complete list of application API scopes; absent (null) leaves them as they are.</param>
 public sealed record UpdateApplicationRequest(
     string DisplayName,
     string? Description,
@@ -77,7 +84,8 @@ public sealed record UpdateApplicationRequest(
     IReadOnlyList<string>? RedirectUris,
     IReadOnlyList<string>? PostLogoutRedirectUris,
     IReadOnlyList<ApplicationRoleDto>? Roles = null,
-    string? GroupClaims = null);
+    string? GroupClaims = null,
+    IReadOnlyList<string>? ApiScopes = null);
 
 /// <summary>What a running application reports about itself when it announces to the portal.</summary>
 /// <param name="Roles">
@@ -197,6 +205,75 @@ public sealed record AccessDecision(
 {
     public static AccessDecision Denied(string? applicationName) => new(false, applicationName, [], []);
 }
+
+// ---------------------------------------------------------------------------
+// Application API: what an application's backend reads and changes with a token of its own.
+// ---------------------------------------------------------------------------
+
+/// <summary>The calling application, as it is configured in the portal.</summary>
+/// <param name="Status">Always <c>active</c> for a caller that got this far.</param>
+/// <param name="Roles">The roles the application defines, to assign on grants.</param>
+/// <param name="GroupClaims"><c>none</c>, <c>granted</c> or <c>all</c>: which groups the user listings include.</param>
+/// <param name="ApiScopes">The application API scopes currently enabled for it.</param>
+public sealed record ApplicationSelfDto(
+    string ClientId,
+    string DisplayName,
+    string? Description,
+    string BaseUrl,
+    string Status,
+    IReadOnlyList<ApplicationRoleDto> Roles,
+    string GroupClaims,
+    IReadOnlyList<string> ApiScopes);
+
+/// <summary>A user who can open the calling application.</summary>
+/// <param name="Direct">Granted to the user personally (only such a grant can be changed through the API).</param>
+/// <param name="Roles">The user's role keys in the application, from every grant together.</param>
+/// <param name="Groups">The user's groups, as the application's groups claim setting allows (empty with <c>none</c>).</param>
+public sealed record ApplicationUserDto(
+    Guid Id,
+    string Email,
+    string DisplayName,
+    bool Direct,
+    IReadOnlyList<string> Roles,
+    IReadOnlyList<string> Groups);
+
+/// <summary>Filter and paging for the users of the calling application.</summary>
+public sealed class ApplicationUserListQuery
+{
+    public const int MaxPageSize = 200;
+
+    [Range(1, int.MaxValue, ErrorMessage = "validation.page.min")]
+    public int Page { get; init; } = 1;
+
+    [Range(1, MaxPageSize, ErrorMessage = "validation.pageSize.range")]
+    public int PageSize { get; init; } = 50;
+
+    /// <summary>Free text matched against email and name.</summary>
+    [StringLength(256, ErrorMessage = "validation.search.max")]
+    public string? Search { get; init; }
+}
+
+/// <summary>One page of the calling application's users, by name.</summary>
+public sealed record ApplicationUserPageDto(
+    IReadOnlyList<ApplicationUserDto> Items,
+    int Page,
+    int PageSize,
+    int TotalCount);
+
+/// <summary>The outcome of a grant made through the application API.</summary>
+/// <param name="Changed">False when the user already held the grant with the same roles.</param>
+public sealed record ApplicationGrantResultDto(ApplicationUserDto User, bool Changed);
+
+/// <summary>The outcome of withdrawing a personal grant through the application API.</summary>
+/// <param name="Changed">False when the user held no personal grant.</param>
+/// <param name="StillHasAccess">True when a group still grants the application to the user.</param>
+public sealed record ApplicationRevokeResultDto(bool Changed, bool StillHasAccess);
+
+/// <summary>The answer to "may this client have a token of its own".</summary>
+/// <param name="Allowed">True only for an active application with at least one API scope.</param>
+/// <param name="ApplicationName">Display name for the audit log; null for an unknown client.</param>
+/// <param name="ApiScopes">The application API scopes enabled for it (empty when refused).</param>
+public sealed record ApplicationTokenDecision(bool Allowed, string? ApplicationName, IReadOnlyList<string> ApiScopes);
 
 // ---------------------------------------------------------------------------
 // Page permissions.

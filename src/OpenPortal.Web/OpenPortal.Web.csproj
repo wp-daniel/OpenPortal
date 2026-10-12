@@ -20,6 +20,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Microsoft.AspNetCore.SpaProxy" />
+    <PackageReference Include="Scalar.AspNetCore" />
     <!--
       The concrete database provider is referenced by the composition root only. Domain, Application
       and the module Infrastructure projects never see it, which is what keeps the SQLite -> PostgreSQL

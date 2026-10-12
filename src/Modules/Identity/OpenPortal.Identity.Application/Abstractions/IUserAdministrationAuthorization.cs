@@ -10,6 +10,12 @@ public enum UserAdministrationOperation
 
     /// <summary>Read, create and edit accounts, reset passwords and change pictures.</summary>
     ManageUsers,
+
+    /// <summary>
+    /// Create ordinary (never administrator) accounts and nothing more, as an application's backend does when it
+    /// adds a colleague.
+    /// </summary>
+    ProvisionUsers,
 }
 
 /// <summary>

@@ -1,11 +1,12 @@
 import { useMutation } from '@tanstack/react-query'
-import { Loader2, Plus, Trash2 } from 'lucide-react'
+import { ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { z } from 'zod'
 import { applicationsApi } from '@/api/access'
-import type { ApplicationSecret, ApplicationSummary, GroupClaimMode } from '@/api/types'
+import type { ApplicationApiScope, ApplicationSecret, ApplicationSummary, GroupClaimMode } from '@/api/types'
 import { FormField } from '@/components/FormField'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -28,7 +29,7 @@ import { linesToList } from '@/lib/access'
 
 type Field = 'clientId' | 'displayName' | 'description' | 'baseUrl' | 'redirectUris' | 'postLogoutRedirectUris' | 'roles'
 
-type FormTab = 'general' | 'roles'
+type FormTab = 'general' | 'roles' | 'api'
 
 /** A row of the roles editor. A role that is already saved keeps its key: the application checks that key. */
 interface RoleRow {
@@ -40,6 +41,13 @@ interface RoleRow {
 }
 
 const GROUP_CLAIM_MODES: readonly GroupClaimMode[] = ['none', 'granted', 'all']
+
+/** In the order the server stores them; each has `applications.apiScope.<key>` and `<key>Hint` labels. */
+const API_SCOPES: readonly { scope: ApplicationApiScope; key: string }[] = [
+  { scope: 'portal.users.read', key: 'usersRead' },
+  { scope: 'portal.access.manage', key: 'accessManage' },
+  { scope: 'portal.users.create', key: 'usersCreate' },
+]
 
 const ROLE_KEY = /^[a-z0-9][a-z0-9._:-]*$/
 
@@ -72,7 +80,8 @@ const roleList = (t: TFunction) =>
 
 /**
  * Create or edit an application: its address and callbacks on the first tab, the roles it understands and
- * the groups it may see on the second. Validation mirrors the server's rules for a quick answer; the server
+ * the groups it may see on the second, what its own backend may do through the application API on the third.
+ * Validation mirrors the server's rules for a quick answer; the server
  * remains the authority and its errors are reported the usual way.
  */
 export function ApplicationFormDialog({
@@ -132,6 +141,7 @@ function ApplicationForm({
   )
   const [nextRowId, setNextRowId] = useState(application?.roles.length ?? 0)
   const [groupClaims, setGroupClaims] = useState<GroupClaimMode>(application?.groupClaims ?? 'none')
+  const [apiScopes, setApiScopes] = useState<ReadonlySet<ApplicationApiScope>>(() => new Set(application?.apiScopes ?? []))
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({})
 
   const schema = useMemo(
@@ -165,7 +175,25 @@ function ApplicationForm({
       description: role.description.trim() === '' ? null : role.description.trim(),
     })),
     groupClaims,
+    apiScopes: API_SCOPES.map((entry) => entry.scope).filter((scope) => apiScopes.has(scope)),
   })
+
+  /** Creating users implies managing access (the server enforces it too): the two boxes move together. */
+  function toggleApiScope(scope: ApplicationApiScope, checked: boolean) {
+    setApiScopes((current) => {
+      const next = new Set(current)
+
+      if (checked) {
+        next.add(scope)
+        if (scope === 'portal.users.create') next.add('portal.access.manage')
+      } else {
+        next.delete(scope)
+        if (scope === 'portal.access.manage') next.delete('portal.users.create')
+      }
+
+      return next
+    })
+  }
 
   const save = useMutation({
     mutationFn: async () => {
@@ -238,6 +266,7 @@ function ApplicationForm({
           <TabsList variant="line" className="max-w-full flex-wrap justify-start group-data-[orientation=horizontal]/tabs:h-auto">
             <TabsTrigger value="general">{t('applications.tab.general')}</TabsTrigger>
             <TabsTrigger value="roles">{t('applications.tab.roles')}</TabsTrigger>
+            <TabsTrigger value="api">{t('applications.tab.api')}</TabsTrigger>
           </TabsList>
           <Separator className="-mt-2" />
 
@@ -388,6 +417,38 @@ function ApplicationForm({
                 ))}
               </RadioGroup>
             </fieldset>
+          </TabsContent>
+
+          <TabsContent value="api" className="grid items-start gap-4 pt-4">
+            <fieldset className="grid gap-3">
+              <legend className="mb-1 text-sm font-medium">{t('applications.api.title')}</legend>
+              <p className="text-muted-foreground text-xs">{t('applications.api.hint')}</p>
+
+              {API_SCOPES.map(({ scope, key }) => (
+                <div key={scope} className="flex items-start gap-3">
+                  <Checkbox
+                    id={`app-api-${key}`}
+                    className="mt-0.5"
+                    checked={apiScopes.has(scope)}
+                    onCheckedChange={(checked) => toggleApiScope(scope, checked === true)}
+                  />
+                  <div className="grid gap-0.5">
+                    <Label htmlFor={`app-api-${key}`}>
+                      {t(`applications.apiScope.${key}`)} <code className="text-muted-foreground text-xs font-normal">{scope}</code>
+                    </Label>
+                    <p className="text-muted-foreground text-xs">{t(`applications.apiScope.${key}Hint`)}</p>
+                  </div>
+                </div>
+              ))}
+            </fieldset>
+
+            <p className="text-muted-foreground text-xs">
+              {t('applications.api.howTo')}{' '}
+              <a href="/scalar" target="_blank" rel="noreferrer" className="text-foreground inline-flex items-center gap-1 underline underline-offset-2">
+                {t('applications.api.reference')}
+                <ExternalLink className="size-3" />
+              </a>
+            </p>
           </TabsContent>
         </Tabs>
       </form>

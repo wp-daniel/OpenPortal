@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using OpenPortal.Access.Domain.Applications;
+using OpenPortal.Web.Authentication;
 using OpenPortal.Web.Security;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
@@ -23,7 +25,8 @@ using PortalAuthentication = OpenPortal.Identity.Application.Abstractions.IAuthe
 namespace OpenPortal.Web.Oidc;
 
 /// <summary>
-/// The OpenID Connect endpoints that other applications send their users to.
+/// The OpenID Connect endpoints that other applications send their users to, and where an application's
+/// backend gets a token of its own for the application API (client credentials).
 /// <para>
 /// OpenIddict has already validated the protocol (client, redirect URI, PKCE) when an action runs; what is
 /// decided here is whether this user may have a token for this application. That decision is made on the
@@ -122,7 +125,10 @@ public sealed class ConnectController : ControllerBase
         var client = await _applications.FindByClientIdAsync(request.ClientId!, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException("The client was validated by OpenIddict but cannot be found.");
 
-        var identity = BuildIdentity(user, request.GetScopes(), decision);
+        // The application API scopes belong to the application's own token: a user's token never carries them,
+        // even when the client is allowed to request them.
+        var scopes = request.GetScopes().Where(scope => !ApplicationApiScopes.IsKnown(scope));
+        var identity = BuildIdentity(user, scopes, decision);
 
         // A permanent authorization ties the refresh tokens to (user, client), which is what revocation
         // targets when access is withdrawn.
@@ -156,6 +162,11 @@ public sealed class ConnectController : ControllerBase
     {
         var request = HttpContext.GetOpenIddictServerRequest()
             ?? throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
+
+        if (request.IsClientCredentialsGrantType())
+        {
+            return await IssueApplicationTokenAsync(request, cancellationToken).ConfigureAwait(false);
+        }
 
         if (!request.IsAuthorizationCodeGrantType() && !request.IsRefreshTokenGrantType())
         {
@@ -257,6 +268,60 @@ public sealed class ConnectController : ControllerBase
             new AuthenticationProperties { RedirectUri = $"{Request.PathBase}/sign-in" },
             OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
+
+    /// <summary>
+    /// The application's own token (client credentials; OpenIddict has already checked the secret and that the
+    /// client may use this grant and these scopes). It carries no user: the subject is the client id, marked so
+    /// the application API can tell it from a user's token. The application must be active and the scopes still
+    /// enabled for it; without a <c>scope</c> parameter the token gets every enabled scope.
+    /// </summary>
+    private async Task<IActionResult> IssueApplicationTokenAsync(OpenIddictRequest request, CancellationToken cancellationToken)
+    {
+        var clientId = request.ClientId!;
+        var decision = await _access.EvaluateApplicationAsync(clientId, cancellationToken).ConfigureAwait(false);
+
+        if (!decision.Allowed)
+        {
+            await RecordApplicationRefusalAsync(clientId, decision.ApplicationName, "application_not_allowed", cancellationToken).ConfigureAwait(false);
+
+            return Refuse(Errors.UnauthorizedClient, "The application is not active or has no application API scopes.");
+        }
+
+        var requested = request.GetScopes();
+        if (requested.Any(scope => !decision.ApiScopes.Contains(scope, StringComparer.Ordinal)))
+        {
+            await RecordApplicationRefusalAsync(clientId, decision.ApplicationName, "scope_not_enabled", cancellationToken).ConfigureAwait(false);
+
+            return Refuse(Errors.InvalidScope, "A requested scope is not enabled for this application.");
+        }
+
+        var identity = new ClaimsIdentity(
+            authenticationType: TokenValidationParameters.DefaultAuthenticationType,
+            nameType: Claims.Name,
+            roleType: Claims.Role);
+
+        identity.SetClaim(Claims.Subject, clientId)
+            .SetClaim(Claims.Name, decision.ApplicationName)
+            .SetClaim(ApplicationTokens.CallerClaim, ApplicationTokens.ApplicationCaller);
+
+        IEnumerable<string> scopes = requested.IsEmpty ? decision.ApiScopes : requested;
+        identity.SetScopes(scopes);
+        identity.SetDestinations(_ => [Destinations.AccessToken]);
+
+        return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+    }
+
+    private Task RecordApplicationRefusalAsync(string clientId, string? applicationName, string reason, CancellationToken cancellationToken) =>
+        _audit.RecordAsync(
+            new AuditEvent
+            {
+                Action = OidcAuditActions.TokenRefused,
+                Outcome = AuditOutcome.Failure,
+                Actor = ApplicationSubject(clientId, applicationName),
+                Target = ApplicationSubject(clientId, applicationName),
+                Details = new Dictionary<string, string?> { ["reason"] = reason, ["grant"] = GrantTypes.ClientCredentials },
+            },
+            cancellationToken);
 
     private async Task<UserReferenceDto?> FindUserAsync(ClaimsPrincipal? principal, CancellationToken cancellationToken)
     {

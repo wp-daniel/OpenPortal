@@ -114,7 +114,7 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
 
         var application = created.Value;
 
-        var configured = Configure(application, request.Roles, request.GroupClaims ?? GroupClaimModes.None, now);
+        var configured = Configure(application, request.Roles, request.GroupClaims ?? GroupClaimModes.None, request.ApiScopes, now);
         if (configured.IsFailure)
         {
             return Result<ApplicationSecretDto>.Failure(configured.Error);
@@ -179,7 +179,9 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
             return Result<ApplicationDto>.Failure(updated.Error);
         }
 
-        var configured = Configure(application, request.Roles, request.GroupClaims, now);
+        var apiScopesBefore = application.ApiScopes;
+
+        var configured = Configure(application, request.Roles, request.GroupClaims, request.ApiScopes, now);
         if (configured.IsFailure)
         {
             return Result<ApplicationDto>.Failure(configured.Error);
@@ -200,7 +202,15 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        await _audit.RecordAsync(AuditEvent.Succeeded(AccessAuditActions.ApplicationUpdated, application.ToAuditSubject()), cancellationToken)
+        // Scopes are what the application's own backend may do, so a change is named in the entry.
+        var apiScopesChanged = !apiScopesBefore.SequenceEqual(application.ApiScopes, StringComparer.Ordinal);
+
+        await _audit.RecordAsync(
+                AuditEvent.Succeeded(
+                    AccessAuditActions.ApplicationUpdated,
+                    application.ToAuditSubject(),
+                    apiScopesChanged ? AccessAudit.Details(("apiScopes", application.ApiScopes.Count > 0 ? AccessAudit.JoinRoles(application.ApiScopes) : "-")) : null),
+                cancellationToken)
             .ConfigureAwait(false);
 
         var rolesAfter = application.Roles.Select(role => (role.Key, role.DisplayName, role.Description)).ToList();
@@ -346,15 +356,25 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
     }
 
     /// <summary>
-    /// Applies the roles and the group claim setting of a create or update request. Null leaves each as it is.
-    /// Returns the keys of the roles that were removed.
+    /// Applies the roles, the group claim setting and the API scopes of a create or update request. Null leaves
+    /// each as it is. Returns the keys of the roles that were removed.
     /// </summary>
     private static Result<IReadOnlyList<string>> Configure(
         PortalApplication application,
         IReadOnlyList<ApplicationRoleDto>? roles,
         string? groupClaims,
+        IReadOnlyList<string>? apiScopes,
         DateTimeOffset now)
     {
+        if (apiScopes is not null)
+        {
+            var scoped = application.SetApiScopes(apiScopes, now);
+            if (scoped.IsFailure)
+            {
+                return Result<IReadOnlyList<string>>.Failure(scoped.Error);
+            }
+        }
+
         if (groupClaims is not null)
         {
             if (AccessMapping.ParseGroupClaims(groupClaims) is not { } mode)

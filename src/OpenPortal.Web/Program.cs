@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.DataProtection;
 using OpenPortal.Access.Application.Abstractions;
+using OpenPortal.Access.Domain.Applications;
 using OpenPortal.Access.Infrastructure.DependencyInjection;
 using OpenPortal.Audit.Application.Abstractions;
 using OpenPortal.Audit.Infrastructure.DependencyInjection;
@@ -23,6 +24,7 @@ using OpenPortal.Web.Middleware;
 using OpenPortal.Web.Oidc;
 using OpenPortal.Web.Persistence;
 using OpenPortal.Web.Security;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -101,6 +103,7 @@ builder.Services.AddContentModule(options =>
 // caller an administrator" and supplies user names from Identity, so the two modules stay unaware of each
 // other.
 builder.Services.AddScoped<IAccessAdminAuthorization, AccessAdminAuthorization>();
+builder.Services.AddScoped<IApplicationApiCaller, HttpApplicationApiCaller>();
 builder.Services.AddScoped<IUserDirectory, IdentityUserDirectory>();
 builder.Services.AddSingleton<IPortalPageCatalog, PortalPageCatalog>();
 
@@ -224,7 +227,21 @@ builder.Services.AddOpenPortalRateLimiting(builder.Configuration);
 builder.Services.AddOpenPortalReverseProxy(builder.Configuration);
 builder.Services.AddOpenPortalHealthChecks();
 
-builder.Services.AddOpenApi(options => options.AddDocumentTransformer<SecuritySchemeTransformer>());
+// Two OpenAPI documents: v1 is the portal's own API (cookie session), apps is what the applications that sign in
+// through the portal use (OpenID Connect, the application API, announcements) and is the one /scalar shows.
+builder.Services.AddOpenApi(options =>
+{
+    options.ShouldInclude = description => !ApplicationApiDocument.Includes(description)
+        || description.RelativePath!.StartsWith("api/apps/announce", StringComparison.OrdinalIgnoreCase);
+    options.AddDocumentTransformer<SecuritySchemeTransformer>();
+});
+
+builder.Services.AddOpenApi(ApplicationApiDocument.DocumentName, options =>
+{
+    options.ShouldInclude = ApplicationApiDocument.Includes;
+    options.AddDocumentTransformer<ApplicationApiDocument>();
+    options.AddOperationTransformer<ApplicationApiDocument>();
+});
 
 var app = builder.Build();
 
@@ -303,6 +320,24 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapOpenApi();
+
+// The API reference for application developers. Everything it loads is served from here: the bundle ships in
+// the Scalar package, the default (third-party) fonts, telemetry and the AI agent are off, and its inline start-up
+// script carries a per-request nonce that SecurityHeadersMiddleware adds to the page's CSP.
+app.MapScalarApiReference("/scalar", options => options
+    .WithTitle("OpenPortal for applications")
+    .AddDocument(ApplicationApiDocument.DocumentName, "Applications", isDefault: true)
+    .WithFavicon("/favicon.svg")
+    .WithNonce()
+    .DisableDefaultFonts()
+    .DisableTelemetry()
+    .DisableAgent()
+    .DisableMcp()
+    .HideDeveloperTools()
+    .AddPreferredSecuritySchemes([ApplicationApiDocument.OAuth2Scheme])
+    .AddClientCredentialsFlow(ApplicationApiDocument.OAuth2Scheme, flow => flow.WithTokenUrl("/connect/token"))
+    .AddDefaultScopes(ApplicationApiDocument.OAuth2Scheme, ApplicationApiScopes.All));
+
 app.MapOpenPortalHealthChecks();
 
 // Everything else is a client-side route: return the built SPA shell so a hard refresh or a deep link
@@ -317,7 +352,9 @@ app.MapFallback(async context =>
     if (context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase)
         || context.Request.Path.StartsWithSegments("/connect", StringComparison.OrdinalIgnoreCase)
         || context.Request.Path.StartsWithSegments("/.well-known", StringComparison.OrdinalIgnoreCase)
-        || context.Request.Path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase))
+        || context.Request.Path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase)
+        || context.Request.Path.StartsWithSegments("/openapi", StringComparison.OrdinalIgnoreCase)
+        || context.Request.Path.StartsWithSegments("/scalar", StringComparison.OrdinalIgnoreCase))
     {
         context.Response.StatusCode = StatusCodes.Status404NotFound;
         context.Response.ContentType = ProblemResults.ProblemJson;

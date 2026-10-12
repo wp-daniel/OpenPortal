@@ -222,7 +222,18 @@ internal static class AccessMapping
         userCount,
         groupCount,
         application.RolesToContract(),
-        application.GroupClaims.ToContract());
+        application.GroupClaims.ToContract(),
+        application.ApiScopes);
+
+    public static ApplicationSelfDto ToSelfDto(this PortalApplication application) => new(
+        application.ClientId,
+        application.DisplayName,
+        application.Description,
+        application.BaseUrl,
+        application.Status.ToContract(),
+        application.RolesToContract(),
+        application.GroupClaims.ToContract(),
+        application.ApiScopes);
 
     public static ApplicationReferenceDto ToReference(this PortalApplication application) =>
         new(application.Id, application.ClientId, application.DisplayName, application.Status.ToContract());

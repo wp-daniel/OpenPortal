@@ -262,6 +262,10 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ApiScopes")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("BaseUrl")
                         .IsRequired()
                         .HasMaxLength(512)

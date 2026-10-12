@@ -21,6 +21,7 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
     private readonly IAccessAdminAuthorization _authorization;
     private readonly IClock _clock;
     private readonly IAuditTrail _audit;
+    private readonly UserGrantOperations _grants;
 
     public AccessAdministrationService(
         AccessDbContext db,
@@ -28,7 +29,8 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
         IUserDirectory directory,
         IAccessAdminAuthorization authorization,
         IClock clock,
-        IAuditTrail audit)
+        IAuditTrail audit,
+        UserGrantOperations grants)
     {
         _db = db;
         _access = access;
@@ -36,6 +38,7 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
         _authorization = authorization;
         _clock = clock;
         _audit = audit;
+        _grants = grants;
     }
 
     public async Task<Result<AccessTreeDto>> GetTreeAsync(CancellationToken cancellationToken)
@@ -187,51 +190,9 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
             return Result.Failure(AccessErrors.ApplicationNotFound);
         }
 
-        roles = NormaliseRoles(roles);
-        var checkedRoles = CheckRoles(application, roles);
-        if (checkedRoles.IsFailure)
-        {
-            return checkedRoles;
-        }
+        var granted = await _grants.GrantAsync(application, userId, roles, cancellationToken).ConfigureAwait(false);
 
-        var users = await _directory.FindAsync([userId], cancellationToken).ConfigureAwait(false);
-        if (!users.TryGetValue(userId, out var user))
-        {
-            return Result.Failure(AccessErrors.UserNotFound);
-        }
-
-        var grant = await _db.UserGrants
-            .SingleOrDefaultAsync(candidate => candidate.ApplicationId == applicationId && candidate.UserId == userId, cancellationToken)
-            .ConfigureAwait(false);
-
-        var created = grant is null;
-        if (grant is null)
-        {
-            grant = new ApplicationUserGrant(applicationId, userId, _clock.UtcNow);
-            _db.UserGrants.Add(grant);
-        }
-
-        var rolesChanged = roles is not null && grant.SetRoles(roles);
-
-        if (!created && !rolesChanged)
-        {
-            return Result.Success();
-        }
-
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        await _audit.RecordAsync(
-                AuditEvent.Succeeded(
-                    created ? AccessAuditActions.UserGranted : AccessAuditActions.UserRolesChanged,
-                    new AuditSubject(AuditSubjectTypes.User, userId.ToString(), user.Email),
-                    AccessAudit.Details(
-                        ("application", application.DisplayName),
-                        ("clientId", application.ClientId),
-                        ("roles", AccessAudit.JoinRoles(grant.Roles)))),
-                cancellationToken)
-            .ConfigureAwait(false);
-
-        return Result.Success();
+        return granted.IsSuccess ? Result.Success() : Result.Failure(granted.Error);
     }
 
     public async Task<Result> RevokeUserAsync(Guid applicationId, Guid userId, CancellationToken cancellationToken)
@@ -248,25 +209,7 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
             return Result.Failure(AccessErrors.ApplicationNotFound);
         }
 
-        var grant = await _db.UserGrants
-            .SingleOrDefaultAsync(candidate => candidate.ApplicationId == applicationId && candidate.UserId == userId, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (grant is not null)
-        {
-            _db.UserGrants.Remove(grant);
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-            await _access.RevokeIfNoLongerAllowedAsync(application, [userId], cancellationToken).ConfigureAwait(false);
-
-            await _audit.RecordAsync(
-                    AuditEvent.Succeeded(
-                        AccessAuditActions.UserRevoked,
-                        await _directory.UserSubjectAsync(userId, cancellationToken).ConfigureAwait(false),
-                        AccessAudit.Details(("application", application.DisplayName), ("clientId", application.ClientId))),
-                    cancellationToken)
-                .ConfigureAwait(false);
-        }
+        await _grants.RevokeAsync(application, userId, cancellationToken).ConfigureAwait(false);
 
         return Result.Success();
     }
@@ -289,7 +232,7 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
             return Result.Failure(AccessErrors.ApplicationNotFound);
         }
 
-        roles = NormaliseRoles(roles);
+        roles = UserGrantOperations.NormaliseRoles(roles);
         var checkedRoles = CheckRoles(application, roles);
         if (checkedRoles.IsFailure)
         {
@@ -422,10 +365,6 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
         // Not audited on its own: it is the second half of deleting the account, which is.
         return Result.Success();
     }
-
-    /// <summary>Role keys are compared lower-cased, as the domain stores them.</summary>
-    private static IReadOnlyList<string>? NormaliseRoles(IReadOnlyList<string>? roles) =>
-        roles?.Select(role => (role ?? string.Empty).Trim().ToLowerInvariant()).ToList();
 
     /// <summary>Every role key given must be one the application defines.</summary>
     private static Result CheckRoles(PortalApplication application, IReadOnlyList<string>? roles) =>

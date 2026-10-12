@@ -28,6 +28,15 @@ public interface IUserAdministrationService
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Creates an ordinary account (the <c>User</c> role only), for a caller allowed
+    /// <see cref="UserAdministrationOperation.ProvisionUsers"/> such as an application's backend. The password is
+    /// validated against the configured policy, like <see cref="CreateUserAsync"/>.
+    /// </summary>
+    Task<Result<UserSummaryDto>> ProvisionUserAsync(
+        ProvisionUserRequest request,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Updates the mutable fields and role membership of an account. An administrator cannot change their
     /// own roles, which prevents both self-lockout and confused-deputy role grants.
     /// </summary>

@@ -1,5 +1,6 @@
 using System.Security.Cryptography.X509Certificates;
 using OpenPortal.Access.Application.Contracts;
+using OpenPortal.Access.Domain.Applications;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace OpenPortal.Web.Oidc;
@@ -49,8 +50,9 @@ public sealed class OidcServerOptions
 /// Turns the portal into an OpenID Connect provider for other applications.
 /// <para>
 /// The endpoints run in pass-through mode: OpenIddict validates the protocol, and
-/// <c>ConnectController</c> decides who gets a token, which is where the access check lives. Only the
-/// authorization-code flow with PKCE and refresh tokens is enabled.
+/// <c>ConnectController</c> decides who gets a token, which is where the access check lives. Users sign in
+/// only through the authorization-code flow with PKCE and refresh tokens; client credentials give an
+/// application a token of its own for the application API, never one for a user.
 /// </para>
 /// </summary>
 public static class OidcServerSetup
@@ -74,17 +76,23 @@ public static class OidcServerSetup
                     .SetUserInfoEndpointUris("connect/userinfo")
                     .SetEndSessionEndpointUris("connect/endsession");
 
+                // Client credentials is the application's own token for the application API; each client may
+                // use it only once an administrator gives the application API scopes (OidcClientRegistry).
                 server.AllowAuthorizationCodeFlow()
                     .AllowRefreshTokenFlow()
+                    .AllowClientCredentialsFlow()
                     .RequireProofKeyForCodeExchange();
 
                 server.RegisterScopes(
-                    Scopes.OpenId,
-                    Scopes.Email,
-                    Scopes.Profile,
-                    Scopes.OfflineAccess,
-                    PortalScopes.Roles,
-                    PortalScopes.Groups);
+                    [
+                        Scopes.OpenId,
+                        Scopes.Email,
+                        Scopes.Profile,
+                        Scopes.OfflineAccess,
+                        PortalScopes.Roles,
+                        PortalScopes.Groups,
+                        .. ApplicationApiScopes.All,
+                    ]);
 
                 // Advertised in the discovery document, so a client library knows what to expect.
                 server.RegisterClaims(

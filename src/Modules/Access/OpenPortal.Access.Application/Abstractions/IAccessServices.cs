@@ -111,6 +111,58 @@ public interface IAccessEvaluator
 
     /// <summary>The active applications the user can open, by name.</summary>
     Task<IReadOnlyList<LaunchpadItemDto>> GetLaunchpadAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Whether the client <paramref name="clientId"/> may have a token of its own (client credentials): it must
+    /// be active, and the answer lists the application API scopes enabled for it (empty when refused).
+    /// </summary>
+    Task<ApplicationTokenDecision> EvaluateApplicationAsync(string clientId, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// What an application's own backend reads and changes through the application API, always on the calling
+/// application: which one is derived from <see cref="IApplicationApiCaller"/>, never from a parameter. Every
+/// method re-checks that the caller is an active application whose token carries the needed scope, and that
+/// the scope is still enabled for it.
+/// </summary>
+public interface IApplicationApiService
+{
+    /// <summary>The calling application with its roles and enabled scopes. Any application token.</summary>
+    Task<Result<ApplicationSelfDto>> GetSelfAsync(CancellationToken cancellationToken);
+
+    /// <summary>The users who can open the application, directly or through a group (<c>portal.users.read</c>).</summary>
+    Task<Result<ApplicationUserPageDto>> ListUsersAsync(ApplicationUserListQuery query, CancellationToken cancellationToken);
+
+    /// <summary>One user who can open the application; not found otherwise (<c>portal.users.read</c>).</summary>
+    Task<Result<ApplicationUserDto>> GetUserAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Grants the application to the user personally (<c>portal.access.manage</c>). With
+    /// <paramref name="roles"/> the grant carries exactly those roles; without, an existing grant keeps its roles.
+    /// </summary>
+    Task<Result<ApplicationGrantResultDto>> GrantUserAsync(
+        Guid userId,
+        IReadOnlyList<string>? roles,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Removes the user's personal grant (<c>portal.access.manage</c>). Access through a group stays: the answer
+    /// says whether the user can still open the application.
+    /// </summary>
+    Task<Result<ApplicationRevokeResultDto>> RevokeUserAsync(Guid userId, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// Who is calling the application API. Supplied by the host from the request's token, so the module stays
+/// unaware of how applications authenticate.
+/// </summary>
+public interface IApplicationApiCaller
+{
+    /// <summary>The client id of an application calling with a token of its own; null for any other caller.</summary>
+    string? ClientId { get; }
+
+    /// <summary>Whether the caller's token was issued with <paramref name="scope"/>.</summary>
+    bool HasScope(string scope);
 }
 
 /// <summary>Receives announcements from running applications, authenticated by the provisioning key.</summary>

@@ -756,6 +756,22 @@
   <data name="error.access.too_many_roles" xml:space="preserve"><value>Une application peut définir au maximum 50 rôles.</value></data>
   <data name="error.access.role_not_found" xml:space="preserve"><value>L'application ne définit pas l'un des rôles indiqués.</value></data>
   <data name="error.access.group_claims_invalid" xml:space="preserve"><value>Le réglage des groupes dans les jetons doit être none, granted ou all.</value></data>
+  <data name="applications.tab.api" xml:space="preserve"><value>API</value></data>
+  <data name="applications.api.title" xml:space="preserve"><value>API de l'application</value></data>
+  <data name="applications.api.hint" xml:space="preserve"><value>Ce que le backend de l'application peut faire avec son propre jeton, sans utilisateur et sans les écrans du portail. Il le demande par POST /connect/token avec grant_type=client_credentials, son client id et son secret. Rien n'est permis tant que rien n'est coché ici.</value></data>
+  <data name="applications.apiScope.usersRead" xml:space="preserve"><value>Lire ses utilisateurs</value></data>
+  <data name="applications.apiScope.usersReadHint" xml:space="preserve"><value>Lister les utilisateurs qui peuvent ouvrir l'application, avec leurs rôles et groupes.</value></data>
+  <data name="applications.apiScope.accessManage" xml:space="preserve"><value>Gérer les accès</value></data>
+  <data name="applications.apiScope.accessManageHint" xml:space="preserve"><value>Accorder l'application à des utilisateurs, changer leurs rôles et la retirer. Les accès des groupes restent dans le portail.</value></data>
+  <data name="applications.apiScope.usersCreate" xml:space="preserve"><value>Créer des utilisateurs</value></data>
+  <data name="applications.apiScope.usersCreateHint" xml:space="preserve"><value>Créer des comptes ordinaires du portail (jamais administrateurs) pour les personnes qu'elle ajoute. Nécessite aussi la gestion des accès.</value></data>
+  <data name="applications.api.howTo" xml:space="preserve"><value>Points de terminaison, demande de jeton et exemples sont dans la</value></data>
+  <data name="applications.api.reference" xml:space="preserve"><value>référence de l'API</value></data>
+  <data name="error.access.api_scope_invalid" xml:space="preserve"><value>Scope d'API inconnu ; les scopes sont portal.users.read, portal.access.manage et portal.users.create.</value></data>
+  <data name="error.access.api_scope_requires_access_manage" xml:space="preserve"><value>Une application qui peut créer des utilisateurs doit aussi pouvoir gérer les accès.</value></data>
+  <data name="error.access.api_scope_missing" xml:space="preserve"><value>Le jeton de l'application ne porte pas le scope requis par cette opération, ou ce scope n'est plus activé.</value></data>
+  <data name="error.access.api_caller_unknown" xml:space="preserve"><value>Seule une application active disposant de son propre jeton (client credentials) peut appeler l'API des applications.</value></data>
+  <data name="error.access.user_has_no_access" xml:space="preserve"><value>L'utilisateur n'existe pas ou ne peut pas ouvrir cette application.</value></data>
   <data name="audit.pageOf_one" xml:space="preserve"><value>Page {page} sur {total} ({count} événement)</value></data>
   <data name="audit.pageOf_other" xml:space="preserve"><value>Page {page} sur {total} ({count} événements)</value></data>
   <data name="nav.settings" xml:space="preserve"><value>Paramètres du portail</value></data>

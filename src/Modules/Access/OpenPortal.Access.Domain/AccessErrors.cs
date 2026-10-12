@@ -142,6 +142,29 @@ public static class AccessErrors
     public static Error GroupClaimsInvalid { get; } =
         Error.Validation(Prefix + "group_claims_invalid", "The groups claim setting must be none, granted or all.");
 
+    public static Error ApiScopeInvalid { get; } =
+        Error.Validation(
+            Prefix + "api_scope_invalid",
+            "Unknown application API scope; the scopes are portal.users.read, portal.access.manage and portal.users.create.");
+
+    public static Error ApiScopeRequiresAccessManage { get; } =
+        Error.Validation(
+            Prefix + "api_scope_requires_access_manage",
+            "An application that may create users must also be allowed to manage access (portal.access.manage).");
+
+    public static Error ApiScopeMissing { get; } =
+        Error.Forbidden(
+            Prefix + "api_scope_missing",
+            "The application's token does not carry the scope this operation needs, or the scope is no longer enabled.");
+
+    public static Error ApiCallerUnknown { get; } =
+        Error.Forbidden(
+            Prefix + "api_caller_unknown",
+            "Only an active application with a token of its own (client credentials) may call the application API.");
+
+    public static Error UserHasNoAccess { get; } =
+        Error.NotFound(Prefix + "user_has_no_access", "The user does not exist or cannot open this application.");
+
     public static Error ProvisioningKeyInvalid { get; } =
         Error.Unauthorized(Prefix + "provisioning_key_invalid", "The provisioning key is missing or not valid.");
 

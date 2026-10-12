@@ -756,6 +756,22 @@
   <data name="error.access.too_many_roles" xml:space="preserve"><value>An application may define at most 50 roles.</value></data>
   <data name="error.access.role_not_found" xml:space="preserve"><value>The application does not define one of the roles given.</value></data>
   <data name="error.access.group_claims_invalid" xml:space="preserve"><value>The groups claim setting must be none, granted or all.</value></data>
+  <data name="applications.tab.api" xml:space="preserve"><value>API</value></data>
+  <data name="applications.api.title" xml:space="preserve"><value>Application API</value></data>
+  <data name="applications.api.hint" xml:space="preserve"><value>What the application's own backend may do with a token of its own, without a user and without the portal's screens. It asks POST /connect/token with grant_type=client_credentials, its client id and its secret. Nothing is allowed until you tick something here.</value></data>
+  <data name="applications.apiScope.usersRead" xml:space="preserve"><value>Read its users</value></data>
+  <data name="applications.apiScope.usersReadHint" xml:space="preserve"><value>List the users who can open the application, with their roles and groups.</value></data>
+  <data name="applications.apiScope.accessManage" xml:space="preserve"><value>Manage access</value></data>
+  <data name="applications.apiScope.accessManageHint" xml:space="preserve"><value>Grant the application to users, change their roles in it and withdraw it. Group grants stay in the portal.</value></data>
+  <data name="applications.apiScope.usersCreate" xml:space="preserve"><value>Create users</value></data>
+  <data name="applications.apiScope.usersCreateHint" xml:space="preserve"><value>Create ordinary portal accounts (never administrators) for people it adds. Needs access management too.</value></data>
+  <data name="applications.api.howTo" xml:space="preserve"><value>Endpoints, token request and examples are in the</value></data>
+  <data name="applications.api.reference" xml:space="preserve"><value>API reference</value></data>
+  <data name="error.access.api_scope_invalid" xml:space="preserve"><value>Unknown application API scope; the scopes are portal.users.read, portal.access.manage and portal.users.create.</value></data>
+  <data name="error.access.api_scope_requires_access_manage" xml:space="preserve"><value>An application that may create users must also be allowed to manage access.</value></data>
+  <data name="error.access.api_scope_missing" xml:space="preserve"><value>The application's token does not carry the scope this operation needs, or the scope is no longer enabled.</value></data>
+  <data name="error.access.api_caller_unknown" xml:space="preserve"><value>Only an active application with a token of its own (client credentials) may call the application API.</value></data>
+  <data name="error.access.user_has_no_access" xml:space="preserve"><value>The user does not exist or cannot open this application.</value></data>
   <data name="audit.pageOf_one" xml:space="preserve"><value>Page {page} of {total} ({count} event)</value></data>
   <data name="audit.pageOf_other" xml:space="preserve"><value>Page {page} of {total} ({count} events)</value></data>
   <data name="nav.settings" xml:space="preserve"><value>Portal settings</value></data>

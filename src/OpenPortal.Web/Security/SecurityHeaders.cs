@@ -97,7 +97,7 @@ public sealed class SecurityHeadersMiddleware
             return;
         }
 
-        headers.ContentSecurityPolicy = _contentSecurityPolicy;
+        headers.ContentSecurityPolicy = WithScriptNonce(_contentSecurityPolicy, context);
         headers["Cross-Origin-Resource-Policy"] = "same-origin";
 
         // API answers carry account data; no shared or browser cache should keep them unless the endpoint says
@@ -106,5 +106,26 @@ public sealed class SecurityHeadersMiddleware
         {
             headers.CacheControl = "no-store";
         }
+    }
+
+    /// <summary>
+    /// The API reference page (<c>/scalar</c>) starts itself with an inline script carrying a fresh nonce, which
+    /// Scalar leaves in <see cref="HttpContext.Items"/>. That one script is allowed by its nonce; every other
+    /// inline script stays blocked, and every other page gets the policy unchanged.
+    /// </summary>
+    private static string WithScriptNonce(string policy, HttpContext context)
+    {
+        if (context.Items[Scalar.AspNetCore.ScalarOptions.NonceHttpContextItemKey] is not string nonce || string.IsNullOrEmpty(nonce))
+        {
+            return policy;
+        }
+
+        const string ScriptSource = "script-src ";
+
+        var index = policy.IndexOf(ScriptSource, StringComparison.Ordinal);
+
+        return index < 0
+            ? $"{policy}; script-src 'self' 'nonce-{nonce}'"
+            : policy.Insert(index + ScriptSource.Length, $"'nonce-{nonce}' ");
     }
 }

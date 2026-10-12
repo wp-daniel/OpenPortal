@@ -76,6 +76,7 @@ Installed from NuGet, not copied into this repository.
 | [SQLitePCLRaw](https://github.com/ericsink/SQLitePCL.raw) (through `Microsoft.EntityFrameworkCore.Sqlite`) | Apache-2.0 | © SourceGear, LLC |
 | [SQLite](https://sqlite.org) (native library bundled by SQLitePCLRaw) | Public domain | — |
 | [Npgsql](https://www.npgsql.org) (`Npgsql.EntityFrameworkCore.PostgreSQL` and `Npgsql`) | PostgreSQL License | © The Npgsql Development Team |
+| [Scalar](https://scalar.com) (`Scalar.AspNetCore`: the API reference at `/scalar`, including the browser script it embeds and serves) | MIT | © 2023-present Scalar |
 
 The Docker image is built on Microsoft's `mcr.microsoft.com/dotnet/aspnet` image (MIT for the .NET parts; the
 Debian base carries its own package licenses) and uses `node` only to build the client, which does not ship in

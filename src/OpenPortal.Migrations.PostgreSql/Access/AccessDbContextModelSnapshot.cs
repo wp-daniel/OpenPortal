@@ -267,6 +267,10 @@ namespace OpenPortal.Migrations.PostgreSql.Access
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("ApiScopes")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("BaseUrl")
                         .IsRequired()
                         .HasMaxLength(512)

@@ -72,6 +72,7 @@ internal sealed class PortalApplicationConfiguration : IEntityTypeConfiguration<
                      nameof(PortalApplication.PostLogoutRedirectUris),
                      nameof(PortalApplication.AnnouncedRedirectUris),
                      nameof(PortalApplication.AnnouncedPostLogoutRedirectUris),
+                     nameof(PortalApplication.ApiScopes),
                  })
         {
             builder.Property<IReadOnlyList<string>>(list).AsStringList();

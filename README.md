@@ -139,6 +139,11 @@ within the access token lifetime (10 minutes by default). The application's own 
 [`samples/OpenPortal.SampleApp`](samples/OpenPortal.SampleApp) shows the whole thing; the
 [wiki](https://github.com/wp-daniel/OpenPortal/wiki/Connecting-an-Application) walks through connecting any app.
 
+The application's backend can also call the portal on its own (client credentials, no user): list who can open
+it, grant or withdraw access with roles, add colleagues. An administrator enables that per application on its
+**API** tab; [`docs/apps-api.md`](docs/apps-api.md) explains it, and the portal's **`/scalar`** page is the
+interactive reference for everything an application uses.
+
 ## Tests
 
 ```bash
@@ -259,6 +264,7 @@ contact a third party. See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md#addre
 - [Wiki](https://github.com/wp-daniel/OpenPortal/wiki) — getting started, single sign-on, localization,
   architecture, testing, publishing, contributing
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — the long form, with the reasoning behind each decision
+- [`docs/apps-api.md`](docs/apps-api.md) — the application API (client credentials) and the `/scalar` reference
 - [`docs/brand`](docs/brand) — the logo and how it is used
 
 ## License

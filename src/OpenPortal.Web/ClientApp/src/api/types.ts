@@ -259,9 +259,13 @@ export interface ApplicationSummary {
   readonly roles: readonly ApplicationRole[]
   /** Which of a user's groups the application receives in the `groups` claim. */
   readonly groupClaims: GroupClaimMode
+  /** What the application's backend may do with a token of its own (client credentials); empty for nothing. */
+  readonly apiScopes: readonly ApplicationApiScope[]
 }
 
 export type GroupClaimMode = 'none' | 'granted' | 'all'
+
+export type ApplicationApiScope = 'portal.users.read' | 'portal.access.manage' | 'portal.users.create'
 
 /** A role an application understands. The key is what the application checks. */
 export interface ApplicationRole {
@@ -285,6 +289,8 @@ export interface UpdateApplicationRequest {
   /** The complete list of roles; a role left out is removed with its assignments. */
   readonly roles: readonly ApplicationRole[]
   readonly groupClaims: GroupClaimMode
+  /** The complete list of application API scopes. */
+  readonly apiScopes: readonly ApplicationApiScope[]
 }
 
 export interface CreateApplicationRequest extends UpdateApplicationRequest {

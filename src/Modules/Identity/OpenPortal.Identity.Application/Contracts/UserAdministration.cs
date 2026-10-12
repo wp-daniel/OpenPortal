@@ -78,6 +78,19 @@ public sealed class CreateUserRequest : UserDetailsRequest
     public bool IsAdministrator { get; init; }
 }
 
+/// <summary>A new ordinary account created on someone else's behalf, never an administrator.</summary>
+public sealed class ProvisionUserRequest : UserDetailsRequest
+{
+    [Required(AllowEmptyStrings = false, ErrorMessage = "validation.email.required")]
+    [EmailAddress(ErrorMessage = "validation.email.invalid")]
+    [StringLength(256, ErrorMessage = "validation.email.max")]
+    public string Email { get; init; } = string.Empty;
+
+    [Required(AllowEmptyStrings = false, ErrorMessage = "validation.password.required")]
+    [StringLength(256, ErrorMessage = "validation.password.max")]
+    public string Password { get; init; } = string.Empty;
+}
+
 /// <summary>Editable fields of an existing account, and whether it is an administrator.</summary>
 public sealed class UpdateUserRequest : UserDetailsRequest
 {

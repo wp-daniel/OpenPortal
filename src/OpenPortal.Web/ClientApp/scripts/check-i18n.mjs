@@ -85,6 +85,7 @@ const builtPrefixes = [
   'applications.done.',
   'applications.confirm.',
   'applications.groupClaims.',
+  'applications.apiScope.',
   'users.status.',
   'avatar.error.',
   'audit.action.',

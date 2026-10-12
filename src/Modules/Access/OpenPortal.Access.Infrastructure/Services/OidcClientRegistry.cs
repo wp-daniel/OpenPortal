@@ -94,16 +94,17 @@ internal sealed class OidcClientRegistry
             return false;
         }
 
-        foreach (var permission in CurrentPermissions)
+        var wanted = PermissionsFor(application);
+        var held = await _applications.GetPermissionsAsync(client, cancellationToken).ConfigureAwait(false);
+
+        // Both ways: an API scope switched off must leave the client too.
+        if (wanted.SetEquals(held))
         {
-            if (!await _applications.HasPermissionAsync(client, permission, cancellationToken).ConfigureAwait(false))
-            {
-                await SyncAsync(application, cancellationToken).ConfigureAwait(false);
-                return true;
-            }
+            return false;
         }
 
-        return false;
+        await SyncAsync(application, cancellationToken).ConfigureAwait(false);
+        return true;
     }
 
     /// <summary>Deletes the client together with its authorizations and tokens.</summary>
@@ -156,20 +157,35 @@ internal sealed class OidcClientRegistry
             descriptor.PostLogoutRedirectUris.Add(new Uri(uri, UriKind.Absolute));
         }
 
-        // Authorization code with PKCE plus refresh tokens is the only flow offered: it is the right one for a
-        // server-rendered or BFF application, and every other flow is a way around the access check.
+        // Authorization code with PKCE plus refresh tokens is the only flow offered to users: it is the right one
+        // for a server-rendered or BFF application, and every other user flow is a way around the access check.
+        // Client credentials is added only for an application given API scopes, and carries no user.
         descriptor.Permissions.Clear();
-        descriptor.Permissions.UnionWith(CurrentPermissions);
+        descriptor.Permissions.UnionWith(PermissionsFor(application));
 
         descriptor.Requirements.Clear();
         descriptor.Requirements.Add(Requirements.Features.ProofKeyForCodeExchange);
+    }
+
+    /// <summary>The OpenIddict permissions the application's client should hold today.</summary>
+    private static HashSet<string> PermissionsFor(PortalApplication application)
+    {
+        var permissions = new HashSet<string>(UserFlowPermissions, StringComparer.Ordinal);
+
+        if (application.ApiScopes.Count > 0)
+        {
+            permissions.Add(Permissions.GrantTypes.ClientCredentials);
+            permissions.UnionWith(application.ApiScopes.Select(scope => Permissions.Prefixes.Scope + scope));
+        }
+
+        return permissions;
     }
 
     /// <summary>
     /// Authorization code with PKCE plus refresh tokens, and the profile, email, roles and groups scopes. Which
     /// groups an application actually receives is decided by its own setting, not by the scope.
     /// </summary>
-    private static readonly string[] CurrentPermissions =
+    private static readonly string[] UserFlowPermissions =
     [
         Permissions.Endpoints.Authorization,
         Permissions.Endpoints.Token,

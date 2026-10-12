@@ -15,6 +15,9 @@ public interface IUserLookupService
 {
     Task<UserReferenceDto?> FindAsync(Guid userId, CancellationToken cancellationToken);
 
+    /// <summary>The account registered with <paramref name="email"/> (compared case-insensitively), if any.</summary>
+    Task<UserReferenceDto?> FindByEmailAsync(string email, CancellationToken cancellationToken);
+
     /// <summary>Returns the accounts that exist among <paramref name="userIds"/>; unknown ids are left out.</summary>
     Task<IReadOnlyList<UserReferenceDto>> FindManyAsync(
         IReadOnlyCollection<Guid> userIds,

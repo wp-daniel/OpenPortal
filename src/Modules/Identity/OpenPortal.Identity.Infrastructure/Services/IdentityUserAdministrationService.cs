@@ -150,15 +150,44 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
             return Result<UserSummaryDto>.Failure(assignable.Error);
         }
 
+        return await CreateAsync(request.Email, request.Password, request.ToDetails(), roles, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<Result<UserSummaryDto>> ProvisionUserAsync(
+        ProvisionUserRequest request,
+        CancellationToken cancellationToken)
+    {
+        var guard = await _guard.EnsureCanAsync(UserAdministrationOperation.ProvisionUsers, cancellationToken).ConfigureAwait(false);
+        if (guard.IsFailure)
+        {
+            return Result<UserSummaryDto>.Failure(guard.Error);
+        }
+
+        ArgumentNullException.ThrowIfNull(request);
+
+        return await CreateAsync(request.Email, request.Password, request.ToDetails(), RolesFor(isAdministrator: false), cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>Creates the account with <paramref name="roles"/>, which the caller has already been allowed to assign.</summary>
+    private async Task<Result<UserSummaryDto>> CreateAsync(
+        string email,
+        string password,
+        UserDetails details,
+        IReadOnlyList<string> roles,
+        CancellationToken cancellationToken)
+    {
+        var isAdministrator = roles.Contains(Roles.Administrator, StringComparer.Ordinal);
+
         // Validate the details before touching the store so bad input is a 400, not a half-made account.
-        var account = ApplicationUser.Create(Guid.NewGuid(), request.Email, request.ToDetails(), _clock.UtcNow);
+        var account = ApplicationUser.Create(Guid.NewGuid(), email, details, _clock.UtcNow);
         if (account.IsFailure)
         {
             return Result<UserSummaryDto>.Failure(account.Error);
         }
 
         var user = account.Value;
-        var created = await _userManager.CreateAsync(user, request.Password).ConfigureAwait(false);
+        var created = await _userManager.CreateAsync(user, password).ConfigureAwait(false);
         if (!created.Succeeded)
         {
             return Result<UserSummaryDto>.Failure(created.ToError(UserErrors.SaveFailed));
@@ -177,7 +206,7 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
                 AuditEvent.Succeeded(
                     IdentityAuditActions.UserCreated,
                     user.ToAuditSubject(),
-                    new Dictionary<string, string?> { ["administrator"] = request.IsAdministrator ? "true" : "false" }),
+                    new Dictionary<string, string?> { ["administrator"] = isAdministrator ? "true" : "false" }),
                 cancellationToken)
             .ConfigureAwait(false);
 

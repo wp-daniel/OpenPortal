@@ -1,3 +1,4 @@
+using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Audit.Application.Abstractions;
 using OpenPortal.Audit.Domain;
 using OpenPortal.Identity.Application.Abstractions;
@@ -18,17 +19,22 @@ internal sealed class HttpAuditRequestContext : IAuditRequestContext
 {
     private readonly IHttpContextAccessor _http;
     private readonly ICurrentUser _currentUser;
+    private readonly IApplicationApiCaller _application;
 
-    public HttpAuditRequestContext(IHttpContextAccessor http, ICurrentUser currentUser)
+    public HttpAuditRequestContext(IHttpContextAccessor http, ICurrentUser currentUser, IApplicationApiCaller application)
     {
         _http = http;
         _currentUser = currentUser;
+        _application = application;
     }
 
+    /// <summary>The signed-in user, or the application calling the application API with a token of its own.</summary>
     public AuditSubject? Actor =>
         _currentUser.UserId is { } userId
             ? new AuditSubject(AuditSubjectTypes.User, userId.ToString(), _currentUser.Email)
-            : null;
+            : _application.ClientId is { } clientId
+                ? new AuditSubject(AuditSubjectTypes.Application, clientId, null)
+                : null;
 
     public AuditOrigin Origin
     {

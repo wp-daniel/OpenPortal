@@ -45,6 +45,23 @@ internal sealed class AccessEvaluator : IAccessEvaluator
             await _access.GroupClaimsAsync(application, userId, cancellationToken).ConfigureAwait(false));
     }
 
+    public async Task<ApplicationTokenDecision> EvaluateApplicationAsync(string clientId, CancellationToken cancellationToken)
+    {
+        var application = await _db.Applications
+            .AsNoTracking()
+            .SingleOrDefaultAsync(candidate => candidate.ClientId == clientId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (application is null)
+        {
+            return new ApplicationTokenDecision(false, ApplicationName: null, []);
+        }
+
+        return application.Status == ApplicationStatus.Active && application.ApiScopes.Count > 0
+            ? new ApplicationTokenDecision(true, application.DisplayName, application.ApiScopes)
+            : new ApplicationTokenDecision(false, application.DisplayName, []);
+    }
+
     public async Task<IReadOnlyList<LaunchpadItemDto>> GetLaunchpadAsync(Guid userId, CancellationToken cancellationToken)
     {
         var granted = await _access.GrantedApplicationIdsAsync(userId, cancellationToken).ConfigureAwait(false);

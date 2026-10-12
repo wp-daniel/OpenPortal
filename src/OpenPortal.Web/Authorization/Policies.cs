@@ -47,6 +47,9 @@ public static class AuthorizationSetup
         services.AddScoped<CurrentPagePermissions>();
         services.AddScoped<IAuthorizationHandler, PortalPageAuthorizationHandler>();
 
+        // Application API: [RequireApplicationScope] answered from the application's own bearer token.
+        services.AddSingleton<IAuthorizationHandler, ApplicationScopeAuthorizationHandler>();
+
         return services;
     }
 }

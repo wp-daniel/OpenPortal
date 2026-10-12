@@ -35,6 +35,8 @@ public sealed class CompositionTests(OpenPortalFactory factory) : IClassFixture<
         typeof(IAccessAdministrationService),
         typeof(IAccessEvaluator),
         typeof(IApplicationAnnouncementService),
+        typeof(IApplicationApiService),
+        typeof(IApplicationApiCaller),
         typeof(IAccessAdminAuthorization),
         typeof(IUserDirectory),
         typeof(IPagePermissionService),

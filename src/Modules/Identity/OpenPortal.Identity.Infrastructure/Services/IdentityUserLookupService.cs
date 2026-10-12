@@ -25,6 +25,18 @@ internal sealed class IdentityUserLookupService : IUserLookupService
         return users.Count == 0 ? null : users[0];
     }
 
+    public async Task<UserReferenceDto?> FindByEmailAsync(string email, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return null;
+        }
+
+        var user = await _userManager.FindByEmailAsync(email.Trim()).ConfigureAwait(false);
+
+        return user is null ? null : await FindAsync(user.Id, cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task<IReadOnlyList<UserReferenceDto>> FindManyAsync(
         IReadOnlyCollection<Guid> userIds,
         CancellationToken cancellationToken)

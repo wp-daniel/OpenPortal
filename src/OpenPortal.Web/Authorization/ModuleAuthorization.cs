@@ -1,5 +1,6 @@
 using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Access.Domain;
+using OpenPortal.Access.Domain.Applications;
 using OpenPortal.Audit.Application.Abstractions;
 using OpenPortal.Audit.Domain;
 using OpenPortal.Content.Application.Abstractions;
@@ -51,18 +52,37 @@ internal sealed class AccessAdminAuthorization : IAccessAdminAuthorization
 internal sealed class UserAdministrationAuthorization : IUserAdministrationAuthorization
 {
     private readonly CurrentPagePermissions _permissions;
+    private readonly IApplicationApiCaller _application;
+    private readonly IAccessEvaluator _access;
 
-    public UserAdministrationAuthorization(CurrentPagePermissions permissions)
+    public UserAdministrationAuthorization(
+        CurrentPagePermissions permissions,
+        IApplicationApiCaller application,
+        IAccessEvaluator access)
     {
         _permissions = permissions;
+        _application = application;
+        _access = access;
     }
 
     public async Task<Result> EnsureCanAsync(UserAdministrationOperation operation, CancellationToken cancellationToken)
     {
+        // An application's backend may only create ordinary accounts, and only while its token carries the scope
+        // and the scope is still enabled for it.
+        if (_application.ClientId is { } clientId)
+        {
+            return operation == UserAdministrationOperation.ProvisionUsers
+                && _application.HasScope(ApplicationApiScopes.UsersCreate)
+                && await _access.EvaluateApplicationAsync(clientId, cancellationToken).ConfigureAwait(false) is { Allowed: true } decision
+                && decision.ApiScopes.Contains(ApplicationApiScopes.UsersCreate, StringComparer.Ordinal)
+                    ? Result.Success()
+                    : Result.Failure(UserErrors.Forbidden);
+        }
+
         string[] pages = operation switch
         {
             UserAdministrationOperation.ListUsers => [PortalPages.Users, PortalPages.Groups, PortalPages.Access],
-            UserAdministrationOperation.ManageUsers => [PortalPages.Users],
+            UserAdministrationOperation.ManageUsers or UserAdministrationOperation.ProvisionUsers => [PortalPages.Users],
             _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null),
         };
 
