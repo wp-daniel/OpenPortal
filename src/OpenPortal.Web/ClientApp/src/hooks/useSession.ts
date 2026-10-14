@@ -34,6 +34,7 @@ export function useSession() {
       isAuthenticated: false,
       user: null,
       passwordPolicy: UNAVAILABLE_PASSWORD_POLICY,
+      registration: { enabled: false, requiresApproval: false },
     },
     isPending,
     isError,

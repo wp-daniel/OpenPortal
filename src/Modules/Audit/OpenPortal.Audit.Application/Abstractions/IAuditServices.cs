@@ -24,6 +24,16 @@ public interface IAuditLogService
 }
 
 /// <summary>
+/// Activity statistics computed from the log. Re-checks the caller through
+/// <see cref="IAuditLogAuthorization.EnsureCanReadStatisticsAsync"/>.
+/// </summary>
+public interface IAuditStatisticsService
+{
+    /// <summary>Sign-ins per day, failures and the most used applications over a period ending today.</summary>
+    Task<Result<ActivityStatisticsDto>> GetActivityAsync(ActivityStatisticsRequest request, CancellationToken cancellationToken);
+}
+
+/// <summary>
 /// The current caller and where their request came from. Supplied by the host, which owns the HTTP pipeline,
 /// so this module stays independent of it.
 /// </summary>
@@ -39,4 +49,7 @@ public interface IAuditRequestContext
 public interface IAuditLogAuthorization
 {
     Task<Result> EnsureCanReadAsync(CancellationToken cancellationToken);
+
+    /// <summary>Whether the caller may read the statistics computed from the log (aggregates, not entries).</summary>
+    Task<Result> EnsureCanReadStatisticsAsync(CancellationToken cancellationToken);
 }

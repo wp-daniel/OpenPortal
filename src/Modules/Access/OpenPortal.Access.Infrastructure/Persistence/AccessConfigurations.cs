@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using OpenPortal.Access.Domain.Applications;
 using OpenPortal.Access.Domain.Grants;
 using OpenPortal.Access.Domain.Groups;
+using OpenPortal.Access.Domain.Organizations;
+using OpenPortal.Access.Domain.Requests;
 
 namespace OpenPortal.Access.Infrastructure.Persistence;
 
@@ -82,6 +84,14 @@ internal sealed class PortalApplicationConfiguration : IEntityTypeConfiguration<
             .IsRequired()
             .HasConversion<string>()
             .HasMaxLength(16);
+
+        // Existing rows take the member name, not "", so they read back as None.
+        builder.Property(application => application.Organizations)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(16)
+            .HasDefaultValue(OrganizationMode.None)
+            .HasSentinel(OrganizationMode.None);
 
         builder.Ignore(application => application.HasManifestChanges);
 
@@ -217,6 +227,96 @@ internal sealed class ApplicationGroupGrantConfiguration : IEntityTypeConfigurat
 
         builder.HasIndex(grant => grant.GroupId)
             .HasDatabaseName("IX_ApplicationGroupGrants_GroupId");
+    }
+}
+
+internal sealed class OrganizationConfiguration : IEntityTypeConfiguration<Organization>
+{
+    public void Configure(EntityTypeBuilder<Organization> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("Organizations");
+
+        builder.HasKey(organization => organization.Id);
+
+        builder.Property(organization => organization.Name).IsRequired().HasMaxLength(Organization.NameMaxLength);
+        builder.Property(organization => organization.Slug).IsRequired().HasMaxLength(Organization.SlugMaxLength);
+        builder.Property(organization => organization.Description).HasMaxLength(Organization.DescriptionMaxLength);
+
+        builder.HasMany(organization => organization.Members)
+            .WithOne()
+            .HasForeignKey(member => member.OrganizationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Metadata.FindNavigation(nameof(Organization.Members))!
+            .SetPropertyAccessMode(PropertyAccessMode.Field);
+
+        // The domain lower-cases the slug, so a plain unique index is case-insensitive in effect.
+        builder.HasIndex(organization => organization.Slug)
+            .IsUnique()
+            .HasDatabaseName("IX_Organizations_Slug");
+    }
+}
+
+internal sealed class OrganizationMemberConfiguration : IEntityTypeConfiguration<OrganizationMember>
+{
+    public void Configure(EntityTypeBuilder<OrganizationMember> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("OrganizationMembers");
+
+        builder.HasKey(member => new { member.OrganizationId, member.UserId });
+
+        builder.Property(member => member.Role)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(16);
+
+        // "Which organizations is this user in" is asked on every sign-in to an application that uses them.
+        builder.HasIndex(member => member.UserId)
+            .HasDatabaseName("IX_OrganizationMembers_UserId");
+    }
+}
+
+internal sealed class AccessRequestConfiguration : IEntityTypeConfiguration<AccessRequest>
+{
+    public void Configure(EntityTypeBuilder<AccessRequest> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("AccessRequests");
+
+        builder.HasKey(request => request.Id);
+
+        builder.Property(request => request.Reason).HasMaxLength(AccessRequest.ReasonMaxLength);
+        builder.Property(request => request.DecisionNote).HasMaxLength(AccessRequest.NoteMaxLength);
+
+        builder.Property(request => request.Status)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(16);
+
+        builder.Property(request => request.GrantedRoles).AsStringList();
+
+        builder.Ignore(request => request.IsPending);
+
+        // Deleting an application takes its requests with it, as it takes its grants.
+        builder.HasOne<PortalApplication>()
+            .WithMany()
+            .HasForeignKey(request => request.ApplicationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // "My requests" and "is one pending already" look the user up; the reviewers' list goes by status.
+        builder.HasIndex(request => new { request.UserId, request.ApplicationId })
+            .HasDatabaseName("IX_AccessRequests_UserId_ApplicationId");
+
+        builder.HasIndex(request => new { request.Status, request.CreatedAtUtc })
+            .HasDatabaseName("IX_AccessRequests_Status_CreatedAtUtc");
+
+        builder.HasIndex(request => request.ApplicationId)
+            .HasDatabaseName("IX_AccessRequests_ApplicationId");
     }
 }
 

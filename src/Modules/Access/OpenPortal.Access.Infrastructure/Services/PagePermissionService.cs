@@ -236,4 +236,23 @@ internal sealed class PagePermissionEvaluator : IPagePermissionEvaluator
         // Keys of pages the host no longer declares are left in the table but grant nothing.
         return keys.Where(_catalog.IsKnown).Order(StringComparer.Ordinal).ToList();
     }
+
+    public async Task<IReadOnlyList<Guid>> GetHoldersAsync(IReadOnlyCollection<string> pageKeys, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(pageKeys);
+
+        var keys = pageKeys.Where(_catalog.IsKnown).Distinct(StringComparer.Ordinal).ToArray();
+        if (keys.Length == 0)
+        {
+            return [];
+        }
+
+        return await _db.PageGrants
+            .AsNoTracking()
+            .Where(grant => keys.Contains(grant.PageKey))
+            .Join(_db.GroupMembers, grant => grant.GroupId, member => member.GroupId, (_, member) => member.UserId)
+            .Distinct()
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
 }

@@ -66,6 +66,13 @@ public sealed class OpenPortalClientOptions
     /// (the application's "groups in tokens" setting); the scope only lets them.
     /// </summary>
     public bool RequestGroups { get; set; } = true;
+
+    /// <summary>
+    /// Asks for the <c>organization</c> scope, so an application set to work per organization in the portal learns
+    /// which one the user signed in for (read it with <see cref="OpenPortalClaims.GetOpenPortalOrganization"/>). To
+    /// sign in for a given organization, add <c>organization=&lt;slug&gt;</c> to the challenge's parameters.
+    /// </summary>
+    public bool RequestOrganization { get; set; } = true;
 }
 
 /// <summary>A role the application checks, as it is announced to the portal.</summary>

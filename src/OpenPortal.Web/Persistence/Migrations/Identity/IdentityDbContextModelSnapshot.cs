@@ -147,6 +147,111 @@ namespace OpenPortal.Web.Persistence.Migrations.Identity
                     b.ToTable("UserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Invitations.UserInvitation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("AcceptedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("AcceptedUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ExpiresAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FirstName")
+                        .HasMaxLength(60)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GroupIds")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("InvitedByUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastName")
+                        .HasMaxLength(60)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("LastSentAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Message")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NormalizedEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OrganizationIds")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("RevokedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAtUtc")
+                        .HasDatabaseName("IX_Invitations_CreatedAtUtc");
+
+                    b.HasIndex("NormalizedEmail")
+                        .HasDatabaseName("IX_Invitations_NormalizedEmail");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Invitations_TokenHash");
+
+                    b.ToTable("Invitations", (string)null);
+                });
+
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Settings.RegistrationSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AllowedDomains")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("InvitationLifetimeDays")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequireEmailConfirmation")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("UpdatedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("RegistrationSettings", (string)null);
+                });
+
             modelBuilder.Entity("OpenPortal.Identity.Domain.Settings.SecuritySettings", b =>
                 {
                     b.Property<int>("Id")
@@ -254,8 +359,18 @@ namespace OpenPortal.Web.Persistence.Migrations.Identity
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Created");
+
                     b.Property<string>("PasswordHash")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("PendingApproval")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("PhoneNumber")
                         .HasColumnType("TEXT");

@@ -124,7 +124,7 @@ public sealed class HardeningTests(OpenPortalFactory factory) : IClassFixture<Op
         var report = await ready.Content.ReadFromJsonAsync<JsonElement>();
         report.GetProperty("status").GetString().ShouldBe("Healthy");
         report.GetProperty("checks").EnumerateArray().Select(check => check.GetProperty("name").GetString())
-            .ShouldBe(["database-identity", "database-content", "database-access", "database-audit"], ignoreOrder: true);
+            .ShouldBe(["database-identity", "database-content", "database-access", "database-audit", "database-notifications"], ignoreOrder: true);
 
         using var unknown = await http.GetAsync("/health/unknown");
         unknown.StatusCode.ShouldBe(HttpStatusCode.NotFound);

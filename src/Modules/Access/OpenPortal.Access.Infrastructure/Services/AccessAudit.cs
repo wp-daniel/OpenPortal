@@ -1,6 +1,7 @@
 using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Access.Domain.Applications;
 using OpenPortal.Access.Domain.Groups;
+using OpenPortal.Access.Domain.Organizations;
 using OpenPortal.SharedKernel.Auditing;
 
 namespace OpenPortal.Access.Infrastructure.Services;
@@ -13,6 +14,9 @@ internal static class AccessAudit
 
     public static AuditSubject ToAuditSubject(this Group group) =>
         new(AuditSubjectTypes.Group, group.Id.ToString(), group.Name);
+
+    public static AuditSubject ToAuditSubject(this Organization organization) =>
+        new(AuditSubjectTypes.Organization, organization.Id.ToString(), organization.Name);
 
     /// <summary>A user by id, labelled with their email when the account still exists.</summary>
     public static async Task<AuditSubject> UserSubjectAsync(

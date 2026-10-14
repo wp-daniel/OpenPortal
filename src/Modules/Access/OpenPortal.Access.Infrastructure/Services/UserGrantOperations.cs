@@ -5,7 +5,9 @@ using OpenPortal.Access.Domain;
 using OpenPortal.Access.Domain.Applications;
 using OpenPortal.Access.Domain.Grants;
 using OpenPortal.Access.Infrastructure.Persistence;
+using OpenPortal.Access.Application.Notifications;
 using OpenPortal.SharedKernel.Auditing;
+using OpenPortal.SharedKernel.Notifications;
 using OpenPortal.SharedKernel.Results;
 using OpenPortal.SharedKernel.Time;
 
@@ -22,29 +24,43 @@ internal sealed class UserGrantOperations
     private readonly IUserDirectory _directory;
     private readonly IClock _clock;
     private readonly IAuditTrail _audit;
+    private readonly INotifier _notifier;
 
     public UserGrantOperations(
         AccessDbContext db,
         AccessQueries access,
         IUserDirectory directory,
         IClock clock,
-        IAuditTrail audit)
+        IAuditTrail audit,
+        INotifier notifier)
     {
         _db = db;
         _access = access;
         _directory = directory;
         _clock = clock;
         _audit = audit;
+        _notifier = notifier;
     }
 
     /// <summary>
     /// Grants the application to the user. With <paramref name="roles"/>, the grant carries exactly those roles;
-    /// without, an existing grant keeps its roles. Returns whether anything changed.
+    /// without, an existing grant keeps its roles. Returns whether anything changed. A new grant tells the user,
+    /// unless <paramref name="notifyUser"/> is false because the caller tells them in its own words (an approved
+    /// access request).
     /// </summary>
+    public Task<Result<bool>> GrantAsync(
+        PortalApplication application,
+        Guid userId,
+        IReadOnlyList<string>? roles,
+        CancellationToken cancellationToken) =>
+        GrantAsync(application, userId, roles, notifyUser: true, cancellationToken);
+
+    /// <inheritdoc cref="GrantAsync(PortalApplication, Guid, IReadOnlyList{string}?, CancellationToken)" />
     public async Task<Result<bool>> GrantAsync(
         PortalApplication application,
         Guid userId,
         IReadOnlyList<string>? roles,
+        bool notifyUser,
         CancellationToken cancellationToken)
     {
         roles = NormaliseRoles(roles);
@@ -89,6 +105,20 @@ internal sealed class UserGrantOperations
                         ("roles", AccessAudit.JoinRoles(grant.Roles)))),
                 cancellationToken)
             .ConfigureAwait(false);
+
+        if (created && notifyUser && application.Status == ApplicationStatus.Active)
+        {
+            await _notifier.NotifyAsync(
+                    new Notice
+                    {
+                        Type = AccessNotificationTypes.ApplicationGranted,
+                        Audience = NoticeAudience.Users(userId),
+                        Parameters = new Dictionary<string, string?> { ["application"] = application.DisplayName },
+                        Link = "/",
+                    },
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
 
         return Result<bool>.Success(true);
     }

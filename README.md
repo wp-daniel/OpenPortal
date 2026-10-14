@@ -44,6 +44,10 @@ OpenIddict, on SQLite by default, organised as a modular monolith whose boundari
 - Profile pictures, cropped and scaled in the browser, validated by content on the server
 - A password policy defined once on the server and published to the client, so forms never disagree with it
 - Last sign-in per account and an "inactive for 90 days" filter, to find dormant accounts
+- Self-registration, off by default: open, or waiting for an administrator's approval, limited to some email
+  domains, with address confirmation by email
+- Invitations by email: a single-use link (emailed over SMTP, or shown to the administrator) that creates the
+  account already in the chosen groups and organizations
 
 **Single sign-on**
 - OpenID Connect provider (authorization code + PKCE + refresh tokens)
@@ -53,6 +57,18 @@ OpenIddict, on SQLite by default, organised as a modular monolith whose boundari
 - Application roles: each application declares the roles it checks, administrators assign them on grants (to
   users or groups), and they reach the application as `role` claims (`User.IsInRole("sales")` just works); an
   application may also receive the user's groups as `groups` claims, if its setting allows
+- Access requests: an application can let users who cannot open it ask for it (from their dashboard or the
+  access-denied page); reviewers approve with roles or decline with a note, and both sides are notified
+- Organizations (multi-tenancy for the applications): users belong to organizations with a role; an application
+  that works per organization gets `org_id`, `org_slug`, `org_name` and `org_role` in its tokens, members of several
+  choose one at sign-in, and leaving an organization ends the session at the next refresh
+
+**Notifications and overview**
+- In-app notification center: a bell with the unread count, a page with every notification, and notices for
+  access requests and decisions, new grants, group and organization memberships, registrations to approve,
+  accepted invitations and account security changes
+- Statistics for administrators (a delegable page): sign-ins per day, failed attempts by reason, account and
+  address, most used applications, active users against the previous period, and what waits for someone
 
 **Security and operations**
 - Audit log of sign-ins, account, group, access, application and content changes: who, what, on what, from
@@ -69,7 +85,7 @@ OpenIddict, on SQLite by default, organised as a modular monolith whose boundari
 - Every error is `application/problem+json` with a stable `errorCode`
 
 **Engineering**
-- Modular monolith (Identity, Access, Content, Audit) with dependency rules checked by architecture tests
+- Modular monolith (Identity, Access, Content, Audit, Notifications) with dependency rules checked by architecture tests
 - Operations return `Result` instead of throwing; bad input is a 400, never a 500
 - Integration tests over the real host on a temporary SQLite file, or a throwaway PostgreSQL database
 
@@ -131,6 +147,13 @@ the portal decides who may:
 5. Roles: list them in the application's `OpenPortal:Roles` (or on the application's **Roles and claims** tab)
    and assign them on each grant under **Access**. The application receives the user's roles as `role` claims
    and, if its setting allows, their groups as `groups` claims; both are recomputed at every token refresh.
+6. Organizations (for an application that serves several tenants, such as a CRM): on the application's **Access**
+   tab choose *optional* or *required*, and put users in organizations under **Organizations**. The tokens then
+   carry `org_id`, `org_slug`, `org_name` and `org_role` (`User.GetOpenPortalOrganization()` in `OpenPortal.Client`);
+   a member of several organizations picks one at sign-in (or the application sends `organization=<slug>`), and
+   leaving the organization ends the session at the next refresh. Key the application's data by `org_id`.
+7. Optionally let users ask for the application (**Access** tab, *users can request access*): it appears on their
+   dashboard and on the access-denied page, and requests wait under **Access requests**.
 
 A user without access is stopped at the portal. Withdrawing access revokes the application's tokens, and the
 token endpoint re-checks access on every refresh, so the user cannot sign in again and the tokens stop working
@@ -247,6 +270,8 @@ every code exchange and refresh, so taking access away takes effect without wait
 | `Access:ProvisioningKey` | shared key applications present when they announce themselves (user secrets); blank disables announcements |
 | `Oidc` | token signing/encryption certificates (`SigningCertificatePath`, `EncryptionCertificatePath` + passwords, or `CertificatesPath` for self-managed ones), token lifetimes; required outside Development |
 | `Audit:RetentionDays` | how long audit entries are kept (default 365; 0 keeps everything) |
+| `Notifications` | `ReadRetentionDays` (default 30) and `RetentionDays` (default 180): how long notifications are kept; `MaxRecipientsPerNotice` |
+| `Email` | account email: `From`, `FromName`, `PublicUrl` (the portal's address in links; set it in production), `Smtp:Host`/`Port`/`Security`/`Username`/`Password` (password in user secrets), or `PickupDirectory` to write `.eml` files instead; off until configured |
 | `RateLimiting` | `Enabled`, and `PermitLimit`/`WindowSeconds` for `General` (per user or address), `SignIn` and `Machine` (per address) |
 | `ReverseProxy` | `Enabled`, `KnownProxies`, `KnownNetworks`, `ForwardLimit`: trust a proxy's `X-Forwarded-*` headers |
 | `SecurityHeaders:ContentSecurityPolicy` | replaces the default policy (this origin only) |

@@ -165,6 +165,69 @@ public static class AccessErrors
     public static Error UserHasNoAccess { get; } =
         Error.NotFound(Prefix + "user_has_no_access", "The user does not exist or cannot open this application.");
 
+    public static Error RequestNotFound { get; } =
+        Error.NotFound(Prefix + "request_not_found", "The access request does not exist.");
+
+    public static Error RequestsNotAccepted { get; } =
+        Error.Conflict(
+            Prefix + "requests_not_accepted",
+            "This application does not accept access requests; ask an administrator to grant it.");
+
+    public static Error AlreadyHasAccess { get; } =
+        Error.Conflict(Prefix + "already_has_access", "You can already open this application.");
+
+    public static Error RequestAlreadyPending { get; } =
+        Error.Conflict(Prefix + "request_already_pending", "A request for this application is already waiting for a decision.");
+
+    public static Error RequestNotPending { get; } =
+        Error.Conflict(Prefix + "request_not_pending", "The request has already been decided or withdrawn.");
+
+    public static Error RequestReasonTooLong { get; } =
+        Error.Validation(
+            Prefix + "request_reason_too_long",
+            $"The reason must not exceed {Requests.AccessRequest.ReasonMaxLength} characters.");
+
+    public static Error RequestNoteTooLong { get; } =
+        Error.Validation(
+            Prefix + "request_note_too_long",
+            $"The note must not exceed {Requests.AccessRequest.NoteMaxLength} characters.");
+
+    public static Error OrganizationNotFound { get; } =
+        Error.NotFound(Prefix + "organization_not_found", "The requested organization does not exist.");
+
+    public static Error OrganizationNameRequired { get; } =
+        Error.Validation(Prefix + "organization_name_required", "An organization name is required.");
+
+    public static Error OrganizationNameTooLong { get; } =
+        Error.Validation(
+            Prefix + "organization_name_too_long",
+            $"The organization name must not exceed {Organizations.Organization.NameMaxLength} characters.");
+
+    public static Error OrganizationDescriptionTooLong { get; } =
+        Error.Validation(
+            Prefix + "organization_description_too_long",
+            $"The description must not exceed {Organizations.Organization.DescriptionMaxLength} characters.");
+
+    public static Error OrganizationSlugRequired { get; } =
+        Error.Validation(Prefix + "organization_slug_required", "An organization needs a short name (slug).");
+
+    public static Error OrganizationSlugInvalid { get; } =
+        Error.Validation(
+            Prefix + "organization_slug_invalid",
+            $"A short name may only contain lower-case letters, digits and hyphens, start with a letter or a digit, and be at most {Organizations.Organization.SlugMaxLength} characters long.");
+
+    public static Error OrganizationSlugInUse { get; } =
+        Error.Conflict(Prefix + "organization_slug_in_use", "Another organization already uses this short name.");
+
+    public static Error OrganizationRoleInvalid { get; } =
+        Error.Validation(Prefix + "organization_role_invalid", "The organization role must be member or admin.");
+
+    public static Error OrganizationModeInvalid { get; } =
+        Error.Validation(Prefix + "organization_mode_invalid", "The organization setting must be none, optional or required.");
+
+    public static Error SignInRequired { get; } =
+        Error.Unauthorized(Prefix + "sign_in_required", "This operation needs a signed-in user.");
+
     public static Error ProvisioningKeyInvalid { get; } =
         Error.Unauthorized(Prefix + "provisioning_key_invalid", "The provisioning key is missing or not valid.");
 

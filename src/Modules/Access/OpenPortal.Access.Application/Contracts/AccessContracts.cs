@@ -15,6 +15,8 @@ namespace OpenPortal.Access.Application.Contracts;
 /// <param name="Roles">The roles the application understands.</param>
 /// <param name="GroupClaims"><c>none</c>, <c>granted</c> or <c>all</c>: which groups reach the application in its tokens.</param>
 /// <param name="ApiScopes">Application API scopes its backend may request with client credentials; empty for none.</param>
+/// <param name="AllowAccessRequests">Users who cannot open it see it in their catalog and may ask for it.</param>
+/// <param name="Organizations"><c>none</c>, <c>optional</c> or <c>required</c>: whether tokens name the user's organization.</param>
 public sealed record ApplicationDto(
     Guid Id,
     string ClientId,
@@ -36,7 +38,17 @@ public sealed record ApplicationDto(
     int GroupCount,
     IReadOnlyList<ApplicationRoleDto> Roles,
     string GroupClaims,
-    IReadOnlyList<string> ApiScopes);
+    IReadOnlyList<string> ApiScopes,
+    bool AllowAccessRequests,
+    string Organizations);
+
+/// <summary>Values of <see cref="ApplicationDto.Organizations"/>.</summary>
+public static class OrganizationModes
+{
+    public const string None = "none";
+    public const string Optional = "optional";
+    public const string Required = "required";
+}
 
 /// <summary>A role an application understands. The key is what reaches the application in the <c>role</c> claim.</summary>
 public sealed record ApplicationRoleDto(string Key, string? DisplayName, string? Description);
@@ -59,6 +71,8 @@ public sealed record ApplicationSecretDto(ApplicationDto Application, string Cli
 /// <param name="Roles">The roles the application understands; none when absent.</param>
 /// <param name="GroupClaims"><c>none</c> (the default), <c>granted</c> or <c>all</c>.</param>
 /// <param name="ApiScopes">Application API scopes for the application's backend; none when absent.</param>
+/// <param name="AllowAccessRequests">Whether users may ask for it; no when absent.</param>
+/// <param name="Organizations"><c>none</c> (the default), <c>optional</c> or <c>required</c>.</param>
 public sealed record CreateApplicationRequest(
     string ClientId,
     string DisplayName,
@@ -68,7 +82,9 @@ public sealed record CreateApplicationRequest(
     IReadOnlyList<string>? PostLogoutRedirectUris,
     IReadOnlyList<ApplicationRoleDto>? Roles = null,
     string? GroupClaims = null,
-    IReadOnlyList<string>? ApiScopes = null);
+    IReadOnlyList<string>? ApiScopes = null,
+    bool? AllowAccessRequests = null,
+    string? Organizations = null);
 
 /// <summary>Field set for editing an application. The client id cannot change.</summary>
 /// <param name="Roles">
@@ -77,6 +93,8 @@ public sealed record CreateApplicationRequest(
 /// </param>
 /// <param name="GroupClaims"><c>none</c>, <c>granted</c> or <c>all</c>; absent leaves it as it is.</param>
 /// <param name="ApiScopes">The complete list of application API scopes; absent (null) leaves them as they are.</param>
+/// <param name="AllowAccessRequests">Whether users may ask for it; absent leaves it as it is.</param>
+/// <param name="Organizations"><c>none</c>, <c>optional</c> or <c>required</c>; absent leaves it as it is.</param>
 public sealed record UpdateApplicationRequest(
     string DisplayName,
     string? Description,
@@ -85,7 +103,9 @@ public sealed record UpdateApplicationRequest(
     IReadOnlyList<string>? PostLogoutRedirectUris,
     IReadOnlyList<ApplicationRoleDto>? Roles = null,
     string? GroupClaims = null,
-    IReadOnlyList<string>? ApiScopes = null);
+    IReadOnlyList<string>? ApiScopes = null,
+    bool? AllowAccessRequests = null,
+    string? Organizations = null);
 
 /// <summary>What a running application reports about itself when it announces to the portal.</summary>
 /// <param name="Roles">
@@ -207,6 +227,200 @@ public sealed record AccessDecision(
 }
 
 // ---------------------------------------------------------------------------
+// Statistics.
+// ---------------------------------------------------------------------------
+
+/// <summary>What the Access module holds, counted.</summary>
+public sealed record AccessStatisticsDto(
+    int Applications,
+    int ActiveApplications,
+    int PendingApplications,
+    int DisabledApplications,
+    int Groups,
+    int Organizations,
+    int UserGrants,
+    int GroupGrants,
+    int PendingAccessRequests);
+
+// ---------------------------------------------------------------------------
+// Organizations.
+// ---------------------------------------------------------------------------
+
+/// <summary>Values of an organization member's role.</summary>
+public static class OrganizationRoles
+{
+    public const string Member = "member";
+    public const string Admin = "admin";
+}
+
+public sealed record OrganizationSummaryDto(
+    Guid Id,
+    string Name,
+    string Slug,
+    string? Description,
+    int MemberCount,
+    DateTimeOffset CreatedAtUtc);
+
+public sealed record OrganizationDetailDto(
+    Guid Id,
+    string Name,
+    string Slug,
+    string? Description,
+    IReadOnlyList<OrganizationMemberDto> Members,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset? UpdatedAtUtc);
+
+/// <param name="Role"><c>member</c> or <c>admin</c>.</param>
+/// <param name="IsKnown">False when the account no longer exists; the membership is shown so it can be removed.</param>
+public sealed record OrganizationMemberDto(
+    Guid Id,
+    string Email,
+    string DisplayName,
+    bool IsKnown,
+    string Role,
+    DateTimeOffset AddedAtUtc);
+
+/// <param name="Slug">Lower-case short name, immutable once created.</param>
+public sealed record CreateOrganizationRequest(string Name, string Slug, string? Description);
+
+/// <summary>The short name (slug) cannot change.</summary>
+public sealed record UpdateOrganizationRequest(string Name, string? Description);
+
+/// <summary>Adds a member or changes their role.</summary>
+/// <param name="Role"><c>member</c> (the default) or <c>admin</c>.</param>
+public sealed record SetOrganizationMemberRequest(string? Role);
+
+/// <summary>An organization the signed-in user belongs to, as applications are told about it.</summary>
+/// <param name="Role"><c>member</c> or <c>admin</c>.</param>
+public sealed record OrganizationMembershipDto(Guid Id, string Slug, string Name, string Role);
+
+/// <summary>What the token endpoints should do about organizations for one sign-in.</summary>
+public enum OrganizationOutcome
+{
+    /// <summary>The application does not work per organization; tokens carry no organization.</summary>
+    NotUsed,
+
+    /// <summary>Tokens name <see cref="OrganizationDecision.Organization"/>.</summary>
+    Selected,
+
+    /// <summary>The user belongs to no organization and the application can do without one.</summary>
+    Unaffiliated,
+
+    /// <summary>The user belongs to several and must choose one among <see cref="OrganizationDecision.Choices"/>.</summary>
+    ChoiceNeeded,
+
+    /// <summary>The application needs an organization and the user belongs to none: refuse the sign-in.</summary>
+    Missing,
+
+    /// <summary>The organization asked for is not one of the user's (or no longer exists): refuse the sign-in.</summary>
+    NotMember,
+}
+
+/// <param name="Organization">The organization the tokens name, when <see cref="OrganizationOutcome.Selected"/>.</param>
+/// <param name="Choices">The user's organizations, when a choice is needed.</param>
+public sealed record OrganizationDecision(
+    OrganizationOutcome Outcome,
+    OrganizationMembershipDto? Organization,
+    IReadOnlyList<OrganizationMembershipDto> Choices);
+
+// ---------------------------------------------------------------------------
+// Access requests.
+// ---------------------------------------------------------------------------
+
+/// <summary>Values of the access request status.</summary>
+public static class AccessRequestStatuses
+{
+    public const string Pending = "pending";
+    public const string Approved = "approved";
+    public const string Rejected = "rejected";
+    public const string Cancelled = "cancelled";
+}
+
+/// <summary>An application the signed-in user cannot open but may ask for.</summary>
+/// <param name="LatestRequest">The user's most recent request for it, if any (pending, or how the last one ended).</param>
+public sealed record RequestableApplicationDto(
+    Guid Id,
+    string ClientId,
+    string DisplayName,
+    string? Description,
+    MyAccessRequestDto? LatestRequest);
+
+/// <summary>One of the signed-in user's own requests.</summary>
+/// <param name="Status"><c>pending</c>, <c>approved</c>, <c>rejected</c> or <c>cancelled</c>.</param>
+/// <param name="DecisionNote">The reviewer's message, once decided.</param>
+public sealed record MyAccessRequestDto(
+    Guid Id,
+    Guid ApplicationId,
+    string ApplicationName,
+    string? Reason,
+    string Status,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset? DecidedAtUtc,
+    string? DecisionNote);
+
+/// <summary>A request as a reviewer sees it.</summary>
+/// <param name="ApplicationRoles">The roles the application defines, to choose from when approving.</param>
+/// <param name="HasAccess">Whether the user can open the application now (granted some other way meanwhile).</param>
+/// <param name="Roles">The role keys the approval granted.</param>
+public sealed record AccessRequestDto(
+    Guid Id,
+    ApplicationReferenceDto Application,
+    UserReferenceDto User,
+    string? Reason,
+    string Status,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset? DecidedAtUtc,
+    UserReferenceDto? DecidedBy,
+    string? DecisionNote,
+    IReadOnlyList<string> Roles,
+    IReadOnlyList<ApplicationRoleDto> ApplicationRoles,
+    bool HasAccess);
+
+/// <summary>A page of access requests, oldest pending first, then newest decided.</summary>
+/// <param name="PendingCount">Requests waiting for a decision in total, whatever the filter.</param>
+public sealed record AccessRequestPageDto(
+    IReadOnlyList<AccessRequestDto> Items,
+    int Page,
+    int PageSize,
+    int TotalCount,
+    int PendingCount);
+
+/// <summary>Filter and paging for the reviewers' list.</summary>
+public sealed class AccessRequestQuery
+{
+    public const int MaxPageSize = 100;
+
+    [Range(1, int.MaxValue, ErrorMessage = "validation.page.min")]
+    public int Page { get; init; } = 1;
+
+    [Range(1, MaxPageSize, ErrorMessage = "validation.pageSize.range")]
+    public int PageSize { get; init; } = 25;
+
+    /// <summary>One of <see cref="AccessRequestStatuses"/>; absent or anything else lists every request.</summary>
+    [StringLength(16, ErrorMessage = "validation.search.max")]
+    public string? Status { get; init; }
+
+    /// <summary>Only the requests for one application.</summary>
+    public Guid? ApplicationId { get; init; }
+}
+
+/// <summary>The signed-in user asks for an application.</summary>
+public sealed class SubmitAccessRequest
+{
+    [Required(ErrorMessage = "validation.application.required")]
+    public Guid ApplicationId { get; init; }
+
+    /// <summary>Why they need it, for the reviewer.</summary>
+    [StringLength(500, ErrorMessage = "validation.reason.max")]
+    public string? Reason { get; init; }
+}
+
+/// <summary>A reviewer's decision.</summary>
+/// <param name="Roles">On approval, the role keys to grant (none when absent).</param>
+/// <param name="Note">A message for the requester.</param>
+public sealed record ReviewAccessRequest(IReadOnlyList<string>? Roles, string? Note);
+
+// ---------------------------------------------------------------------------
 // Application API: what an application's backend reads and changes with a token of its own.
 // ---------------------------------------------------------------------------
 
@@ -315,4 +529,10 @@ public static class PortalScopes
 
     /// <summary>The user's groups, as <c>groups</c> claims, when the application's setting allows it.</summary>
     public const string Groups = "groups";
+
+    /// <summary>
+    /// The organization the user signs in for (<c>org_id</c>, <c>org_slug</c>, <c>org_name</c>, <c>org_role</c>), when
+    /// the application works per organization.
+    /// </summary>
+    public const string Organization = "organization";
 }

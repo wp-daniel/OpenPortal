@@ -63,6 +63,11 @@ public static class IdentityModuleServiceCollectionExtensions
         services.AddScoped<ITwoFactorService, IdentityTwoFactorService>();
         services.AddScoped<ISecuritySettingsService, IdentitySecuritySettingsService>();
         services.AddScoped<SecuritySettingsStore>();
+        services.AddScoped<RegistrationSettingsStore>();
+        services.AddScoped<IRegistrationSettingsService, IdentityRegistrationSettingsService>();
+        services.AddScoped<IRegistrationService, IdentityRegistrationService>();
+        services.AddScoped<IInvitationService, IdentityInvitationService>();
+        services.AddScoped<IUserStatisticsService, UserStatisticsService>();
         services.AddScoped<IdentityDataSeeder>();
 
         services.TryAddSingleton<IClock, SystemClock>();

@@ -3,6 +3,22 @@ using OpenPortal.SharedKernel.Text;
 
 namespace OpenPortal.Identity.Domain.Users;
 
+/// <summary>How an account came to exist.</summary>
+public enum AccountOrigin
+{
+    /// <summary>Created by an administrator (or the bootstrap step).</summary>
+    Created = 0,
+
+    /// <summary>The person registered on their own.</summary>
+    Registered = 1,
+
+    /// <summary>The person accepted an invitation.</summary>
+    Invited = 2,
+
+    /// <summary>An application's backend created it through the application API.</summary>
+    Provisioned = 3,
+}
+
 /// <summary>
 /// The platform's user account.
 /// <para>
@@ -47,11 +63,17 @@ public sealed class ApplicationUser : IdentityUser<Guid>
         Guid id,
         string email,
         UserDetails details,
-        DateTimeOffset createdAtUtc)
+        DateTimeOffset createdAtUtc,
+        AccountOrigin origin = AccountOrigin.Created)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(email);
 
-        var user = new ApplicationUser(id, email.Trim(), createdAtUtc);
+        if (!Enum.IsDefined(origin))
+        {
+            throw new ArgumentOutOfRangeException(nameof(origin), origin, null);
+        }
+
+        var user = new ApplicationUser(id, email.Trim(), createdAtUtc) { Origin = origin };
 
         var named = user.UpdateDetails(details, createdAtUtc);
         if (named.IsFailure)
@@ -67,6 +89,34 @@ public sealed class ApplicationUser : IdentityUser<Guid>
 
     /// <summary>Human-readable name shown in the UI. Never used as a login credential.</summary>
     public string DisplayName { get; private set; } = string.Empty;
+
+    /// <summary>How the account came to exist.</summary>
+    public AccountOrigin Origin { get; private set; }
+
+    /// <summary>
+    /// True for a self-registered account that waits for an administrator's approval: it cannot sign in until then.
+    /// </summary>
+    public bool PendingApproval { get; private set; }
+
+    /// <summary>Holds a new self-registered account until an administrator approves it.</summary>
+    public void RequireApproval()
+    {
+        PendingApproval = true;
+    }
+
+    /// <summary>Lets an account that waited for approval sign in.</summary>
+    public SharedKernel.Results.Result Approve(DateTimeOffset now)
+    {
+        if (!PendingApproval)
+        {
+            return SharedKernel.Results.Result.Failure(UserErrors.RegistrationNotPending);
+        }
+
+        PendingApproval = false;
+        UpdatedAtUtc = now;
+
+        return SharedKernel.Results.Result.Success();
+    }
 
     /// <summary>
     /// The user's preferred UI language as a culture code such as <c>it</c> or <c>pt-BR</c>, or

@@ -10,7 +10,9 @@ using OpenPortal.Access.Domain;
 using OpenPortal.Access.Domain.Applications;
 using OpenPortal.Access.Infrastructure.Configuration;
 using OpenPortal.Access.Infrastructure.Persistence;
+using OpenPortal.Access.Application.Notifications;
 using OpenPortal.SharedKernel.Auditing;
+using OpenPortal.SharedKernel.Notifications;
 using OpenPortal.SharedKernel.Results;
 using OpenPortal.SharedKernel.Time;
 
@@ -27,15 +29,18 @@ internal sealed class ApplicationAnnouncementService : IApplicationAnnouncementS
     private readonly IClock _clock;
     private readonly ILogger<ApplicationAnnouncementService> _logger;
     private readonly IAuditTrail _audit;
+    private readonly INotifier _notifier;
 
     public ApplicationAnnouncementService(
         AccessDbContext db,
         IOptions<AccessModuleOptions> options,
         IClock clock,
         ILogger<ApplicationAnnouncementService> logger,
-        IAuditTrail audit)
+        IAuditTrail audit,
+        INotifier notifier)
     {
         _audit = audit;
+        _notifier = notifier;
         _db = db;
         _options = options;
         _clock = clock;
@@ -125,6 +130,21 @@ internal sealed class ApplicationAnnouncementService : IApplicationAnnouncementS
                         Actor = application.ToAuditSubject(),
                         Target = application.ToAuditSubject(),
                         Details = AccessAudit.Details(("version", application.Version), ("baseUrl", application.BaseUrl)),
+                    },
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            await _notifier.NotifyAsync(
+                    new Notice
+                    {
+                        Type = AccessNotificationTypes.ApplicationAnnounced,
+                        Audience = NoticeAudience.Holders(AccessNotificationRoles.ApplicationReviewers),
+                        Parameters = new Dictionary<string, string?>
+                        {
+                            ["application"] = application.DisplayName,
+                            ["clientId"] = application.ClientId,
+                        },
+                        Link = "/admin/applications",
                     },
                     cancellationToken)
                 .ConfigureAwait(false);

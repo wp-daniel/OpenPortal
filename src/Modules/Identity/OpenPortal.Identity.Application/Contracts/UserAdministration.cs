@@ -24,7 +24,18 @@ public sealed record UserSummaryDto(
     string? Country,
     DateTimeOffset? AvatarUpdatedAtUtc,
     DateTimeOffset? LastSignInAtUtc,
-    bool TwoFactorEnabled);
+    bool TwoFactorEnabled,
+    bool PendingApproval,
+    string Origin);
+
+/// <summary>Values of <see cref="UserSummaryDto.Origin"/>.</summary>
+public static class AccountOrigins
+{
+    public const string Created = "created";
+    public const string Registered = "registered";
+    public const string Invited = "invited";
+    public const string Provisioned = "provisioned";
+}
 
 /// <summary>Filter and paging parameters for the administration user list.</summary>
 public sealed class UserListQuery
@@ -55,6 +66,9 @@ public static class UserStatusFilter
     public const string Active = "active";
     public const string Locked = "locked";
     public const string Unconfirmed = "unconfirmed";
+
+    /// <summary>Self-registered, waiting for an administrator.</summary>
+    public const string Pending = "pending";
 
     /// <summary>Never signed in, or not for <see cref="InactiveAfterDays"/> days.</summary>
     public const string Inactive = "inactive";

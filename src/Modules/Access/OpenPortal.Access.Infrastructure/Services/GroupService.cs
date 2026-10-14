@@ -5,7 +5,9 @@ using OpenPortal.Access.Application.Contracts;
 using OpenPortal.Access.Domain;
 using OpenPortal.Access.Domain.Groups;
 using OpenPortal.Access.Infrastructure.Persistence;
+using OpenPortal.Access.Application.Notifications;
 using OpenPortal.SharedKernel.Auditing;
+using OpenPortal.SharedKernel.Notifications;
 using OpenPortal.SharedKernel.Results;
 using OpenPortal.SharedKernel.Time;
 
@@ -21,6 +23,7 @@ internal sealed class GroupService : IGroupService
     private readonly IPortalPageCatalog _catalog;
     private readonly IClock _clock;
     private readonly IAuditTrail _audit;
+    private readonly INotifier _notifier;
 
     public GroupService(
         AccessDbContext db,
@@ -29,9 +32,11 @@ internal sealed class GroupService : IGroupService
         IAccessAdminAuthorization authorization,
         IPortalPageCatalog catalog,
         IClock clock,
-        IAuditTrail audit)
+        IAuditTrail audit,
+        INotifier notifier)
     {
         _audit = audit;
+        _notifier = notifier;
         _db = db;
         _access = access;
         _directory = directory;
@@ -227,6 +232,17 @@ internal sealed class GroupService : IGroupService
                         AccessAuditActions.GroupMemberAdded,
                         new AuditSubject(AuditSubjectTypes.User, userId.ToString(), user.Email),
                         AccessAudit.Details(("group", group.Name), ("groupId", group.Id.ToString()))),
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            await _notifier.NotifyAsync(
+                    new Notice
+                    {
+                        Type = AccessNotificationTypes.GroupJoined,
+                        Audience = NoticeAudience.Users(userId),
+                        Parameters = new Dictionary<string, string?> { ["group"] = group.Name },
+                        Link = "/",
+                    },
                     cancellationToken)
                 .ConfigureAwait(false);
         }

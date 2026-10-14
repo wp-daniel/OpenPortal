@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 import { AppBreadcrumbs } from '@/components/AppBreadcrumbs'
 import { AppSidebar } from '@/components/AppSidebar'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import { NotificationBell } from '@/components/NotificationBell'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Separator } from '@/components/ui/separator'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
@@ -37,12 +38,14 @@ export function AppLayout() {
 
       <AppSidebar />
 
-      <SidebarInset>
+      {/* min-w-0: a wide table scrolls inside its card instead of widening the whole page. */}
+      <SidebarInset className="min-w-0">
         <header className="bg-background/95 sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b px-4 backdrop-blur">
           <SidebarTrigger className="-ml-1" aria-label={t('nav.toggleSidebar')} />
           <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
           <AppBreadcrumbs />
           <div className="ml-auto flex shrink-0 items-center gap-1">
+            <NotificationBell />
             <LanguageSwitcher />
             <ThemeToggle />
           </div>

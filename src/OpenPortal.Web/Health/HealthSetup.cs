@@ -6,6 +6,7 @@ using OpenPortal.Access.Infrastructure.Persistence;
 using OpenPortal.Audit.Infrastructure.Persistence;
 using OpenPortal.Content.Infrastructure.Persistence;
 using OpenPortal.Identity.Infrastructure.Persistence;
+using OpenPortal.Notifications.Infrastructure.Persistence;
 
 namespace OpenPortal.Web.Health;
 
@@ -33,7 +34,8 @@ public static class HealthSetup
             .AddCheck<DatabaseHealthCheck<IdentityDbContext>>("database-identity", tags: [ReadyTag])
             .AddCheck<DatabaseHealthCheck<ContentDbContext>>("database-content", tags: [ReadyTag])
             .AddCheck<DatabaseHealthCheck<AccessDbContext>>("database-access", tags: [ReadyTag])
-            .AddCheck<DatabaseHealthCheck<AuditDbContext>>("database-audit", tags: [ReadyTag]);
+            .AddCheck<DatabaseHealthCheck<AuditDbContext>>("database-audit", tags: [ReadyTag])
+            .AddCheck<DatabaseHealthCheck<NotificationsDbContext>>("database-notifications", tags: [ReadyTag]);
 
         return services;
     }

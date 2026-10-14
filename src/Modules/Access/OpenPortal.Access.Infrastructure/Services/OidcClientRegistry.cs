@@ -182,8 +182,9 @@ internal sealed class OidcClientRegistry
     }
 
     /// <summary>
-    /// Authorization code with PKCE plus refresh tokens, and the profile, email, roles and groups scopes. Which
-    /// groups an application actually receives is decided by its own setting, not by the scope.
+    /// Authorization code with PKCE plus refresh tokens, and the profile, email, roles, groups and organization
+    /// scopes. Which groups an application actually receives, and whether it hears about organizations, is decided
+    /// by its own settings, not by the scope.
     /// </summary>
     private static readonly string[] UserFlowPermissions =
     [
@@ -197,6 +198,7 @@ internal sealed class OidcClientRegistry
         Permissions.Scopes.Profile,
         Permissions.Scopes.Roles,
         Permissions.Prefixes.Scope + PortalScopes.Groups,
+        Permissions.Prefixes.Scope + PortalScopes.Organization,
     ];
 
     private static string NewSecret() => Base64Url.EncodeToString(RandomNumberGenerator.GetBytes(32));

@@ -12,15 +12,19 @@ using OpenPortal.Content.Infrastructure.DependencyInjection;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Identity.Infrastructure.Configuration;
 using OpenPortal.Identity.Infrastructure.DependencyInjection;
+using OpenPortal.Notifications.Application.Abstractions;
+using OpenPortal.Notifications.Infrastructure.DependencyInjection;
 using OpenPortal.Web;
 using OpenPortal.Web.Auditing;
 using OpenPortal.Web.Authentication;
 using OpenPortal.Web.Authorization;
+using OpenPortal.Web.Email;
 using OpenPortal.Web.Geo;
 using OpenPortal.Web.Health;
 using OpenPortal.Web.Infrastructure;
 using OpenPortal.Web.Localization;
 using OpenPortal.Web.Middleware;
+using OpenPortal.Web.Notifications;
 using OpenPortal.Web.Oidc;
 using OpenPortal.Web.Persistence;
 using OpenPortal.Web.Security;
@@ -92,6 +96,11 @@ builder.Services.AddScoped<IContentEditAuthorization, ContentEditAuthorization>(
 builder.Services.AddScoped<IUserAdministrationAuthorization, UserAdministrationAuthorization>();
 builder.Services.AddScoped<IUserPageSource, PortalUserPageSource>();
 
+// Account email (invitations, address confirmation, approvals): delivery is the host's (SMTP or a pickup folder),
+// the texts come from the resource files.
+builder.Services.AddOpenPortalEmail(builder.Configuration);
+builder.Services.AddScoped<IAccountMessaging, HostAccountMessaging>();
+
 builder.Services.AddIdentityModule(
     builder.Configuration,
     options => DatabaseProviderSelector.Configure(options, database.Provider, database.ConnectionString));
@@ -104,6 +113,7 @@ builder.Services.AddContentModule(options =>
 // other.
 builder.Services.AddScoped<IAccessAdminAuthorization, AccessAdminAuthorization>();
 builder.Services.AddScoped<IApplicationApiCaller, HttpApplicationApiCaller>();
+builder.Services.AddScoped<IAccessCaller, HttpAccessCaller>();
 builder.Services.AddScoped<IUserDirectory, IdentityUserDirectory>();
 builder.Services.AddSingleton<IPortalPageCatalog, PortalPageCatalog>();
 
@@ -117,6 +127,14 @@ builder.Services.AddScoped<IAuditRequestContext, HttpAuditRequestContext>();
 builder.Services.AddScoped<IAuditLogAuthorization, AuditLogAuthorization>();
 
 builder.Services.AddAuditModule(
+    builder.Configuration,
+    options => DatabaseProviderSelector.Configure(options, database.Provider, database.ConnectionString));
+
+// Notifications: the notifier every module tells people with (INotifier) and each user's notification center. The
+// host says who is calling and which people each kind of work (a notice's roles) names.
+builder.Services.AddScoped<INotificationContext, HostNotificationContext>();
+
+builder.Services.AddNotificationsModule(
     builder.Configuration,
     options => DatabaseProviderSelector.Configure(options, database.Provider, database.ConnectionString));
 

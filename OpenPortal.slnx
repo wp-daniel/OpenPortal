@@ -21,6 +21,11 @@
     <Project Path="src/Modules/Content/OpenPortal.Content.Domain/OpenPortal.Content.Domain.csproj" />
     <Project Path="src/Modules/Content/OpenPortal.Content.Infrastructure/OpenPortal.Content.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Notifications/">
+    <Project Path="src/Modules/Notifications/OpenPortal.Notifications.Application/OpenPortal.Notifications.Application.csproj" />
+    <Project Path="src/Modules/Notifications/OpenPortal.Notifications.Domain/OpenPortal.Notifications.Domain.csproj" />
+    <Project Path="src/Modules/Notifications/OpenPortal.Notifications.Infrastructure/OpenPortal.Notifications.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/Identity/">
     <Project Path="src/Modules/Identity/OpenPortal.Identity.Application/OpenPortal.Identity.Application.csproj" />
     <Project Path="src/Modules/Identity/OpenPortal.Identity.Domain/OpenPortal.Identity.Domain.csproj" />

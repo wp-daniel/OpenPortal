@@ -868,4 +868,414 @@
   <data name="audit.action.user.two_factor_reset" xml:space="preserve"><value>Reset two-factor authentication</value></data>
   <data name="audit.action.settings.security_updated" xml:space="preserve"><value>Changed sign-in security settings</value></data>
   <data name="audit.category.settings" xml:space="preserve"><value>Portal settings</value></data>
+  <data name="nav.accessRequests" xml:space="preserve"><value>Access requests</value></data>
+  <data name="nav.organizations" xml:space="preserve"><value>Organizations</value></data>
+  <data name="nav.statistics" xml:space="preserve"><value>Statistics</value></data>
+  <data name="nav.notifications" xml:space="preserve"><value>Notifications</value></data>
+  <data name="nav.invitations" xml:space="preserve"><value>Invitations</value></data>
+  <data name="error.access.request_not_found" xml:space="preserve"><value>The access request does not exist.</value></data>
+  <data name="error.access.requests_not_accepted" xml:space="preserve"><value>This application does not accept access requests; ask an administrator to grant it.</value></data>
+  <data name="error.access.already_has_access" xml:space="preserve"><value>You can already open this application.</value></data>
+  <data name="error.access.request_already_pending" xml:space="preserve"><value>A request for this application is already waiting for a decision.</value></data>
+  <data name="error.access.request_not_pending" xml:space="preserve"><value>The request has already been decided or withdrawn.</value></data>
+  <data name="error.access.request_reason_too_long" xml:space="preserve"><value>The reason must not exceed 500 characters.</value></data>
+  <data name="error.access.request_note_too_long" xml:space="preserve"><value>The note must not exceed 500 characters.</value></data>
+  <data name="error.access.sign_in_required" xml:space="preserve"><value>This operation needs a signed-in user.</value></data>
+  <data name="error.access.organization_not_found" xml:space="preserve"><value>The organization does not exist.</value></data>
+  <data name="error.access.organization_name_required" xml:space="preserve"><value>An organization name is required.</value></data>
+  <data name="error.access.organization_name_too_long" xml:space="preserve"><value>The organization name must not exceed 120 characters.</value></data>
+  <data name="error.access.organization_description_too_long" xml:space="preserve"><value>The description must not exceed 500 characters.</value></data>
+  <data name="error.access.organization_slug_required" xml:space="preserve"><value>An organization needs a short name.</value></data>
+  <data name="error.access.organization_slug_invalid" xml:space="preserve"><value>A short name may only contain lower-case letters, digits and hyphens, start with a letter or a digit, and be at most 64 characters long.</value></data>
+  <data name="error.access.organization_slug_in_use" xml:space="preserve"><value>Another organization already uses this short name.</value></data>
+  <data name="error.access.organization_role_invalid" xml:space="preserve"><value>The organization role must be member or admin.</value></data>
+  <data name="error.access.organization_mode_invalid" xml:space="preserve"><value>The organization setting must be none, optional or required.</value></data>
+  <data name="error.audit.statistics_forbidden" xml:space="preserve"><value>The statistics require an administrator account or the statistics page.</value></data>
+  <data name="error.notifications.not_found" xml:space="preserve"><value>The notification does not exist.</value></data>
+  <data name="error.notifications.sign_in_required" xml:space="preserve"><value>Notifications belong to a signed-in user.</value></data>
+  <data name="error.notifications.recipient_required" xml:space="preserve"><value>A notification needs a recipient.</value></data>
+  <data name="error.notifications.type_invalid" xml:space="preserve"><value>The notification type is not valid.</value></data>
+  <data name="error.identity.account_pending_approval" xml:space="preserve"><value>Your account is waiting for an administrator to approve it.</value></data>
+  <data name="error.identity.email_not_confirmed" xml:space="preserve"><value>Confirm your email address with the link we sent before signing in.</value></data>
+  <data name="error.identity.registration_closed" xml:space="preserve"><value>This portal does not accept new registrations.</value></data>
+  <data name="error.identity.registration_domain_not_allowed" xml:space="preserve"><value>Accounts with this email domain cannot register here.</value></data>
+  <data name="error.identity.registration_not_pending" xml:space="preserve"><value>The account is not waiting for approval.</value></data>
+  <data name="error.identity.registration_mode_invalid" xml:space="preserve"><value>The registration setting must be disabled, open or approval.</value></data>
+  <data name="error.identity.registration_domain_invalid" xml:space="preserve"><value>Each allowed domain must be a host name such as example.com, at most 20 of them.</value></data>
+  <data name="error.identity.email_delivery_unavailable" xml:space="preserve"><value>Email confirmation needs email delivery, which is not configured on this portal.</value></data>
+  <data name="error.identity.email_confirmation_invalid" xml:space="preserve"><value>The confirmation link is not valid or has expired.</value></data>
+  <data name="error.identity.invitation_lifetime_invalid" xml:space="preserve"><value>Invitations must stay valid between 1 and 90 days.</value></data>
+  <data name="error.identity.invitation_not_found" xml:space="preserve"><value>The invitation does not exist.</value></data>
+  <data name="error.identity.invitation_invalid" xml:space="preserve"><value>This invitation is not valid: it was used, withdrawn or never existed.</value></data>
+  <data name="error.identity.invitation_expired" xml:space="preserve"><value>This invitation has expired. Ask for a new one.</value></data>
+  <data name="error.identity.invitation_closed" xml:space="preserve"><value>The invitation was already accepted or withdrawn.</value></data>
+  <data name="error.identity.invitation_already_pending" xml:space="preserve"><value>An invitation to this address is already waiting; send it again instead.</value></data>
+  <data name="error.identity.invitation_email_invalid" xml:space="preserve"><value>The email address is not valid.</value></data>
+  <data name="error.identity.invitation_message_too_long" xml:space="preserve"><value>The message must not exceed 500 characters.</value></data>
+  <data name="error.identity.invitation_too_many_memberships" xml:space="preserve"><value>An invitation may name at most 50 groups and 50 organizations.</value></data>
+  <data name="validation.application.required" xml:space="preserve"><value>Choose an application.</value></data>
+  <data name="validation.reason.max" xml:space="preserve"><value>The reason must not exceed 500 characters.</value></data>
+  <data name="validation.message.max" xml:space="preserve"><value>The message must not exceed 500 characters.</value></data>
+  <data name="validation.registrationMode.required" xml:space="preserve"><value>Choose how registration works.</value></data>
+  <data name="validation.invitationLifetime.range" xml:space="preserve"><value>Invitations must stay valid between 1 and 90 days.</value></data>
+  <data name="validation.token.required" xml:space="preserve"><value>The link is incomplete.</value></data>
+  <data name="validation.days.range" xml:space="preserve"><value>The period must be between 1 and 90 days.</value></data>
+  <data name="audit.category.organization" xml:space="preserve"><value>Organizations</value></data>
+  <data name="audit.subject.organization" xml:space="preserve"><value>Organization</value></data>
+  <data name="audit.subject.access_request" xml:space="preserve"><value>Access request</value></data>
+  <data name="audit.subject.invitation" xml:space="preserve"><value>Invitation</value></data>
+  <data name="audit.action.organization.created" xml:space="preserve"><value>Created an organization</value></data>
+  <data name="audit.action.organization.updated" xml:space="preserve"><value>Changed an organization</value></data>
+  <data name="audit.action.organization.deleted" xml:space="preserve"><value>Deleted an organization</value></data>
+  <data name="audit.action.organization.member_added" xml:space="preserve"><value>Added to an organization</value></data>
+  <data name="audit.action.organization.member_role_changed" xml:space="preserve"><value>Changed a role in an organization</value></data>
+  <data name="audit.action.organization.member_removed" xml:space="preserve"><value>Removed from an organization</value></data>
+  <data name="audit.action.access.request_submitted" xml:space="preserve"><value>Asked for access to an application</value></data>
+  <data name="audit.action.access.request_approved" xml:space="preserve"><value>Approved an access request</value></data>
+  <data name="audit.action.access.request_rejected" xml:space="preserve"><value>Declined an access request</value></data>
+  <data name="audit.action.access.request_cancelled" xml:space="preserve"><value>Withdrew an access request</value></data>
+  <data name="audit.action.settings.registration_updated" xml:space="preserve"><value>Changed registration settings</value></data>
+  <data name="audit.action.user.registered" xml:space="preserve"><value>Registered</value></data>
+  <data name="audit.action.user.registration_approved" xml:space="preserve"><value>Approved a registration</value></data>
+  <data name="audit.action.account.email_confirmed" xml:space="preserve"><value>Confirmed the email address</value></data>
+  <data name="audit.action.user.invited" xml:space="preserve"><value>Invited someone</value></data>
+  <data name="audit.action.user.invitation_resent" xml:space="preserve"><value>Sent an invitation again</value></data>
+  <data name="audit.action.user.invitation_revoked" xml:space="preserve"><value>Withdrew an invitation</value></data>
+  <data name="audit.action.user.invitation_accepted" xml:space="preserve"><value>Accepted an invitation</value></data>
+  <data name="notification.access.request_submitted.title" xml:space="preserve"><value>Access requested</value></data>
+  <data name="notification.access.request_submitted.body" xml:space="preserve"><value>{user} asked for {application}.</value></data>
+  <data name="notification.access.request_approved.title" xml:space="preserve"><value>Access granted</value></data>
+  <data name="notification.access.request_approved.body" xml:space="preserve"><value>Your request for {application} was approved.</value></data>
+  <data name="notification.access.request_rejected.title" xml:space="preserve"><value>Request declined</value></data>
+  <data name="notification.access.request_rejected.body" xml:space="preserve"><value>Your request for {application} was declined.</value></data>
+  <data name="notification.access.application_granted.title" xml:space="preserve"><value>New application</value></data>
+  <data name="notification.access.application_granted.body" xml:space="preserve"><value>You can now open {application}.</value></data>
+  <data name="notification.access.group_joined.title" xml:space="preserve"><value>Added to a group</value></data>
+  <data name="notification.access.group_joined.body" xml:space="preserve"><value>You were added to the group {group}.</value></data>
+  <data name="notification.application.announced.title" xml:space="preserve"><value>Application waiting for approval</value></data>
+  <data name="notification.application.announced.body" xml:space="preserve"><value>{application} ({clientId}) announced itself and waits for approval.</value></data>
+  <data name="notification.organization.joined.title" xml:space="preserve"><value>Added to an organization</value></data>
+  <data name="notification.organization.joined.body" xml:space="preserve"><value>You are now a member of {organization}.</value></data>
+  <data name="notification.user.registration_pending.title" xml:space="preserve"><value>Registration to approve</value></data>
+  <data name="notification.user.registration_pending.body" xml:space="preserve"><value>{user} ({email}) registered and waits for approval.</value></data>
+  <data name="notification.user.registered.title" xml:space="preserve"><value>New registration</value></data>
+  <data name="notification.user.registered.body" xml:space="preserve"><value>{user} ({email}) created an account.</value></data>
+  <data name="notification.user.invitation_accepted.title" xml:space="preserve"><value>Invitation accepted</value></data>
+  <data name="notification.user.invitation_accepted.body" xml:space="preserve"><value>{user} ({email}) accepted your invitation.</value></data>
+  <data name="notification.account.password_reset.title" xml:space="preserve"><value>Password changed by an administrator</value></data>
+  <data name="notification.account.password_reset.body" xml:space="preserve"><value>An administrator set a new password on your account. If you did not ask for it, tell them.</value></data>
+  <data name="notification.account.two_factor_reset.title" xml:space="preserve"><value>Two-factor authentication turned off</value></data>
+  <data name="notification.account.two_factor_reset.body" xml:space="preserve"><value>An administrator turned off two-factor authentication on your account. Set it up again from your security settings.</value></data>
+  <data name="notification.account.administrator_granted.title" xml:space="preserve"><value>You are now an administrator</value></data>
+  <data name="notification.account.administrator_granted.body" xml:space="preserve"><value>Your account was given the administrator role.</value></data>
+  <data name="notification.account.registration_approved.title" xml:space="preserve"><value>Welcome!</value></data>
+  <data name="notification.account.registration_approved.body" xml:space="preserve"><value>Your account was approved. You can use the portal now.</value></data>
+  <data name="email.footer" xml:space="preserve"><value>This message was sent by OpenPortal. If you were not expecting it, you can ignore it.</value></data>
+  <data name="email.invitation.subject" xml:space="preserve"><value>You are invited to OpenPortal</value></data>
+  <data name="email.invitation.greeting" xml:space="preserve"><value>Hello {name},</value></data>
+  <data name="email.invitation.body" xml:space="preserve"><value>{inviter} invited you to create your account. The link is valid until {expires}.</value></data>
+  <data name="email.invitation.action" xml:space="preserve"><value>Create my account</value></data>
+  <data name="email.email_confirmation.subject" xml:space="preserve"><value>Confirm your email address</value></data>
+  <data name="email.email_confirmation.greeting" xml:space="preserve"><value>Hello {name},</value></data>
+  <data name="email.email_confirmation.body" xml:space="preserve"><value>Confirm that this address is yours to finish creating your account.</value></data>
+  <data name="email.email_confirmation.action" xml:space="preserve"><value>Confirm my address</value></data>
+  <data name="email.registration_approved.subject" xml:space="preserve"><value>Your account was approved</value></data>
+  <data name="email.registration_approved.greeting" xml:space="preserve"><value>Hello {name},</value></data>
+  <data name="email.registration_approved.body" xml:space="preserve"><value>An administrator approved your account: you can sign in now.</value></data>
+  <data name="email.registration_approved.action" xml:space="preserve"><value>Sign in</value></data>
+  <data name="common.pageOf" xml:space="preserve"><value>Page {page} of {pages}</value></data>
+  <data name="nav.selectOrganization" xml:space="preserve"><value>Choose an organization</value></data>
+  <data name="dashboard.overview" xml:space="preserve"><value>Overview</value></data>
+  <data name="notifications.title" xml:space="preserve"><value>Notifications</value></data>
+  <data name="notifications.description" xml:space="preserve"><value>What happened in the portal that concerns you.</value></data>
+  <data name="notifications.bell" xml:space="preserve"><value>Notifications</value></data>
+  <data name="notifications.bellUnread_one" xml:space="preserve"><value>1 unread notification</value></data>
+  <data name="notifications.bellUnread_other" xml:space="preserve"><value>{count} unread notifications</value></data>
+  <data name="notifications.unreadCount_one" xml:space="preserve"><value>1 unread</value></data>
+  <data name="notifications.unreadCount_other" xml:space="preserve"><value>{count} unread</value></data>
+  <data name="notifications.markAllRead" xml:space="preserve"><value>Mark all as read</value></data>
+  <data name="notifications.markRead" xml:space="preserve"><value>Mark as read</value></data>
+  <data name="notifications.markUnread" xml:space="preserve"><value>Mark as unread</value></data>
+  <data name="notifications.allRead" xml:space="preserve"><value>All notifications marked as read</value></data>
+  <data name="notifications.deleteRead" xml:space="preserve"><value>Delete the read ones</value></data>
+  <data name="notifications.readDeleted" xml:space="preserve"><value>Read notifications deleted</value></data>
+  <data name="notifications.seeAll" xml:space="preserve"><value>See all notifications</value></data>
+  <data name="notifications.open" xml:space="preserve"><value>Open</value></data>
+  <data name="notifications.unread" xml:space="preserve"><value>Unread</value></data>
+  <data name="notifications.tab.all" xml:space="preserve"><value>All</value></data>
+  <data name="notifications.tab.unread" xml:space="preserve"><value>Unread ({count})</value></data>
+  <data name="notifications.empty.title" xml:space="preserve"><value>Nothing new</value></data>
+  <data name="notifications.empty.description" xml:space="preserve"><value>When something concerns you (an access granted, a request to review), it shows up here.</value></data>
+  <data name="notifications.emptyUnread.title" xml:space="preserve"><value>All caught up</value></data>
+  <data name="notifications.emptyUnread.description" xml:space="preserve"><value>Every notification has been read.</value></data>
+  <data name="catalog.title" xml:space="preserve"><value>Applications you can ask for</value></data>
+  <data name="catalog.description" xml:space="preserve"><value>You cannot open these yet; ask and a reviewer will decide.</value></data>
+  <data name="accessDenied.canRequest" xml:space="preserve"><value>This application accepts access requests.</value></data>
+  <data name="accessDenied.organization" xml:space="preserve"><value>This application works per organization, and you do not belong to the one it needs. Ask an administrator to add you.</value></data>
+  <data name="requests.ask" xml:space="preserve"><value>Request access</value></data>
+  <data name="requests.askAgain" xml:space="preserve"><value>Ask again</value></data>
+  <data name="requests.cancel" xml:space="preserve"><value>Withdraw</value></data>
+  <data name="requests.cancelled" xml:space="preserve"><value>Request withdrawn</value></data>
+  <data name="requests.pendingSince" xml:space="preserve"><value>Requested {when}</value></data>
+  <data name="requests.rejectedOn" xml:space="preserve"><value>Declined {when}</value></data>
+  <data name="requests.dialogTitle" xml:space="preserve"><value>Request access to {application}</value></data>
+  <data name="requests.dialogDescription" xml:space="preserve"><value>A reviewer will read your request; you will be notified of the decision.</value></data>
+  <data name="requests.reason" xml:space="preserve"><value>Why do you need it?</value></data>
+  <data name="requests.reasonHint" xml:space="preserve"><value>Optional, but it helps the reviewer decide.</value></data>
+  <data name="requests.reasonMax" xml:space="preserve"><value>Keep it under {max} characters.</value></data>
+  <data name="requests.send" xml:space="preserve"><value>Send request</value></data>
+  <data name="requests.sent" xml:space="preserve"><value>Request sent</value></data>
+  <data name="requests.sentDescription" xml:space="preserve"><value>You will be notified when {application} is granted or declined.</value></data>
+  <data name="requests.failed" xml:space="preserve"><value>The request could not be sent</value></data>
+  <data name="requests.status.pending" xml:space="preserve"><value>Waiting</value></data>
+  <data name="requests.status.approved" xml:space="preserve"><value>Approved</value></data>
+  <data name="requests.status.rejected" xml:space="preserve"><value>Declined</value></data>
+  <data name="requests.status.cancelled" xml:space="preserve"><value>Withdrawn</value></data>
+  <data name="account.tab.organizations" xml:space="preserve"><value>Organizations</value></data>
+  <data name="account.tab.requests" xml:space="preserve"><value>Access requests</value></data>
+  <data name="account.organizations.title" xml:space="preserve"><value>My organizations</value></data>
+  <data name="account.organizations.description" xml:space="preserve"><value>Applications that work per organization let you choose among these when you sign in.</value></data>
+  <data name="account.organizations.empty" xml:space="preserve"><value>You do not belong to any organization.</value></data>
+  <data name="account.requests.title" xml:space="preserve"><value>My access requests</value></data>
+  <data name="account.requests.description" xml:space="preserve"><value>The applications you asked for, and how each request ended.</value></data>
+  <data name="account.requests.empty" xml:space="preserve"><value>You have not asked for any application.</value></data>
+  <data name="account.requests.asked" xml:space="preserve"><value>Asked {when}</value></data>
+  <data name="account.requests.decided" xml:space="preserve"><value>decided {when}</value></data>
+  <data name="requests.admin.title" xml:space="preserve"><value>Access requests</value></data>
+  <data name="requests.admin.description" xml:space="preserve"><value>People asking for applications they cannot open. Approving grants the application with the roles you choose.</value></data>
+  <data name="requests.admin.listTitle" xml:space="preserve"><value>Requests</value></data>
+  <data name="requests.admin.pendingCount_one" xml:space="preserve"><value>1 request waiting for a decision</value></data>
+  <data name="requests.admin.pendingCount_other" xml:space="preserve"><value>{count} requests waiting for a decision</value></data>
+  <data name="requests.admin.search" xml:space="preserve"><value>Search people, applications, reasons</value></data>
+  <data name="requests.admin.emptyPending.title" xml:space="preserve"><value>Nothing to review</value></data>
+  <data name="requests.admin.emptyPending.description" xml:space="preserve"><value>New requests appear here, and reviewers are notified.</value></data>
+  <data name="requests.admin.empty.title" xml:space="preserve"><value>No requests</value></data>
+  <data name="requests.admin.empty.description" xml:space="preserve"><value>No request matches the filter.</value></data>
+  <data name="requests.column.user" xml:space="preserve"><value>Requester</value></data>
+  <data name="requests.column.application" xml:space="preserve"><value>Application</value></data>
+  <data name="requests.column.reason" xml:space="preserve"><value>Reason</value></data>
+  <data name="requests.column.when" xml:space="preserve"><value>Requested</value></data>
+  <data name="requests.approve" xml:space="preserve"><value>Approve</value></data>
+  <data name="requests.reject" xml:space="preserve"><value>Decline</value></data>
+  <data name="requests.approved" xml:space="preserve"><value>Request approved</value></data>
+  <data name="requests.rejected" xml:space="preserve"><value>Request declined</value></data>
+  <data name="requests.approveTitle" xml:space="preserve"><value>Grant {application}</value></data>
+  <data name="requests.rejectTitle" xml:space="preserve"><value>Decline the request for {application}</value></data>
+  <data name="requests.decisionFor" xml:space="preserve"><value>Requested by {name} ({email}).</value></data>
+  <data name="requests.decisionFailed" xml:space="preserve"><value>The decision could not be saved</value></data>
+  <data name="requests.decidedBy" xml:space="preserve"><value>by {name}, {when}</value></data>
+  <data name="requests.hasAccess" xml:space="preserve"><value>Already has access another way</value></data>
+  <data name="requests.hasAccessHint" xml:space="preserve"><value>This person can already open the application (through a group or a grant made since). Approving adds a personal grant with the roles chosen.</value></data>
+  <data name="requests.roles" xml:space="preserve"><value>Roles to grant</value></data>
+  <data name="requests.rolesHint" xml:space="preserve"><value>What the application will let this person do.</value></data>
+  <data name="requests.noteOptional" xml:space="preserve"><value>Note for the requester (optional)</value></data>
+  <data name="requests.reasonForRequester" xml:space="preserve"><value>Why (for the requester)</value></data>
+  <data name="requests.noteHint" xml:space="preserve"><value>Sent with the notification.</value></data>
+  <data name="requests.noteMax" xml:space="preserve"><value>Keep it under {max} characters.</value></data>
+  <data name="applications.tab.access" xml:space="preserve"><value>Access</value></data>
+  <data name="applications.requests.title" xml:space="preserve"><value>Users can request access</value></data>
+  <data name="applications.requests.hint" xml:space="preserve"><value>Users who cannot open the application see it in their catalog and on the access-denied page, and can ask for it.</value></data>
+  <data name="applications.organizations.title" xml:space="preserve"><value>Organizations</value></data>
+  <data name="applications.organizations.hint" xml:space="preserve"><value>For applications that keep several organizations (tenants) apart, such as a CRM serving several companies.</value></data>
+  <data name="applications.organizations.none" xml:space="preserve"><value>Not used</value></data>
+  <data name="applications.organizations.noneHint" xml:space="preserve"><value>Tokens say nothing about organizations.</value></data>
+  <data name="applications.organizations.optional" xml:space="preserve"><value>Optional</value></data>
+  <data name="applications.organizations.optionalHint" xml:space="preserve"><value>Tokens name the organization the user signs in for, when they belong to one.</value></data>
+  <data name="applications.organizations.required" xml:space="preserve"><value>Required</value></data>
+  <data name="applications.organizations.requiredHint" xml:space="preserve"><value>Only members of an organization may sign in; members of several choose one.</value></data>
+  <data name="applications.organizations.claims" xml:space="preserve"><value>With the organization scope, tokens carry</value></data>
+  <data name="organizations.title" xml:space="preserve"><value>Organizations</value></data>
+  <data name="organizations.description" xml:space="preserve"><value>Tenants that applications keep apart. Members sign in for one of their organizations, which the application receives in its tokens.</value></data>
+  <data name="organizations.listTitle" xml:space="preserve"><value>All organizations</value></data>
+  <data name="organizations.create" xml:space="preserve"><value>New organization</value></data>
+  <data name="organizations.created" xml:space="preserve"><value>Organization created</value></data>
+  <data name="organizations.saved" xml:space="preserve"><value>Organization saved</value></data>
+  <data name="organizations.saveFailed" xml:space="preserve"><value>The organization could not be saved</value></data>
+  <data name="organizations.deleted" xml:space="preserve"><value>Organization deleted</value></data>
+  <data name="organizations.deleteTitle" xml:space="preserve"><value>Delete {name}?</value></data>
+  <data name="organizations.deleteDescription" xml:space="preserve"><value>Its members lose it and their sessions in applications that work per organization end. Applications keep their own data.</value></data>
+  <data name="organizations.empty.title" xml:space="preserve"><value>No organizations yet</value></data>
+  <data name="organizations.empty.description" xml:space="preserve"><value>Create one per customer, branch or team an application must keep apart.</value></data>
+  <data name="organizations.search" xml:space="preserve"><value>Search organizations</value></data>
+  <data name="organizations.column.name" xml:space="preserve"><value>Name</value></data>
+  <data name="organizations.column.slug" xml:space="preserve"><value>Short name</value></data>
+  <data name="organizations.column.members" xml:space="preserve"><value>Members</value></data>
+  <data name="organizations.column.created" xml:space="preserve"><value>Created</value></data>
+  <data name="organizations.memberCount_one" xml:space="preserve"><value>1 member</value></data>
+  <data name="organizations.memberCount_other" xml:space="preserve"><value>{count} members</value></data>
+  <data name="organizations.tab.details" xml:space="preserve"><value>Details</value></data>
+  <data name="organizations.tab.members" xml:space="preserve"><value>Members</value></data>
+  <data name="organizations.form.createTitle" xml:space="preserve"><value>New organization</value></data>
+  <data name="organizations.form.createDescription" xml:space="preserve"><value>The short name is how sign-ins name the organization; it cannot change later.</value></data>
+  <data name="organizations.form.editTitle" xml:space="preserve"><value>Organization</value></data>
+  <data name="organizations.form.editDescription" xml:space="preserve"><value>Name and members of the organization.</value></data>
+  <data name="organizations.form.name" xml:space="preserve"><value>Name</value></data>
+  <data name="organizations.form.nameRequired" xml:space="preserve"><value>The name is required.</value></data>
+  <data name="organizations.form.nameMax" xml:space="preserve"><value>Keep it under {max} characters.</value></data>
+  <data name="organizations.form.slug" xml:space="preserve"><value>Short name</value></data>
+  <data name="organizations.form.slugHint" xml:space="preserve"><value>Lower-case letters, digits and hyphens, e.g. acme.</value></data>
+  <data name="organizations.form.slugLocked" xml:space="preserve"><value>The short name cannot change: applications may rely on it.</value></data>
+  <data name="organizations.form.slugRequired" xml:space="preserve"><value>The short name is required.</value></data>
+  <data name="organizations.form.slugInvalid" xml:space="preserve"><value>Use lower-case letters, digits and hyphens (64 at most), starting with a letter or a digit.</value></data>
+  <data name="organizations.form.description" xml:space="preserve"><value>Description</value></data>
+  <data name="organizations.form.descriptionMax" xml:space="preserve"><value>Keep it under {max} characters.</value></data>
+  <data name="organizations.membersHint" xml:space="preserve"><value>Applications receive the member role as org_role: an admin can be given more rights inside them.</value></data>
+  <data name="organizations.add" xml:space="preserve"><value>Add</value></data>
+  <data name="organizations.noMembers" xml:space="preserve"><value>No members yet.</value></data>
+  <data name="organizations.remove" xml:space="preserve"><value>Remove {name}</value></data>
+  <data name="organizations.role" xml:space="preserve"><value>Role in the organization</value></data>
+  <data name="organizations.roleName.member" xml:space="preserve"><value>Member</value></data>
+  <data name="organizations.roleName.admin" xml:space="preserve"><value>Admin</value></data>
+  <data name="selectOrganization.title" xml:space="preserve"><value>Choose an organization</value></data>
+  <data name="selectOrganization.description" xml:space="preserve"><value>You belong to several organizations. Which one are you signing in to {application} for?</value></data>
+  <data name="selectOrganization.invalid" xml:space="preserve"><value>This page is reached while signing in to an application. Start again from the application.</value></data>
+  <data name="signIn.noAccount" xml:space="preserve"><value>No account yet?</value></data>
+  <data name="signIn.register" xml:space="preserve"><value>Create one</value></data>
+  <data name="signIn.pendingApproval.title" xml:space="preserve"><value>Your account is waiting for approval</value></data>
+  <data name="signIn.pendingApproval.description" xml:space="preserve"><value>An administrator has to approve it; you will receive an email when it is done.</value></data>
+  <data name="signIn.unconfirmed" xml:space="preserve"><value>Confirm your email address first: open the link we sent you.</value></data>
+  <data name="register.title" xml:space="preserve"><value>Create your account</value></data>
+  <data name="register.description" xml:space="preserve"><value>A few details and a password, and you are in.</value></data>
+  <data name="register.descriptionApproval" xml:space="preserve"><value>An administrator will approve the new account before you can sign in.</value></data>
+  <data name="register.submit" xml:space="preserve"><value>Create account</value></data>
+  <data name="register.failed" xml:space="preserve"><value>The account could not be created</value></data>
+  <data name="register.closed" xml:space="preserve"><value>This portal does not accept registrations any more.</value></data>
+  <data name="register.haveAccount" xml:space="preserve"><value>Already have an account?</value></data>
+  <data name="register.signIn" xml:space="preserve"><value>Sign in</value></data>
+  <data name="register.backToSignIn" xml:space="preserve"><value>Back to sign-in</value></data>
+  <data name="register.checkEmail.title" xml:space="preserve"><value>Check your email</value></data>
+  <data name="register.checkEmail.description" xml:space="preserve"><value>We sent a confirmation link to your address. Open it to finish creating your account.</value></data>
+  <data name="register.pending.title" xml:space="preserve"><value>Account created</value></data>
+  <data name="register.pending.description" xml:space="preserve"><value>An administrator will review it. You will receive an email when you can sign in.</value></data>
+  <data name="confirmEmail.confirming" xml:space="preserve"><value>Confirming your address…</value></data>
+  <data name="confirmEmail.done.title" xml:space="preserve"><value>Address confirmed</value></data>
+  <data name="confirmEmail.done.description" xml:space="preserve"><value>You can sign in now.</value></data>
+  <data name="confirmEmail.done.approval" xml:space="preserve"><value>Thank you. An administrator still has to approve the account; you will receive an email.</value></data>
+  <data name="confirmEmail.invalid.title" xml:space="preserve"><value>This link does not work</value></data>
+  <data name="confirmEmail.invalid.description" xml:space="preserve"><value>It is incomplete, already used or expired. Enter your address to get a new one.</value></data>
+  <data name="confirmEmail.resend" xml:space="preserve"><value>Send the link again</value></data>
+  <data name="confirmEmail.resent" xml:space="preserve"><value>Check your email</value></data>
+  <data name="confirmEmail.resentDescription" xml:space="preserve"><value>If the address waits for confirmation, a new link is on its way.</value></data>
+  <data name="invitation.title" xml:space="preserve"><value>You are invited</value></data>
+  <data name="invitation.description" xml:space="preserve"><value>Choose your name and a password to create your account.</value></data>
+  <data name="invitation.descriptionBy" xml:space="preserve"><value>{name} invited you. Choose your name and a password to create your account.</value></data>
+  <data name="invitation.emailHint" xml:space="preserve"><value>The invited address: it is the one you will sign in with.</value></data>
+  <data name="invitation.submit" xml:space="preserve"><value>Create my account</value></data>
+  <data name="invitation.failed" xml:space="preserve"><value>The account could not be created</value></data>
+  <data name="invitation.expires" xml:space="preserve"><value>This invitation is valid until {date}.</value></data>
+  <data name="invitation.expired.title" xml:space="preserve"><value>This invitation has expired</value></data>
+  <data name="invitation.expired.description" xml:space="preserve"><value>Ask whoever invited you to send it again.</value></data>
+  <data name="invitation.invalid.title" xml:space="preserve"><value>This invitation is not valid</value></data>
+  <data name="invitation.invalid.description" xml:space="preserve"><value>It was already used or withdrawn. If you already have an account, sign in.</value></data>
+  <data name="invitations.title" xml:space="preserve"><value>Invitations</value></data>
+  <data name="invitations.description" xml:space="preserve"><value>Invite people by email: the link lets them create their account, already in the groups and organizations you choose.</value></data>
+  <data name="invitations.listTitle" xml:space="preserve"><value>Invitations sent</value></data>
+  <data name="invitations.invite" xml:space="preserve"><value>Invite</value></data>
+  <data name="invitations.search" xml:space="preserve"><value>Search by email</value></data>
+  <data name="invitations.empty.title" xml:space="preserve"><value>No invitations</value></data>
+  <data name="invitations.empty.description" xml:space="preserve"><value>Invite someone and their account will be ready when they follow the link.</value></data>
+  <data name="invitations.column.email" xml:space="preserve"><value>Invited</value></data>
+  <data name="invitations.column.invitedBy" xml:space="preserve"><value>Invited by</value></data>
+  <data name="invitations.column.expires" xml:space="preserve"><value>Valid until</value></data>
+  <data name="invitations.memberships" xml:space="preserve"><value>Joins {groups} groups, {organizations} organizations</value></data>
+  <data name="invitations.status.pending" xml:space="preserve"><value>Waiting</value></data>
+  <data name="invitations.status.accepted" xml:space="preserve"><value>Accepted</value></data>
+  <data name="invitations.status.expired" xml:space="preserve"><value>Expired</value></data>
+  <data name="invitations.status.revoked" xml:space="preserve"><value>Withdrawn</value></data>
+  <data name="invitations.resend" xml:space="preserve"><value>Send again</value></data>
+  <data name="invitations.revoke" xml:space="preserve"><value>Withdraw</value></data>
+  <data name="invitations.revoked" xml:space="preserve"><value>Invitation withdrawn</value></data>
+  <data name="invitations.failed" xml:space="preserve"><value>The invitation could not be sent</value></data>
+  <data name="invitations.form.title" xml:space="preserve"><value>Invite someone</value></data>
+  <data name="invitations.form.description" xml:space="preserve"><value>They receive a link to create their account; it works once.</value></data>
+  <data name="invitations.form.optional" xml:space="preserve"><value>Optional: they can change it.</value></data>
+  <data name="invitations.form.message" xml:space="preserve"><value>Personal message</value></data>
+  <data name="invitations.form.messageHint" xml:space="preserve"><value>Shown in the email and on the invitation page.</value></data>
+  <data name="invitations.form.groups" xml:space="preserve"><value>Groups to join</value></data>
+  <data name="invitations.form.organizations" xml:space="preserve"><value>Organizations to join</value></data>
+  <data name="invitations.form.send" xml:space="preserve"><value>Send invitation</value></data>
+  <data name="invitations.issued.title" xml:space="preserve"><value>Invitation ready</value></data>
+  <data name="invitations.issued.emailed" xml:space="preserve"><value>The link was emailed.</value></data>
+  <data name="invitations.issued.notEmailed" xml:space="preserve"><value>Email is not configured: pass the link on yourself.</value></data>
+  <data name="invitations.issued.once" xml:space="preserve"><value>The portal keeps no copy of the link: copy it now if you need it.</value></data>
+  <data name="invitations.issued.link" xml:space="preserve"><value>Invitation link</value></data>
+  <data name="invitations.issued.copy" xml:space="preserve"><value>Copy the link</value></data>
+  <data name="invitations.issued.copied" xml:space="preserve"><value>Link copied</value></data>
+  <data name="invitations.issued.expires" xml:space="preserve"><value>Valid until {date}.</value></data>
+  <data name="users.pendingApproval" xml:space="preserve"><value>Waiting for approval</value></data>
+  <data name="users.status.pending" xml:space="preserve"><value>Waiting for approval</value></data>
+  <data name="users.approve" xml:space="preserve"><value>Approve</value></data>
+  <data name="users.approved" xml:space="preserve"><value>Account approved</value></data>
+  <data name="users.origin.created" xml:space="preserve"><value>Created</value></data>
+  <data name="users.origin.registered" xml:space="preserve"><value>Self-registered</value></data>
+  <data name="users.origin.invited" xml:space="preserve"><value>Invited</value></data>
+  <data name="users.origin.provisioned" xml:space="preserve"><value>Created by an application</value></data>
+  <data name="settings.registration.title" xml:space="preserve"><value>Registration and invitations</value></data>
+  <data name="settings.registration.description" xml:space="preserve"><value>How people get an account besides an administrator creating it.</value></data>
+  <data name="settings.registration.mode" xml:space="preserve"><value>Self-registration</value></data>
+  <data name="settings.registration.modes.disabled" xml:space="preserve"><value>Off</value></data>
+  <data name="settings.registration.modes.disabledHint" xml:space="preserve"><value>Accounts are created by administrators, directly or by invitation.</value></data>
+  <data name="settings.registration.modes.open" xml:space="preserve"><value>Open</value></data>
+  <data name="settings.registration.modes.openHint" xml:space="preserve"><value>Anyone allowed by the domains below can register and sign in.</value></data>
+  <data name="settings.registration.modes.approval" xml:space="preserve"><value>With approval</value></data>
+  <data name="settings.registration.modes.approvalHint" xml:space="preserve"><value>New accounts wait until a holder of the users page approves them.</value></data>
+  <data name="settings.registration.confirm" xml:space="preserve"><value>Confirm the email address</value></data>
+  <data name="settings.registration.confirmHint" xml:space="preserve"><value>A self-registered account signs in only after following the link sent to its address. Recommended: without it anyone can register an address that is not theirs.</value></data>
+  <data name="settings.registration.confirmNeedsEmail" xml:space="preserve"><value>Email confirmation needs email delivery: configure it or turn confirmation off.</value></data>
+  <data name="settings.registration.noEmail" xml:space="preserve"><value>Email delivery is not configured (Email section of the settings): invitation links are shown to you instead of being emailed, and email confirmation is unavailable.</value></data>
+  <data name="settings.registration.domains" xml:space="preserve"><value>Allowed email domains</value></data>
+  <data name="settings.registration.domainsHint" xml:space="preserve"><value>One per line (example.com). Empty allows any domain; subdomains are not included.</value></data>
+  <data name="settings.registration.invitationDays" xml:space="preserve"><value>Invitations valid for (days)</value></data>
+  <data name="settings.registration.invitationDaysHint" xml:space="preserve"><value>From 1 to 90 days; sending again restarts the period.</value></data>
+  <data name="settings.registration.daysInvalid" xml:space="preserve"><value>Enter a number of days from 1 to 90.</value></data>
+  <data name="statistics.title" xml:space="preserve"><value>Statistics</value></data>
+  <data name="statistics.description" xml:space="preserve"><value>Sign-ins, failures and application use, from the audit log.</value></data>
+  <data name="statistics.more" xml:space="preserve"><value>All statistics</value></data>
+  <data name="statistics.days_one" xml:space="preserve"><value>1 day</value></data>
+  <data name="statistics.days_other" xml:space="preserve"><value>{count} days</value></data>
+  <data name="statistics.incomplete" xml:space="preserve"><value>The audit log no longer keeps all of this period: older entries were removed by the retention policy, so the figures are partial.</value></data>
+  <data name="statistics.kpi.signIns" xml:space="preserve"><value>Portal sign-ins</value></data>
+  <data name="statistics.kpi.activeUsers" xml:space="preserve"><value>Active users</value></data>
+  <data name="statistics.kpi.applicationSignIns" xml:space="preserve"><value>Application sign-ins</value></data>
+  <data name="statistics.kpi.failedSignIns" xml:space="preserve"><value>Failed attempts</value></data>
+  <data name="statistics.kpi.previous" xml:space="preserve"><value>{value} the period before</value></data>
+  <data name="statistics.kpi.new" xml:space="preserve"><value>new</value></data>
+  <data name="statistics.series.signIns" xml:space="preserve"><value>Portal sign-ins</value></data>
+  <data name="statistics.series.applicationSignIns" xml:space="preserve"><value>Application sign-ins</value></data>
+  <data name="statistics.series.failedSignIns" xml:space="preserve"><value>Failed attempts</value></data>
+  <data name="statistics.activity.title" xml:space="preserve"><value>Sign-ins per day</value></data>
+  <data name="statistics.activity.description" xml:space="preserve"><value>From {from} to {to}</value></data>
+  <data name="statistics.activity.empty" xml:space="preserve"><value>No sign-ins in this period.</value></data>
+  <data name="statistics.attention.title" xml:space="preserve"><value>Needs attention</value></data>
+  <data name="statistics.attention.description" xml:space="preserve"><value>Waiting for someone to act.</value></data>
+  <data name="statistics.attention.accessRequests" xml:space="preserve"><value>Access requests</value></data>
+  <data name="statistics.attention.registrations" xml:space="preserve"><value>Registrations to approve</value></data>
+  <data name="statistics.attention.applications" xml:space="preserve"><value>Applications to approve</value></data>
+  <data name="statistics.attention.locked" xml:space="preserve"><value>Locked accounts</value></data>
+  <data name="statistics.facts.users" xml:space="preserve"><value>Accounts</value></data>
+  <data name="statistics.facts.newUsers" xml:space="preserve"><value>New in the period</value></data>
+  <data name="statistics.facts.twoFactor" xml:space="preserve"><value>With two-factor</value></data>
+  <data name="statistics.facts.applications" xml:space="preserve"><value>Active applications</value></data>
+  <data name="statistics.topApplications.title" xml:space="preserve"><value>Most used applications</value></data>
+  <data name="statistics.topApplications.description" xml:space="preserve"><value>Sign-ins through the portal in the period.</value></data>
+  <data name="statistics.topApplications.empty" xml:space="preserve"><value>No application sign-ins in this period.</value></data>
+  <data name="statistics.topApplications.users_one" xml:space="preserve"><value>1 user</value></data>
+  <data name="statistics.topApplications.users_other" xml:space="preserve"><value>{count} users</value></data>
+  <data name="statistics.failures.title" xml:space="preserve"><value>Failed attempts by reason</value></data>
+  <data name="statistics.failures.description" xml:space="preserve"><value>Why portal sign-ins were refused.</value></data>
+  <data name="statistics.failures.empty" xml:space="preserve"><value>No failed attempts in this period.</value></data>
+  <data name="statistics.failedAccounts.title" xml:space="preserve"><value>Most targeted accounts</value></data>
+  <data name="statistics.failedAccounts.description" xml:space="preserve"><value>Addresses typed in failed sign-ins (including ones without an account).</value></data>
+  <data name="statistics.failedAddresses.title" xml:space="preserve"><value>Failed attempts by address</value></data>
+  <data name="statistics.failedAddresses.description" xml:space="preserve"><value>Where failed sign-ins came from.</value></data>
+  <data name="statistics.attempts_one" xml:space="preserve"><value>1 attempt</value></data>
+  <data name="statistics.attempts_other" xml:space="preserve"><value>{count} attempts</value></data>
+  <data name="statistics.reason.invalid_password" xml:space="preserve"><value>Wrong password</value></data>
+  <data name="statistics.reason.unknown_account" xml:space="preserve"><value>Unknown account</value></data>
+  <data name="statistics.reason.locked_out" xml:space="preserve"><value>Account locked</value></data>
+  <data name="statistics.reason.invalid_code" xml:space="preserve"><value>Wrong two-factor code</value></data>
+  <data name="statistics.reason.not_allowed" xml:space="preserve"><value>Not allowed to sign in</value></data>
+  <data name="statistics.reason.pending_approval" xml:space="preserve"><value>Waiting for approval</value></data>
+  <data name="statistics.reason.email_not_confirmed" xml:space="preserve"><value>Email not confirmed</value></data>
+  <data name="statistics.reason.unknown" xml:space="preserve"><value>Other</value></data>
 </root>

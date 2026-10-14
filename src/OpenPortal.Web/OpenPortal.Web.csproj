@@ -13,6 +13,7 @@
     <ProjectReference Include="..\Modules\Audit\OpenPortal.Audit.Infrastructure\OpenPortal.Audit.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Content\OpenPortal.Content.Infrastructure\OpenPortal.Content.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Identity\OpenPortal.Identity.Infrastructure\OpenPortal.Identity.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Notifications\OpenPortal.Notifications.Infrastructure\OpenPortal.Notifications.Infrastructure.csproj" />
     <!-- PostgreSQL's migrations (and its provider) ship with the host; SQLite's live in this project. -->
     <ProjectReference Include="..\OpenPortal.Migrations.PostgreSql\OpenPortal.Migrations.PostgreSql.csproj" />
   </ItemGroup>
@@ -21,6 +22,8 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Microsoft.AspNetCore.SpaProxy" />
     <PackageReference Include="Scalar.AspNetCore" />
+    <!-- Account email (invitations, address confirmation) over SMTP; System.Net.Mail.SmtpClient is not recommended for new code. -->
+    <PackageReference Include="MailKit" />
     <!--
       The concrete database provider is referenced by the composition root only. Domain, Application
       and the module Infrastructure projects never see it, which is what keeps the SQLite -> PostgreSQL

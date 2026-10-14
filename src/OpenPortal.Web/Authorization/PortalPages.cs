@@ -23,6 +23,9 @@ public static class PortalPages
     public const string Users = "users";
     public const string Groups = "groups";
     public const string Access = "access";
+    public const string AccessRequests = "access-requests";
+    public const string Organizations = "organizations";
+    public const string Statistics = "statistics";
     public const string Applications = "applications";
     public const string ContentProfile = "content.profile";
     public const string ContentProjects = "content.projects";
@@ -34,10 +37,13 @@ public static class PortalPages
         new(Users, "nav.users", "nav.identity"),
         new(Groups, "nav.groups", "nav.identity"),
         new(Access, "nav.access", "nav.identity"),
+        new(AccessRequests, "nav.accessRequests", "nav.identity"),
+        new(Organizations, "nav.organizations", "nav.identity"),
         new(Applications, "nav.applications", "nav.applications"),
         new(ContentProfile, "nav.profile", "nav.content"),
         new(ContentProjects, "nav.projects", "nav.content"),
         new(Audit, "nav.audit", "nav.security"),
+        new(Statistics, "nav.statistics", "nav.security"),
     ];
 }
 

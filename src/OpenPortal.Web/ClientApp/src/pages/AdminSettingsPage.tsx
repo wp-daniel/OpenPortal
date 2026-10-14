@@ -2,21 +2,27 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { settingsApi } from '@/api/settings'
-import type { SecuritySettings } from '@/api/types'
+import type { RegistrationMode, RegistrationSettings, SecuritySettings } from '@/api/types'
 import { FormField } from '@/components/FormField'
 import { PageHeader } from '@/components/PageHeader'
 import { Section } from '@/components/Section'
 import { ErrorPanel, LoadingState } from '@/components/StatePanels'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { SESSION_QUERY_KEY } from '@/hooks/useSession'
 import { notify } from '@/hooks/useToast'
 import { useI18n } from '@/i18n/useI18n'
 import { describeError, traceIdOf } from '@/lib/errors'
 import { reportFormError, serverFieldErrors } from '@/lib/forms'
 
 const SETTINGS_KEY = ['admin-settings-security'] as const
+const REGISTRATION_KEY = ['admin-settings-registration'] as const
+const REGISTRATION_MODES: readonly RegistrationMode[] = ['disabled', 'open', 'approval']
 
 /** Maximum length of the authenticator issuer name (`SecuritySettings.IssuerMaxLength` on the server). */
 const ISSUER_MAX_LENGTH = 64
@@ -29,6 +35,7 @@ export function AdminSettingsPage() {
   const { t } = useI18n()
 
   const settings = useQuery({ queryKey: SETTINGS_KEY, queryFn: ({ signal }) => settingsApi.security(signal) })
+  const registration = useQuery({ queryKey: REGISTRATION_KEY, queryFn: ({ signal }) => settingsApi.registration(signal) })
 
   return (
     <div className="space-y-6">
@@ -46,7 +53,140 @@ export function AdminSettingsPage() {
 
       {/* Keyed by the saved stamp so the form restarts from the server's values after each save. */}
       {settings.data && <SecurityForm key={settings.data.updatedAtUtc ?? 'defaults'} initial={settings.data} />}
+
+      {registration.isError && (
+        <ErrorPanel
+          message={describeError(registration.error)}
+          traceId={traceIdOf(registration.error)}
+          onRetry={() => void registration.refetch()}
+        />
+      )}
+      {registration.data && (
+        <RegistrationForm key={registration.data.updatedAtUtc ?? 'defaults'} initial={registration.data} />
+      )}
     </div>
+  )
+}
+
+/**
+ * How accounts come to exist besides an administrator creating them: self-registration (off, open, or waiting
+ * for approval), which email domains may register, whether the address must be confirmed, and how long an
+ * invitation link stays valid.
+ */
+function RegistrationForm({ initial }: { initial: RegistrationSettings }) {
+  const { t } = useI18n()
+  const queryClient = useQueryClient()
+  const [mode, setMode] = useState<RegistrationMode>(initial.mode)
+  const [domains, setDomains] = useState(initial.allowedDomains.join('\n'))
+  const [confirm, setConfirm] = useState(initial.requireEmailConfirmation)
+  const [days, setDays] = useState(String(initial.invitationLifetimeDays))
+  const [daysError, setDaysError] = useState<string | undefined>()
+
+  const allowedDomains = domains
+    .split(/[\s,;]+/)
+    .map((domain) => domain.trim().toLowerCase())
+    .filter((domain) => domain !== '')
+
+  const save = useMutation({
+    mutationFn: () =>
+      settingsApi.updateRegistration({
+        mode,
+        allowedDomains,
+        requireEmailConfirmation: confirm,
+        invitationLifetimeDays: Number(days),
+      }),
+    meta: { handlesErrors: true },
+    onSuccess: async (saved) => {
+      notify.success(t('settings.saved'))
+      queryClient.setQueryData(REGISTRATION_KEY, saved)
+      // The sign-in page reads whether registration is offered from the session.
+      await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY })
+    },
+    onError: (failure) => reportFormError(failure, t('settings.saveFailed')),
+  })
+
+  function submit(event: FormEvent) {
+    event.preventDefault()
+    const value = Number(days)
+
+    if (!Number.isInteger(value) || value < 1 || value > 90) {
+      setDaysError(t('settings.registration.daysInvalid'))
+      return
+    }
+
+    setDaysError(undefined)
+    save.mutate()
+  }
+
+  const serverErrors = serverFieldErrors(save.error)
+  const needsEmail = mode !== 'disabled' && confirm && !initial.emailDeliveryAvailable
+
+  return (
+    <Section title={t('settings.registration.title')} description={t('settings.registration.description')}>
+      <form onSubmit={submit} noValidate className="grid max-w-2xl items-start gap-6">
+        {!initial.emailDeliveryAvailable && (
+          <Alert>
+            <AlertDescription>{t('settings.registration.noEmail')}</AlertDescription>
+          </Alert>
+        )}
+
+        <fieldset className="grid gap-3">
+          <legend className="mb-1 text-sm font-medium">{t('settings.registration.mode')}</legend>
+          <RadioGroup value={mode} onValueChange={(value) => setMode(value as RegistrationMode)} className="gap-2">
+            {REGISTRATION_MODES.map((value) => (
+              <div key={value} className="flex items-start gap-3">
+                <RadioGroupItem value={value} id={`registration-${value}`} className="mt-0.5" />
+                <div className="grid gap-0.5">
+                  <Label htmlFor={`registration-${value}`}>{t(`settings.registration.modes.${value}`)}</Label>
+                  <p className="text-muted-foreground text-xs">{t(`settings.registration.modes.${value}Hint`)}</p>
+                </div>
+              </div>
+            ))}
+          </RadioGroup>
+        </fieldset>
+
+        <div className="flex items-start justify-between gap-6 rounded-lg border p-4">
+          <div className="grid gap-1">
+            <Label htmlFor="registration-confirm">{t('settings.registration.confirm')}</Label>
+            <p className="text-muted-foreground text-sm">{t('settings.registration.confirmHint')}</p>
+          </div>
+          <Switch id="registration-confirm" checked={confirm} onCheckedChange={setConfirm} />
+        </div>
+
+        {needsEmail && <p className="text-destructive text-sm">{t('settings.registration.confirmNeedsEmail')}</p>}
+
+        <FormField
+          label={t('settings.registration.domains')}
+          htmlFor="registration-domains"
+          hint={t('settings.registration.domainsHint')}
+          error={serverErrors.allowedDomains?.[0]}
+        >
+          <Textarea
+            rows={3}
+            className="font-mono text-xs"
+            placeholder="example.com"
+            value={domains}
+            onChange={(event) => setDomains(event.target.value)}
+          />
+        </FormField>
+
+        <FormField
+          label={t('settings.registration.invitationDays')}
+          htmlFor="registration-days"
+          hint={t('settings.registration.invitationDaysHint')}
+          error={daysError ?? serverErrors.invitationLifetimeDays?.[0]}
+        >
+          <Input type="number" min={1} max={90} className="w-32" value={days} onChange={(event) => setDays(event.target.value)} />
+        </FormField>
+
+        <div>
+          <Button type="submit" disabled={save.isPending || needsEmail}>
+            {save.isPending && <Loader2 className="animate-spin" />}
+            {save.isPending ? t('common.saving') : t('common.save')}
+          </Button>
+        </div>
+      </form>
+    </Section>
   )
 }
 

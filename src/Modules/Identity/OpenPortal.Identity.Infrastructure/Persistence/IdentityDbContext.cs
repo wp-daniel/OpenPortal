@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using OpenPortal.Identity.Domain.Invitations;
 using OpenPortal.Identity.Domain.Settings;
 using OpenPortal.Identity.Domain.Users;
 
@@ -28,6 +29,10 @@ public sealed class IdentityDbContext : IdentityDbContext<ApplicationUser, Ident
 
     public DbSet<SecuritySettings> SecuritySettings => Set<SecuritySettings>();
 
+    public DbSet<RegistrationSettings> RegistrationSettings => Set<RegistrationSettings>();
+
+    public DbSet<UserInvitation> Invitations => Set<UserInvitation>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -37,6 +42,8 @@ public sealed class IdentityDbContext : IdentityDbContext<ApplicationUser, Ident
         builder.ApplyConfiguration(new ApplicationUserConfiguration());
         builder.ApplyConfiguration(new UserAvatarConfiguration());
         builder.ApplyConfiguration(new SecuritySettingsConfiguration());
+        builder.ApplyConfiguration(new RegistrationSettingsConfiguration());
+        builder.ApplyConfiguration(new UserInvitationConfiguration());
 
         builder.Entity<IdentityRole<Guid>>().ToTable("Roles");
         builder.Entity<IdentityUserRole<Guid>>().ToTable("UserRoles");

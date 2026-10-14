@@ -32,6 +32,9 @@ export const userAdminApi = {
 
   removeAvatar: (userId: string) => api.delete<void>(`/api/admin/users/${userId}/avatar`),
 
+  /** Lets a self-registered account that waits for approval sign in (to reject it, delete it). */
+  approve: (userId: string) => api.post<UserSummary>(`/api/admin/users/${userId}/approve`),
+
   /** Deletes the account, its group memberships and its application grants. */
   remove: (userId: string) => api.delete<void>(`/api/admin/users/${userId}`),
 }

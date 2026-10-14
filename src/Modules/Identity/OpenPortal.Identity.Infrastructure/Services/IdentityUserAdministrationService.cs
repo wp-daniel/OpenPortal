@@ -5,7 +5,9 @@ using OpenPortal.Identity.Application.Auditing;
 using OpenPortal.Identity.Application.Contracts;
 using OpenPortal.Identity.Domain.Users;
 using OpenPortal.Identity.Infrastructure.Persistence;
+using OpenPortal.Identity.Application.Notifications;
 using OpenPortal.SharedKernel.Auditing;
+using OpenPortal.SharedKernel.Notifications;
 using OpenPortal.SharedKernel.Results;
 using OpenPortal.SharedKernel.Time;
 
@@ -21,6 +23,8 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
     private readonly AdministrationGuard _guard;
     private readonly IClock _clock;
     private readonly IAuditTrail _audit;
+    private readonly INotifier _notifier;
+    private readonly IAccountMessaging _messaging;
 
     public IdentityUserAdministrationService(
         UserManager<ApplicationUser> userManager,
@@ -29,8 +33,12 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         UserLookup userLookup,
         AdministrationGuard guard,
         IClock clock,
-        IAuditTrail audit)
+        IAuditTrail audit,
+        INotifier notifier,
+        IAccountMessaging messaging)
     {
+        _notifier = notifier;
+        _messaging = messaging;
         _userManager = userManager;
         _dbContext = dbContext;
         _currentUser = currentUser;
@@ -85,6 +93,7 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
             UserStatusFilter.Locked => usersQuery.Where(user =>
                 user.LockoutEnabled && user.LockoutEnd != null && user.LockoutEnd > now),
             UserStatusFilter.Unconfirmed => usersQuery.Where(user => !user.EmailConfirmed),
+            UserStatusFilter.Pending => usersQuery.Where(user => user.PendingApproval),
             UserStatusFilter.Inactive => usersQuery.Where(user =>
                 user.LastSignInAtUtc == null || user.LastSignInAtUtc < inactiveSince),
             UserStatusFilter.Active => usersQuery.Where(user =>
@@ -150,7 +159,8 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
             return Result<UserSummaryDto>.Failure(assignable.Error);
         }
 
-        return await CreateAsync(request.Email, request.Password, request.ToDetails(), roles, cancellationToken).ConfigureAwait(false);
+        return await CreateAsync(request.Email, request.Password, request.ToDetails(), roles, AccountOrigin.Created, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     public async Task<Result<UserSummaryDto>> ProvisionUserAsync(
@@ -165,7 +175,13 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
 
         ArgumentNullException.ThrowIfNull(request);
 
-        return await CreateAsync(request.Email, request.Password, request.ToDetails(), RolesFor(isAdministrator: false), cancellationToken)
+        return await CreateAsync(
+                request.Email,
+                request.Password,
+                request.ToDetails(),
+                RolesFor(isAdministrator: false),
+                AccountOrigin.Provisioned,
+                cancellationToken)
             .ConfigureAwait(false);
     }
 
@@ -175,12 +191,13 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         string password,
         UserDetails details,
         IReadOnlyList<string> roles,
+        AccountOrigin origin,
         CancellationToken cancellationToken)
     {
         var isAdministrator = roles.Contains(Roles.Administrator, StringComparer.Ordinal);
 
         // Validate the details before touching the store so bad input is a 400, not a half-made account.
-        var account = ApplicationUser.Create(Guid.NewGuid(), email, details, _clock.UtcNow);
+        var account = ApplicationUser.Create(Guid.NewGuid(), email, details, _clock.UtcNow, origin);
         if (account.IsFailure)
         {
             return Result<UserSummaryDto>.Failure(account.Error);
@@ -296,6 +313,11 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
                         user.ToAuditSubject()),
                     cancellationToken)
                 .ConfigureAwait(false);
+
+            if (request.IsAdministrator)
+            {
+                await NotifyAsync(user.Id, IdentityNotificationTypes.AdministratorGranted, cancellationToken).ConfigureAwait(false);
+            }
         }
 
         return Result<UserSummaryDto>.Success(ToSummary(user, effectiveRoles, _clock.UtcNow));
@@ -345,6 +367,9 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         await _audit.RecordAsync(AuditEvent.Succeeded(IdentityAuditActions.PasswordReset, lookup.Value.ToAuditSubject()), cancellationToken)
             .ConfigureAwait(false);
 
+        // Read at the next sign-in: whoever owns the account learns that someone else set its password.
+        await NotifyAsync(userId, IdentityNotificationTypes.PasswordReset, cancellationToken).ConfigureAwait(false);
+
         return Result.Success();
     }
 
@@ -383,7 +408,62 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         await _audit.RecordAsync(AuditEvent.Succeeded(IdentityAuditActions.TwoFactorReset, lookup.Value.ToAuditSubject()), cancellationToken)
             .ConfigureAwait(false);
 
+        await NotifyAsync(userId, IdentityNotificationTypes.TwoFactorReset, cancellationToken).ConfigureAwait(false);
+
         return Result.Success();
+    }
+
+    public async Task<Result<UserSummaryDto>> ApproveRegistrationAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var guard = await _guard.EnsureCanAsync(UserAdministrationOperation.ManageUsers, cancellationToken).ConfigureAwait(false);
+        if (guard.IsFailure)
+        {
+            return Result<UserSummaryDto>.Failure(guard.Error);
+        }
+
+        var lookup = await _userLookup.FindAsync(userId, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
+        {
+            return Result<UserSummaryDto>.Failure(lookup.Error);
+        }
+
+        var user = lookup.Value;
+
+        var approved = user.Approve(_clock.UtcNow);
+        if (approved.IsFailure)
+        {
+            return Result<UserSummaryDto>.Failure(approved.Error);
+        }
+
+        var persisted = await _userManager.UpdateAsync(user).ConfigureAwait(false);
+        if (!persisted.Succeeded)
+        {
+            return Result<UserSummaryDto>.Failure(persisted.ToError(UserErrors.SaveFailed));
+        }
+
+        await _audit.RecordAsync(AuditEvent.Succeeded(IdentityAuditActions.RegistrationApproved, user.ToAuditSubject()), cancellationToken)
+            .ConfigureAwait(false);
+
+        // Waiting for the next sign-in in the notification center, and by email so they know they can sign in.
+        await _notifier.NotifyAsync(
+                new Notice { Type = IdentityNotificationTypes.RegistrationApproved, Audience = NoticeAudience.Users(user.Id), Link = "/" },
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        await _messaging.SendAsync(
+                new AccountMessage(
+                    AccountMessageKinds.RegistrationApproved,
+                    user.Email!,
+                    user.DisplayName,
+                    user.Language,
+                    "/sign-in",
+                    new Dictionary<string, string?> { ["name"] = user.FirstName }),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var roles = await LoadRolesAsync([userId], cancellationToken).ConfigureAwait(false);
+
+        return Result<UserSummaryDto>.Success(ToSummary(user, roles.GetValueOrDefault(userId) ?? [], _clock.UtcNow));
     }
 
     public async Task<Result> DeleteUserAsync(Guid userId, CancellationToken cancellationToken)
@@ -426,6 +506,12 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
 
         return Result.Success();
     }
+
+    /// <summary>Tells the account's owner about a change to it, linking to their security settings.</summary>
+    private Task NotifyAsync(Guid userId, string type, CancellationToken cancellationToken) =>
+        _notifier.NotifyAsync(
+            new Notice { Type = type, Audience = NoticeAudience.Users(userId), Link = "/account?tab=security" },
+            cancellationToken);
 
     /// <summary>
     /// The roles behind the administrator flag: every account holds <see cref="Roles.User"/>, and an
@@ -504,5 +590,7 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         Country: user.Country,
         AvatarUpdatedAtUtc: user.AvatarUpdatedAtUtc,
         LastSignInAtUtc: user.LastSignInAtUtc,
-        TwoFactorEnabled: user.TwoFactorEnabled);
+        TwoFactorEnabled: user.TwoFactorEnabled,
+        PendingApproval: user.PendingApproval,
+        Origin: RegistrationMapping.ToContract(user.Origin));
 }

@@ -254,6 +254,9 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("AllowAccessRequests")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("AnnouncedPostLogoutRedirectUris")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -295,6 +298,13 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
 
                     b.Property<long?>("LastSeenAtUtc")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Organizations")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("None");
 
                     b.Property<string>("PostLogoutRedirectUris")
                         .IsRequired()
@@ -450,6 +460,117 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                     b.ToTable("GroupMembers", (string)null);
                 });
 
+            modelBuilder.Entity("OpenPortal.Access.Domain.Organizations.Organization", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("UpdatedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Slug")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Organizations_Slug");
+
+                    b.ToTable("Organizations", (string)null);
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Organizations.OrganizationMember", b =>
+                {
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("AddedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("OrganizationId", "UserId");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_OrganizationMembers_UserId");
+
+                    b.ToTable("OrganizationMembers", (string)null);
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Requests.AccessRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ApplicationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("DecidedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("DecidedByUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GrantedRoles")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationId")
+                        .HasDatabaseName("IX_AccessRequests_ApplicationId");
+
+                    b.HasIndex("Status", "CreatedAtUtc")
+                        .HasDatabaseName("IX_AccessRequests_Status_CreatedAtUtc");
+
+                    b.HasIndex("UserId", "ApplicationId")
+                        .HasDatabaseName("IX_AccessRequests_UserId_ApplicationId");
+
+                    b.ToTable("AccessRequests", (string)null);
+                });
+
             modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreAuthorization<System.Guid>", b =>
                 {
                     b.HasOne("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication<System.Guid>", "Application")
@@ -525,6 +646,24 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("OpenPortal.Access.Domain.Organizations.OrganizationMember", b =>
+                {
+                    b.HasOne("OpenPortal.Access.Domain.Organizations.Organization", null)
+                        .WithMany("Members")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Requests.AccessRequest", b =>
+                {
+                    b.HasOne("OpenPortal.Access.Domain.Applications.PortalApplication", null)
+                        .WithMany()
+                        .HasForeignKey("ApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication<System.Guid>", b =>
                 {
                     b.Navigation("Authorizations");
@@ -543,6 +682,11 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                 });
 
             modelBuilder.Entity("OpenPortal.Access.Domain.Groups.Group", b =>
+                {
+                    b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Organizations.Organization", b =>
                 {
                     b.Navigation("Members");
                 });

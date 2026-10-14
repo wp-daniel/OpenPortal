@@ -223,7 +223,26 @@ internal static class AccessMapping
         groupCount,
         application.RolesToContract(),
         application.GroupClaims.ToContract(),
-        application.ApiScopes);
+        application.ApiScopes,
+        application.AllowAccessRequests,
+        application.Organizations.ToContract());
+
+    public static string ToContract(this OrganizationMode mode) => mode switch
+    {
+        OrganizationMode.None => OrganizationModes.None,
+        OrganizationMode.Optional => OrganizationModes.Optional,
+        OrganizationMode.Required => OrganizationModes.Required,
+        _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null),
+    };
+
+    /// <summary>Reads an organization mode from a request; null for anything unknown.</summary>
+    public static OrganizationMode? ParseOrganizationMode(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        OrganizationModes.None => OrganizationMode.None,
+        OrganizationModes.Optional => OrganizationMode.Optional,
+        OrganizationModes.Required => OrganizationMode.Required,
+        _ => null,
+    };
 
     public static ApplicationSelfDto ToSelfDto(this PortalApplication application) => new(
         application.ClientId,

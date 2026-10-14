@@ -20,6 +20,9 @@
     <ProjectReference Include="..\..\src\Modules\Identity\OpenPortal.Identity.Application\OpenPortal.Identity.Application.csproj" />
     <ProjectReference Include="..\..\src\Modules\Identity\OpenPortal.Identity.Domain\OpenPortal.Identity.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Identity\OpenPortal.Identity.Infrastructure\OpenPortal.Identity.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Notifications\OpenPortal.Notifications.Application\OpenPortal.Notifications.Application.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Notifications\OpenPortal.Notifications.Domain\OpenPortal.Notifications.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Notifications\OpenPortal.Notifications.Infrastructure\OpenPortal.Notifications.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\OpenPortal.Client\OpenPortal.Client.csproj" />
     <ProjectReference Include="..\..\src\OpenPortal.SharedKernel\OpenPortal.SharedKernel.csproj" />
     <ProjectReference Include="..\..\src\OpenPortal.Web\OpenPortal.Web.csproj" />

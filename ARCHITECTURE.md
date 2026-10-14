@@ -8,7 +8,7 @@
 # Architecture
 
 OpenPortal is a modular monolith: one deployable ASP.NET Core host, a React client, three business modules
-(Identity, Content, Access) and an Audit module, isolated by convention and enforced by tests. It is also an OpenID Connect
+(Identity, Content, Access) plus an Audit and a Notifications module, isolated by convention and enforced by tests. It is also an OpenID Connect
 provider, so other applications can sign their users in through it.
 
 The shape exists to make two specific promises cheap to keep:
@@ -29,7 +29,7 @@ names the rule, rather than waiting for review to notice.
 ```
 OpenPortal.slnx
 src/
-  OpenPortal.SharedKernel/              Result, Error, IClock, TextRules, IAuditTrail
+  OpenPortal.SharedKernel/              Result, Error, IClock, TextRules, IAuditTrail, INotifier
   Modules/
     Identity/
       OpenPortal.Identity.Domain/          ApplicationUser, Roles
@@ -47,7 +47,11 @@ src/
     Audit/
       OpenPortal.Audit.Domain/             AuditEntry
       OpenPortal.Audit.Application/        IAuditLogService, host ports (IAuditRequestContext, IAuditLogAuthorization)
-      OpenPortal.Audit.Infrastructure/     AuditDbContext, IAuditTrail implementation, retention sweep, AddAuditModule
+      OpenPortal.Audit.Infrastructure/     AuditDbContext, IAuditTrail implementation, statistics, retention sweep, AddAuditModule
+    Notifications/
+      OpenPortal.Notifications.Domain/          Notification
+      OpenPortal.Notifications.Application/     INotificationService, host port (INotificationContext)
+      OpenPortal.Notifications.Infrastructure/  NotificationsDbContext, INotifier implementation, retention sweep, AddNotificationsModule
   OpenPortal.Migrations.PostgreSql/     the PostgreSQL migrations of every module
   OpenPortal.Client/                    NuGet package for applications: OIDC sign-in + announcement
   OpenPortal.Web/                       composition root: controllers, middleware, SQLite migrations, ClientApp, Oidc/,
@@ -78,6 +82,7 @@ Web  ──────────────►  *.Infrastructure  ──► 
 | Identity never references Content, and vice versa | `Identity_does_not_reference_Content`, `Content_does_not_reference_Identity` |
 | Access references neither Identity nor Content, and neither references Access | `Access_does_not_reference_Identity_or_Content`, `Identity_and_Content_do_not_reference_Access` |
 | Identity, Content and Access record audit events through the shared kernel and never reference Audit; Audit references none of them | `Modules_record_audit_events_without_referencing_the_Audit_module` |
+| The modules notify through the shared kernel (`INotifier`) and never reference Notifications; Notifications references none of them | `Modules_notify_without_referencing_the_Notifications_module` |
 | The client package references nothing of the portal | `The_client_package_stands_alone` |
 | SharedKernel references no framework and no module | `SharedKernel_references_no_framework_or_module_assembly` |
 | DbContexts and repositories live only in Infrastructure | `Only_the_web_host_and_infrastructure_projects_use_EntityFrameworkCore`, `DbContexts_live_only_in_infrastructure_projects` |
@@ -243,6 +248,34 @@ removing a role an administrator may have assigned is the administrator's call. 
 every grant. Clients approved before roles existed get the new scope permissions at startup
 (`OidcClientUpgradeService`).
 
+**Organizations (multi-tenancy for the applications).** The portal is the identity provider of applications that
+may serve several organizations (a CRM with many customer companies); it does not partition itself. Access owns
+`Organization` (name, immutable lower-case `Slug`) and `OrganizationMember` (user id, role `member`/`admin`), managed
+on the `organizations` page. An application's `Organizations` setting decides what happens at sign-in
+(`IAccessEvaluator.EvaluateOrganizationAsync`, called by `ConnectController`):
+
+- `none`: tokens say nothing about organizations;
+- `optional`: a member of one organization signs in for it, a member of several chooses (the authorize request
+  redirects to the SPA's `/select-organization`, which returns to the same request with `organization=<slug>`;
+  `prompt=none` gets `account_selection_required`), a non-member signs in without one;
+- `required`: as optional, but a user without an organization (or asking for one that is not theirs) is sent to
+  `/access-denied?reason=organization`.
+
+The chosen organization travels in the tokens as `org_id`, `org_slug`, `org_name`, `org_role` (identity token and
+userinfo with the `organization` scope; always in the access token). Like access, it is **re-checked on every
+refresh**: the token's `org_id` must still be one of the user's organizations, renames and role changes reach the
+application, and leaving the organization (or its deletion) is `invalid_grant`; removal also revokes the user's
+tokens for the applications that use organizations. The application keys its data by `org_id`. Grants stay
+per user and group: an organization says *which tenant*, a grant says *whether* the user may open the application.
+
+**Access requests.** An application can accept requests (`AllowAccessRequests`). The user's catalog
+(`GET /api/account/access-requests/catalog`: active, requestable, not yet granted) feeds the dashboard and the
+access-denied page; a request (`AccessRequest`: pending → approved / rejected / cancelled, at most one pending per
+user and application) is reviewed on the `access-requests` page. Approving creates an ordinary user grant through
+`UserGrantOperations` with the roles the reviewer chose, so a granted request is withdrawn like any grant and the
+access rule stays in `AccessQueries`. The user side never takes a user id as a parameter: the signed-in user comes
+from the host's `IAccessCaller`, as the calling application comes from `IApplicationApiCaller`.
+
 **Keys.** Data Protection keys are persisted to `DataProtection:KeysPath` so sessions survive restarts and
 can be shared between instances (protect them at rest in production, e.g. `ProtectKeysWithCertificate`).
 Token signing and encryption use development certificates in Development, ephemeral keys in tests
@@ -277,6 +310,60 @@ The design choices, in the order they matter:
 Reading the log is the `audit` portal page, so it can be delegated to auditors. Entries older than
 `Audit:RetentionDays` are deleted once a day by `AuditRetentionService`. The same request also gives each
 account its `LastSignInAtUtc`, which the users list shows and filters on (inactive for 90 days).
+
+---
+
+## Notifications (Notifications module)
+
+The notification center follows the audit log's pattern. Modules tell people through a port in the shared kernel,
+`INotifier.NotifyAsync(Notice)`, after the change is committed and best effort; the Notifications module stores one
+row per recipient and serves the signed-in user's own list (`/api/notifications`). A notice has a type (declared as a
+constant by the sending module: `AccessNotificationTypes`, `IdentityNotificationTypes`), the values its text mentions
+and a local link; the client renders `notification.<type>.title`/`.body`, so the stored row is independent of the
+reader's language (a test checks every type has both texts).
+
+The audience is users by id and/or **roles**, kinds of work named by the module (`access.request_reviewers`,
+`identity.user_reviewers`, `access.application_reviewers`). The host's `INotificationContext` turns a role into the
+administrators plus the members of groups granted the pages that do that work (`HostNotificationContext.RolePages`),
+so whoever is told can act. The caller is left out of the recipients (nobody is told about what they just did),
+except for a notice marked `IncludeCaller`, such as the memberships an invitation gives the person accepting it.
+Links are local paths only (`Notification.NormaliseLink`). The client polls the unread count every 30 seconds while
+the tab is visible and toasts what arrives; read notifications are deleted after `ReadRetentionDays`, all after
+`RetentionDays`, and an account's notifications go with the account.
+
+---
+
+## Registration and invitations (Identity module)
+
+`RegistrationSettings` (one row, administrators only, **Security → Portal settings**) decides whether people may
+register: `disabled` (the default), `open` or `approval`, optionally limited to email domains, and whether a
+self-registered account must confirm its address first. `PortalSignInManager.CanSignInAsync` refuses an account that
+waits for approval (`ApplicationUser.PendingApproval`) or for its confirmation; the reason (`identity.account_pending_approval`,
+`identity.email_not_confirmed`) is told only to whoever typed the right password, since the framework checks
+"may sign in" before the password. With confirmation on, registering an address that already has an account gets
+the same answer as a new one, so the endpoint does not reveal accounts. Pending accounts are not "active" for the
+token endpoint either.
+
+`UserInvitation` is a single-use link: only the SHA-256 of its 256-bit token is stored, sending it again issues a new
+token, and accepting creates an account whose address counts as confirmed (`AccountOrigin.Invited`) and signs it in.
+An invitation may promise group and organization memberships; Identity keeps their ids for the host, which
+validates them when the invitation is made (the inviter needs the groups / organizations page,
+`IAccessProvisioningService.ValidateMembershipsAsync`) and applies them on acceptance. Email goes through the
+Identity port `IAccountMessaging`: the host writes the texts from the resource files (`email.<kind>.*`) in the
+recipient's language, builds links from `Email:PublicUrl` and delivers with MailKit (SMTP or a pickup folder);
+without delivery the link is shown to the administrator instead.
+
+---
+
+## Statistics
+
+The `statistics` page (also on the dashboard of whoever holds it) needs no store of its own. Sign-in activity is
+computed by the Audit module from the log (`IAuditStatisticsService`): the host names which action codes are
+sign-ins (`auth.sign_in`, `oidc.sign_in`), so the module stays unaware of the others. Rows of the period and of the
+one before are read narrowed to a few columns and counted in memory per day of the viewer's time zone (grouping by a
+local day translates differently on SQLite and PostgreSQL); periods are 1 to 90 days, and a period older than the
+retention is reported as incomplete. Identity and Access add their counts (`IUserStatisticsService`,
+`IAccessStatisticsService`), each re-checking the caller; `AdminStatisticsController` only puts the three side by side.
 
 ---
 
@@ -319,7 +406,7 @@ unpublished work. `Public_project_payload_does_not_leak_editor_fields` guards th
 
 ## Persistence
 
-Four `DbContext` instances, one per module (Identity, Content, Access, Audit). Each module owns its schema and
+Five `DbContext` instances, one per module (Identity, Content, Access, Audit, Notifications). Each module owns its schema and
 its migrations; no context knows the others exist, and the Access context also holds the OpenIddict tables.
 
 **Provider selection** lives only in `DatabaseProviderSelector.Configure`. Modules register their contexts

@@ -55,4 +55,29 @@ public static class AccessAuditActions
 
     /// <summary>A group's pages were replaced as a whole; the details list what was added and removed.</summary>
     public const string GroupPagesChanged = "pages.group_pages_changed";
+
+    public const string OrganizationCreated = "organization.created";
+
+    public const string OrganizationUpdated = "organization.updated";
+
+    public const string OrganizationDeleted = "organization.deleted";
+
+    /// <summary>The target is the member; the details name the organization and the role.</summary>
+    public const string OrganizationMemberAdded = "organization.member_added";
+
+    public const string OrganizationMemberRoleChanged = "organization.member_role_changed";
+
+    public const string OrganizationMemberRemoved = "organization.member_removed";
+
+    /// <summary>A user asked for an application. The target is the application.</summary>
+    public const string RequestSubmitted = "access.request_submitted";
+
+    /// <summary>A reviewer approved a request (and so granted the application). The target is the requester.</summary>
+    public const string RequestApproved = "access.request_approved";
+
+    /// <summary>A reviewer rejected a request. The target is the requester.</summary>
+    public const string RequestRejected = "access.request_rejected";
+
+    /// <summary>The requester withdrew their request. The target is the application.</summary>
+    public const string RequestCancelled = "access.request_cancelled";
 }

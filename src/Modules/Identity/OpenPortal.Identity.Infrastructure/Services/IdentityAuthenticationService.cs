@@ -34,6 +34,7 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
     private readonly IOptions<IdentityOptions> _identityOptions;
     private readonly IAuditTrail _audit;
     private readonly IClock _clock;
+    private readonly RegistrationSettingsStore _registration;
     private readonly Lazy<string> _timingEqualisationHash;
 
     public IdentityAuthenticationService(
@@ -45,8 +46,10 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
         IUserPageSource pages,
         IOptions<IdentityOptions> identityOptions,
         IAuditTrail audit,
-        IClock clock)
+        IClock clock,
+        RegistrationSettingsStore registration)
     {
+        _registration = registration;
         _signInManager = signInManager;
         _userManager = userManager;
         _passwordHasher = passwordHasher;
@@ -123,6 +126,11 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
             return Result.Failure(UserErrors.TwoFactorRequired);
         }
 
+        if (signIn.IsNotAllowed)
+        {
+            return await RefuseNotAllowedAsync(user, request.Password, cancellationToken).ConfigureAwait(false);
+        }
+
         if (!signIn.Succeeded)
         {
             await RecordSignInAsync(user.ToAuditSubject(), FailureReason(signIn), cancellationToken).ConfigureAwait(false);
@@ -133,6 +141,32 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
         await CompleteSignInAsync(user, method: null, cancellationToken).ConfigureAwait(false);
 
         return Result.Success();
+    }
+
+    /// <summary>
+    /// The framework refuses an account that may not sign in before it checks the password. Saying why (waiting
+    /// for approval, address unconfirmed) is only for whoever knows the password; anybody else gets the answer a
+    /// wrong password gets, and the attempt counts toward the lockout like one.
+    /// </summary>
+    private async Task<Result> RefuseNotAllowedAsync(ApplicationUser user, string password, CancellationToken cancellationToken)
+    {
+        if (!await _userManager.CheckPasswordAsync(user, password).ConfigureAwait(false))
+        {
+            await _userManager.AccessFailedAsync(user).ConfigureAwait(false);
+            await RecordSignInAsync(user.ToAuditSubject(), SignInFailureReasons.InvalidPassword, cancellationToken).ConfigureAwait(false);
+
+            return Result.Failure(UserErrors.InvalidCredentials);
+        }
+
+        var (reason, error) = user.PendingApproval
+            ? (SignInFailureReasons.PendingApproval, UserErrors.AccountPendingApproval)
+            : await _registration.AwaitsEmailConfirmationAsync(user, cancellationToken).ConfigureAwait(false)
+                ? (SignInFailureReasons.EmailNotConfirmed, UserErrors.EmailNotConfirmed)
+                : (SignInFailureReasons.NotAllowed, UserErrors.AccountNotAllowed);
+
+        await RecordSignInAsync(user.ToAuditSubject(), reason, cancellationToken).ConfigureAwait(false);
+
+        return Result.Failure(error);
     }
 
     public async Task<Result> SignInWithTwoFactorAsync(TwoFactorLoginRequest request, CancellationToken cancellationToken)
@@ -206,9 +240,12 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
 
     public async Task<Result<SessionDto>> GetSessionAsync(CancellationToken cancellationToken)
     {
+        var settings = await _registration.ReadAsync(cancellationToken).ConfigureAwait(false);
+        var registration = new RegistrationInfoDto(settings.IsOpen, settings.Mode == Domain.Settings.RegistrationMode.Approval);
+
         if (!_currentUser.IsAuthenticated)
         {
-            return Result<SessionDto>.Success(SessionDto.AnonymousFor(PasswordPolicy));
+            return Result<SessionDto>.Success(SessionDto.AnonymousFor(PasswordPolicy, registration));
         }
 
         var lookup = await _userLookup.FindCurrentAsync(cancellationToken).ConfigureAwait(false);
@@ -217,7 +254,7 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
         {
             // The cookie references an account that no longer exists. Report an anonymous session rather
             // than an error, and let the cookie expire naturally.
-            return Result<SessionDto>.Success(SessionDto.AnonymousFor(PasswordPolicy));
+            return Result<SessionDto>.Success(SessionDto.AnonymousFor(PasswordPolicy, registration));
         }
 
         var user = lookup.Value;
@@ -235,7 +272,8 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
                 Language: user.Language,
                 AvatarUpdatedAtUtc: user.AvatarUpdatedAtUtc,
                 Pages: pages),
-            PasswordPolicy: PasswordPolicy));
+            PasswordPolicy: PasswordPolicy,
+            Registration: registration));
     }
 
     private Task RecordSignInAsync(

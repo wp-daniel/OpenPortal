@@ -55,10 +55,17 @@ export interface PasswordPolicy {
   readonly requireNonAlphanumeric: boolean
 }
 
+/** Whether the sign-in page offers to create an account. Public, like the password policy. */
+export interface RegistrationInfo {
+  readonly enabled: boolean
+  readonly requiresApproval: boolean
+}
+
 export interface Session {
   readonly isAuthenticated: boolean
   readonly user: SessionUser | null
   readonly passwordPolicy: PasswordPolicy
+  readonly registration: RegistrationInfo
 }
 
 export interface AccountProfile extends UserDetails {
@@ -117,7 +124,13 @@ export interface UserSummary extends UserDetails {
   readonly lastSignInAtUtc: string | null
   /** Whether the account has an authenticator app enrolled. */
   readonly twoFactorEnabled: boolean
+  /** Self-registered and waiting for an administrator; it cannot sign in until approved. */
+  readonly pendingApproval: boolean
+  /** How the account came to exist. */
+  readonly origin: AccountOrigin
 }
+
+export type AccountOrigin = 'created' | 'registered' | 'invited' | 'provisioned'
 
 export interface PagedResult<T> {
   readonly items: readonly T[]
@@ -261,9 +274,15 @@ export interface ApplicationSummary {
   readonly groupClaims: GroupClaimMode
   /** What the application's backend may do with a token of its own (client credentials); empty for nothing. */
   readonly apiScopes: readonly ApplicationApiScope[]
+  /** Users who cannot open it see it in their catalog and may ask for it. */
+  readonly allowAccessRequests: boolean
+  /** Whether tokens name the organization the user signs in for. */
+  readonly organizations: OrganizationMode
 }
 
 export type GroupClaimMode = 'none' | 'granted' | 'all'
+
+export type OrganizationMode = 'none' | 'optional' | 'required'
 
 export type ApplicationApiScope = 'portal.users.read' | 'portal.access.manage' | 'portal.users.create'
 
@@ -291,6 +310,8 @@ export interface UpdateApplicationRequest {
   readonly groupClaims: GroupClaimMode
   /** The complete list of application API scopes. */
   readonly apiScopes: readonly ApplicationApiScope[]
+  readonly allowAccessRequests: boolean
+  readonly organizations: OrganizationMode
 }
 
 export interface CreateApplicationRequest extends UpdateApplicationRequest {
@@ -490,4 +511,283 @@ export interface SecuritySettings {
 export interface UpdateSecuritySettingsRequest {
   readonly twoFactorEnabled: boolean
   readonly twoFactorIssuer: string
+}
+
+// ---------------------------------------------------------------------------
+// Notifications.
+// ---------------------------------------------------------------------------
+
+/** One notification. Its text is `notification.<type>.title` / `.body`, filled with `parameters`. */
+export interface PortalNotification {
+  readonly id: string
+  readonly type: string
+  readonly parameters: Readonly<Record<string, string | null>>
+  /** A local path of the portal to open, or null. */
+  readonly link: string | null
+  readonly createdAtUtc: string
+  readonly readAtUtc: string | null
+}
+
+export interface NotificationPage {
+  readonly items: readonly PortalNotification[]
+  readonly page: number
+  readonly pageSize: number
+  readonly totalCount: number
+  readonly totalPages: number
+  readonly hasPrevious: boolean
+  readonly hasNext: boolean
+  /** Unread notifications in total, whatever the filter. */
+  readonly unreadCount: number
+}
+
+export interface NotificationCount {
+  readonly unreadCount: number
+  readonly latestAtUtc: string | null
+}
+
+// ---------------------------------------------------------------------------
+// Access requests.
+// ---------------------------------------------------------------------------
+
+export type AccessRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled'
+
+/** One of the signed-in user's own requests. */
+export interface MyAccessRequest {
+  readonly id: string
+  readonly applicationId: string
+  readonly applicationName: string
+  readonly reason: string | null
+  readonly status: AccessRequestStatus
+  readonly createdAtUtc: string
+  readonly decidedAtUtc: string | null
+  readonly decisionNote: string | null
+}
+
+/** An application the user cannot open but may ask for, with their latest request. */
+export interface RequestableApplication {
+  readonly id: string
+  readonly clientId: string
+  readonly displayName: string
+  readonly description: string | null
+  readonly latestRequest: MyAccessRequest | null
+}
+
+/** A request as reviewers see it. */
+export interface AccessRequest {
+  readonly id: string
+  readonly application: ApplicationReference
+  readonly user: UserReference
+  readonly reason: string | null
+  readonly status: AccessRequestStatus
+  readonly createdAtUtc: string
+  readonly decidedAtUtc: string | null
+  readonly decidedBy: UserReference | null
+  readonly decisionNote: string | null
+  /** Role keys the approval granted. */
+  readonly roles: readonly string[]
+  /** The roles the application defines, to choose from when approving. */
+  readonly applicationRoles: readonly ApplicationRole[]
+  /** The user can open the application already (granted some other way meanwhile). */
+  readonly hasAccess: boolean
+}
+
+export interface AccessRequestPage {
+  readonly items: readonly AccessRequest[]
+  readonly page: number
+  readonly pageSize: number
+  readonly totalCount: number
+  readonly pendingCount: number
+}
+
+// ---------------------------------------------------------------------------
+// Organizations.
+// ---------------------------------------------------------------------------
+
+export type OrganizationRole = 'member' | 'admin'
+
+export interface OrganizationSummary {
+  readonly id: string
+  readonly name: string
+  readonly slug: string
+  readonly description: string | null
+  readonly memberCount: number
+  readonly createdAtUtc: string
+}
+
+export interface OrganizationMember extends UserReference {
+  readonly role: OrganizationRole
+  readonly addedAtUtc: string
+}
+
+export interface OrganizationDetail {
+  readonly id: string
+  readonly name: string
+  readonly slug: string
+  readonly description: string | null
+  readonly members: readonly OrganizationMember[]
+  readonly createdAtUtc: string
+  readonly updatedAtUtc: string | null
+}
+
+/** An organization a user belongs to, as applications are told about it. */
+export interface OrganizationMembership {
+  readonly id: string
+  readonly slug: string
+  readonly name: string
+  readonly role: OrganizationRole
+}
+
+// ---------------------------------------------------------------------------
+// Registration and invitations.
+// ---------------------------------------------------------------------------
+
+export type RegistrationMode = 'disabled' | 'open' | 'approval'
+
+export interface RegistrationSettings {
+  readonly mode: RegistrationMode
+  readonly allowedDomains: readonly string[]
+  readonly requireEmailConfirmation: boolean
+  readonly invitationLifetimeDays: number
+  /** Whether the portal can send email (confirmations, invitations). */
+  readonly emailDeliveryAvailable: boolean
+  readonly updatedAtUtc: string | null
+}
+
+export interface UpdateRegistrationSettingsRequest {
+  readonly mode: RegistrationMode
+  readonly allowedDomains: readonly string[]
+  readonly requireEmailConfirmation: boolean
+  readonly invitationLifetimeDays: number
+}
+
+export interface RegisterRequest {
+  readonly email: string
+  readonly password: string
+  readonly firstName: string
+  readonly lastName: string
+}
+
+export type RegistrationOutcome = 'signed_in' | 'confirmation_sent' | 'approval_pending' | 'confirmed'
+
+export interface RegistrationResult {
+  readonly outcome: RegistrationOutcome
+}
+
+export type InvitationStatus = 'pending' | 'accepted' | 'revoked' | 'expired'
+
+export interface Invitation {
+  readonly id: string
+  readonly email: string
+  readonly firstName: string | null
+  readonly lastName: string | null
+  readonly message: string | null
+  readonly status: InvitationStatus
+  readonly invitedById: string
+  readonly invitedByName: string | null
+  readonly createdAtUtc: string
+  readonly expiresAtUtc: string
+  readonly lastSentAtUtc: string
+  readonly acceptedAtUtc: string | null
+  readonly acceptedUserId: string | null
+  readonly groupIds: readonly string[]
+  readonly organizationIds: readonly string[]
+}
+
+/** An invitation just issued, with its link (shown once: the portal keeps no copy of the token). */
+export interface InvitationIssued {
+  readonly invitation: Invitation
+  readonly link: string
+  readonly emailSent: boolean
+}
+
+export interface CreateInvitationRequest {
+  readonly email: string
+  readonly firstName: string | null
+  readonly lastName: string | null
+  readonly message: string | null
+  readonly groupIds: readonly string[]
+  readonly organizationIds: readonly string[]
+}
+
+export interface InvitationPreview {
+  readonly email: string
+  readonly firstName: string | null
+  readonly lastName: string | null
+  readonly invitedByName: string | null
+  readonly message: string | null
+  readonly expiresAtUtc: string
+}
+
+// ---------------------------------------------------------------------------
+// Statistics.
+// ---------------------------------------------------------------------------
+
+export interface ActivityTotals {
+  readonly signIns: number
+  readonly failedSignIns: number
+  readonly applicationSignIns: number
+  readonly activeUsers: number
+}
+
+export interface DailyActivity extends ActivityTotals {
+  /** `yyyy-mm-dd`, a day of the requested time zone. */
+  readonly date: string
+}
+
+export interface ApplicationUsage {
+  readonly clientId: string
+  readonly name: string | null
+  readonly signIns: number
+  readonly users: number
+}
+
+export interface CountedValue {
+  readonly value: string
+  readonly count: number
+  readonly lastAtUtc: string
+}
+
+export interface ActivityStatistics {
+  readonly from: string
+  readonly to: string
+  readonly timeZone: string
+  readonly current: ActivityTotals
+  readonly previous: ActivityTotals
+  readonly days: readonly DailyActivity[]
+  readonly topApplications: readonly ApplicationUsage[]
+  readonly failureReasons: readonly CountedValue[]
+  readonly topFailedAccounts: readonly CountedValue[]
+  readonly topFailedAddresses: readonly CountedValue[]
+  /** False when the audit retention removed part of the period (or of the one before). */
+  readonly isComplete: boolean
+}
+
+export interface UserStatistics {
+  readonly total: number
+  readonly administrators: number
+  readonly locked: number
+  readonly pendingApproval: number
+  readonly twoFactorEnabled: number
+  readonly newInPeriod: number
+  readonly signedInInPeriod: number
+  readonly neverSignedIn: number
+  readonly pendingInvitations: number
+}
+
+export interface AccessStatistics {
+  readonly applications: number
+  readonly activeApplications: number
+  readonly pendingApplications: number
+  readonly disabledApplications: number
+  readonly groups: number
+  readonly organizations: number
+  readonly userGrants: number
+  readonly groupGrants: number
+  readonly pendingAccessRequests: number
+}
+
+export interface PortalStatistics {
+  readonly activity: ActivityStatistics
+  readonly users: UserStatistics
+  readonly access: AccessStatistics
 }

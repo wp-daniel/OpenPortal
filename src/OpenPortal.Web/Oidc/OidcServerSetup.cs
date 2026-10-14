@@ -91,6 +91,7 @@ public static class OidcServerSetup
                         Scopes.OfflineAccess,
                         PortalScopes.Roles,
                         PortalScopes.Groups,
+                        PortalScopes.Organization,
                         .. ApplicationApiScopes.All,
                     ]);
 

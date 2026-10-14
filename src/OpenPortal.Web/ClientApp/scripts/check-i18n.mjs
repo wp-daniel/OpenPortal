@@ -92,6 +92,15 @@ const builtPrefixes = [
   'audit.category.',
   'audit.period.',
   'audit.subject.',
+  'notification.',
+  'statistics.reason.',
+  'requests.status.',
+  'invitations.status.',
+  'users.origin.',
+  'organizations.roleName.',
+  'applications.organizations.',
+  'settings.registration.modes.',
+  'email.',
 ]
 const base = (key) => key.replace(/_(zero|one|two|few|many|other)$/, '')
 const unused = [...neutral].filter((key) => !used.has(base(key)) && !builtPrefixes.some((prefix) => key.startsWith(prefix)))

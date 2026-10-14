@@ -33,7 +33,8 @@ const home: Crumb = { labelKey: 'nav.dashboard', to: '/' }
 /**
  * The trail shown in the header, built from the `handle.crumbs` of every matched route, so the route tree in
  * `App.tsx` is the one place that says where a page sits. The last step is the current page and is never a
- * link. On small screens only the current page is shown.
+ * link. Below `lg` (where the sidebar and the header controls leave little room) only the current page is shown,
+ * and the trail never pushes the header wider than the screen: what does not fit is truncated.
  */
 export function AppBreadcrumbs() {
   const { t } = useI18n()
@@ -43,23 +44,23 @@ export function AppBreadcrumbs() {
   const crumbs = trail.length > 0 && trail[0].to === home.to ? trail : [home, ...trail]
 
   return (
-    <Breadcrumb className="min-w-0">
+    <Breadcrumb className="min-w-0 overflow-hidden">
       <BreadcrumbList className="flex-nowrap">
         {crumbs.map((crumb, index) => {
           const last = index === crumbs.length - 1
 
           return (
             <Fragment key={`${crumb.labelKey}-${index}`}>
-              {index > 0 && <BreadcrumbSeparator className="hidden md:block" />}
-              <BreadcrumbItem className={cn('min-w-0', !last && 'hidden md:inline-flex')}>
+              {index > 0 && <BreadcrumbSeparator className="hidden lg:block" />}
+              <BreadcrumbItem className={cn('min-w-0', !last && 'hidden lg:inline-flex')}>
                 {last ? (
                   <BreadcrumbPage className="truncate">{t(crumb.labelKey)}</BreadcrumbPage>
                 ) : crumb.to ? (
-                  <BreadcrumbLink asChild>
+                  <BreadcrumbLink asChild className="truncate">
                     <Link to={crumb.to}>{t(crumb.labelKey)}</Link>
                   </BreadcrumbLink>
                 ) : (
-                  <span>{t(crumb.labelKey)}</span>
+                  <span className="truncate">{t(crumb.labelKey)}</span>
                 )}
               </BreadcrumbItem>
             </Fragment>

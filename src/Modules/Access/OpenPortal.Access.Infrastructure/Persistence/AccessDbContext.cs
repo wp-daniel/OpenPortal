@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using OpenPortal.Access.Domain.Applications;
 using OpenPortal.Access.Domain.Grants;
 using OpenPortal.Access.Domain.Groups;
+using OpenPortal.Access.Domain.Organizations;
+using OpenPortal.Access.Domain.Requests;
 
 namespace OpenPortal.Access.Infrastructure.Persistence;
 
@@ -34,6 +36,12 @@ public sealed class AccessDbContext : DbContext
     public DbSet<ApplicationGroupGrant> GroupGrants => Set<ApplicationGroupGrant>();
 
     public DbSet<PageGroupGrant> PageGrants => Set<PageGroupGrant>();
+
+    public DbSet<AccessRequest> AccessRequests => Set<AccessRequest>();
+
+    public DbSet<Organization> Organizations => Set<Organization>();
+
+    public DbSet<OrganizationMember> OrganizationMembers => Set<OrganizationMember>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

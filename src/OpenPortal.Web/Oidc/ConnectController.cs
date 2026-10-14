@@ -15,6 +15,8 @@ using OpenIddict.Server.AspNetCore;
 using OpenIddict.Validation.AspNetCore;
 using OpenPortal.Access.Application.Abstractions;
 using AccessDecision = OpenPortal.Access.Application.Contracts.AccessDecision;
+using OrganizationMembershipDto = OpenPortal.Access.Application.Contracts.OrganizationMembershipDto;
+using OrganizationOutcome = OpenPortal.Access.Application.Contracts.OrganizationOutcome;
 using PortalScopes = OpenPortal.Access.Application.Contracts.PortalScopes;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Identity.Application.Contracts;
@@ -45,6 +47,15 @@ public sealed class ConnectController : ControllerBase
 {
     /// <summary>The claim carrying group names (not in OpenIddict's constants; the name most applications expect).</summary>
     public const string GroupsClaim = "groups";
+
+    /// <summary>The organization the user signed in for: its id (stable), short name, name and the user's role in it.</summary>
+    public const string OrganizationIdClaim = "org_id";
+    public const string OrganizationSlugClaim = "org_slug";
+    public const string OrganizationNameClaim = "org_name";
+    public const string OrganizationRoleClaim = "org_role";
+
+    /// <summary>The authorization request parameter naming the organization (slug or id) to sign in for.</summary>
+    public const string OrganizationParameter = "organization";
 
     private readonly IAccessEvaluator _access;
     private readonly IUserLookupService _users;
@@ -118,8 +129,51 @@ public sealed class ConnectController : ControllerBase
 
             // A page of the portal rather than an error sent back to the application: the user is better off
             // being told plainly, and the application has nothing useful to do with "access_denied" anyway.
+            // The client id lets the page offer an access request when the application accepts them.
             var app = Uri.EscapeDataString(decision.ApplicationName ?? request.ClientId ?? string.Empty);
-            return Redirect($"{Request.PathBase}/access-denied?app={app}");
+            var clientId = Uri.EscapeDataString(request.ClientId ?? string.Empty);
+            return Redirect($"{Request.PathBase}/access-denied?app={app}&client={clientId}");
+        }
+
+        var organization = await _access.EvaluateOrganizationAsync(
+                user.Id,
+                request.ClientId!,
+                (string?)request[OrganizationParameter],
+                interactive: true,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        switch (organization.Outcome)
+        {
+            case OrganizationOutcome.ChoiceNeeded:
+                if (request.HasPromptValue(PromptValues.None))
+                {
+                    return Refuse(Errors.AccountSelectionRequired, "The user belongs to several organizations and must choose one.");
+                }
+
+                // The portal asks which organization, then comes back here with organization=<slug>.
+                var back = (Request.HasFormContentType ? Request.Form.AsEnumerable() : Request.Query.AsEnumerable())
+                    .Where(pair => pair.Key != Parameters.Prompt && pair.Key != OrganizationParameter)
+                    .ToList();
+                var returnUrl = Uri.EscapeDataString(Request.PathBase + Request.Path + QueryString.Create(back));
+                var name = Uri.EscapeDataString(decision.ApplicationName ?? request.ClientId ?? string.Empty);
+                return Redirect($"{Request.PathBase}/select-organization?app={name}&returnUrl={returnUrl}");
+
+            case OrganizationOutcome.Missing or OrganizationOutcome.NotMember:
+                await _audit.RecordAsync(
+                        AuditEvent.Failed(
+                            OidcAuditActions.SignIn,
+                            ApplicationSubject(request.ClientId!, decision.ApplicationName),
+                            new Dictionary<string, string?>
+                            {
+                                ["reason"] = organization.Outcome == OrganizationOutcome.Missing ? "no_organization" : "not_member",
+                                ["organization"] = (string?)request[OrganizationParameter],
+                            }),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+                var denied = Uri.EscapeDataString(decision.ApplicationName ?? request.ClientId ?? string.Empty);
+                return Redirect($"{Request.PathBase}/access-denied?app={denied}&reason=organization");
         }
 
         var client = await _applications.FindByClientIdAsync(request.ClientId!, cancellationToken).ConfigureAwait(false)
@@ -128,7 +182,7 @@ public sealed class ConnectController : ControllerBase
         // The application API scopes belong to the application's own token: a user's token never carries them,
         // even when the client is allowed to request them.
         var scopes = request.GetScopes().Where(scope => !ApplicationApiScopes.IsKnown(scope));
-        var identity = BuildIdentity(user, scopes, decision);
+        var identity = BuildIdentity(user, scopes, decision, organization.Organization);
 
         // A permanent authorization ties the refresh tokens to (user, client), which is what revocation
         // targets when access is withdrawn.
@@ -144,11 +198,22 @@ public sealed class ConnectController : ControllerBase
 
         identity.SetAuthorizationId(await _authorizations.GetIdAsync(authorization, cancellationToken).ConfigureAwait(false));
 
+        var signInDetails = new Dictionary<string, string?>();
+        if (decision.Roles.Count > 0)
+        {
+            signInDetails["roles"] = string.Join(", ", decision.Roles);
+        }
+
+        if (organization.Organization is { } chosen)
+        {
+            signInDetails["organization"] = chosen.Slug;
+        }
+
         await _audit.RecordAsync(
                 AuditEvent.Succeeded(
                     OidcAuditActions.SignIn,
                     ApplicationSubject(request.ClientId!, decision.ApplicationName),
-                    decision.Roles.Count > 0 ? new Dictionary<string, string?> { ["roles"] = string.Join(", ", decision.Roles) } : null),
+                    signInDetails.Count > 0 ? signInDetails : null),
                 cancellationToken)
             .ConfigureAwait(false);
 
@@ -197,9 +262,26 @@ public sealed class ConnectController : ControllerBase
             return Refuse(Errors.InvalidGrant, "Access to this application has been withdrawn.");
         }
 
+        // The organization the sign-in chose stays the one the tokens name; leaving it ends the session like
+        // losing the application would.
+        var organization = await _access.EvaluateOrganizationAsync(
+                userId,
+                request.ClientId!,
+                stored.Principal!.GetClaim(OrganizationIdClaim),
+                interactive: false,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (organization.Outcome is OrganizationOutcome.Missing or OrganizationOutcome.NotMember or OrganizationOutcome.ChoiceNeeded)
+        {
+            await RecordRefusalAsync(userId, user.Email, request.ClientId!, decision.ApplicationName, "organization_withdrawn", cancellationToken).ConfigureAwait(false);
+
+            return Refuse(Errors.InvalidGrant, "The user no longer belongs to the organization this session was for.");
+        }
+
         // Rebuilt from the current account and grants, so a renamed user, a changed email or a role given or
         // taken away reaches the application at its next refresh.
-        var identity = BuildIdentity(user, stored.Principal!.GetScopes(), decision);
+        var identity = BuildIdentity(user, stored.Principal!.GetScopes(), decision, organization.Organization);
         identity.SetAuthorizationId(stored.Principal!.GetAuthorizationId());
 
         return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
@@ -249,6 +331,14 @@ public sealed class ConnectController : ControllerBase
         if (User.HasScope(PortalScopes.Groups))
         {
             claims[GroupsClaim] = User.GetClaims(GroupsClaim).ToArray();
+        }
+
+        if (User.HasScope(PortalScopes.Organization) && User.GetClaim(OrganizationIdClaim) is { } organizationId)
+        {
+            claims[OrganizationIdClaim] = organizationId;
+            claims[OrganizationSlugClaim] = User.GetClaim(OrganizationSlugClaim) ?? string.Empty;
+            claims[OrganizationNameClaim] = User.GetClaim(OrganizationNameClaim) ?? string.Empty;
+            claims[OrganizationRoleClaim] = User.GetClaim(OrganizationRoleClaim) ?? string.Empty;
         }
 
         return Ok(claims);
@@ -375,7 +465,11 @@ public sealed class ConnectController : ControllerBase
     private static AuditSubject ApplicationSubject(string clientId, string? applicationName) =>
         new(AuditSubjectTypes.Application, clientId, applicationName);
 
-    private static ClaimsIdentity BuildIdentity(UserReferenceDto user, IEnumerable<string> scopes, AccessDecision decision)
+    private static ClaimsIdentity BuildIdentity(
+        UserReferenceDto user,
+        IEnumerable<string> scopes,
+        AccessDecision decision,
+        OrganizationMembershipDto? organization)
     {
         var identity = new ClaimsIdentity(
             authenticationType: TokenValidationParameters.DefaultAuthenticationType,
@@ -391,6 +485,16 @@ public sealed class ConnectController : ControllerBase
         // a JSON array in the token, one value a string; ASP.NET Core reads both as separate claims.
         identity.SetClaims(Claims.Role, [.. decision.Roles]);
         identity.SetClaims(GroupsClaim, [.. decision.Groups]);
+
+        // The tenant the application keeps the user's data apart by. Always in the access token (the refresh check
+        // reads it back); in the identity token when the application asked for the organization scope.
+        if (organization is not null)
+        {
+            identity.SetClaim(OrganizationIdClaim, organization.Id.ToString())
+                .SetClaim(OrganizationSlugClaim, organization.Slug)
+                .SetClaim(OrganizationNameClaim, organization.Name)
+                .SetClaim(OrganizationRoleClaim, organization.Role);
+        }
 
         identity.SetScopes(scopes);
         identity.SetDestinations(claim => DestinationsFor(claim, identity));
@@ -412,6 +516,7 @@ public sealed class ConnectController : ControllerBase
             Claims.Email => Scopes.Email,
             Claims.Role => PortalScopes.Roles,
             GroupsClaim => PortalScopes.Groups,
+            OrganizationIdClaim or OrganizationSlugClaim or OrganizationNameClaim or OrganizationRoleClaim => PortalScopes.Organization,
             _ => null,
         };
 

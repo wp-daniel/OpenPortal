@@ -10,9 +10,18 @@ import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { notify } from '@/hooks/useToast'
 import { SESSION_QUERY_KEY } from '@/hooks/useSession'
+import { AcceptInvitationPage } from '@/pages/AcceptInvitationPage'
 import { AccessDeniedPage } from '@/pages/AccessDeniedPage'
 import { AccountPage } from '@/pages/AccountPage'
 import { AdminAccessPage } from '@/pages/AdminAccessPage'
+import { AdminAccessRequestsPage } from '@/pages/AdminAccessRequestsPage'
+import { AdminInvitationsPage } from '@/pages/AdminInvitationsPage'
+import { AdminOrganizationsPage } from '@/pages/AdminOrganizationsPage'
+import { AdminStatisticsPage } from '@/pages/AdminStatisticsPage'
+import { ConfirmEmailPage } from '@/pages/ConfirmEmailPage'
+import { NotificationsPage } from '@/pages/NotificationsPage'
+import { RegisterPage } from '@/pages/RegisterPage'
+import { SelectOrganizationPage } from '@/pages/SelectOrganizationPage'
 import { AdminApplicationsPage } from '@/pages/AdminApplicationsPage'
 import { AdminAuditPage } from '@/pages/AdminAuditPage'
 import { AdminSettingsPage } from '@/pages/AdminSettingsPage'
@@ -86,7 +95,21 @@ const router = createBrowserRouter([
     children: [
       {
         element: <PublicOnlyRoute />,
-        children: [{ element: <AuthLayout />, children: [{ path: 'sign-in', element: <SignInPage /> }] }],
+        children: [
+          {
+            element: <AuthLayout />,
+            children: [
+              { path: 'sign-in', element: <SignInPage /> },
+              { path: 'register', element: <RegisterPage /> },
+              { path: 'invitation', element: <AcceptInvitationPage /> },
+            ],
+          },
+        ],
+      },
+      {
+        // An emailed link may be opened signed in or not, on any device: no guard either way.
+        element: <AuthLayout />,
+        children: [{ path: 'confirm-email', element: <ConfirmEmailPage /> }],
       },
       {
         element: <ProtectedRoute />,
@@ -98,6 +121,12 @@ const router = createBrowserRouter([
               { index: true, element: <DashboardPage />, handle: crumbs({ labelKey: 'nav.dashboard', to: '/' }) },
               { path: 'account', element: <AccountPage />, handle: crumbs({ labelKey: 'nav.account' }) },
               { path: 'access-denied', element: <AccessDeniedPage />, handle: crumbs({ labelKey: 'nav.accessDenied' }) },
+              { path: 'notifications', element: <NotificationsPage />, handle: crumbs({ labelKey: 'nav.notifications' }) },
+              {
+                path: 'select-organization',
+                element: <SelectOrganizationPage />,
+                handle: crumbs({ labelKey: 'nav.selectOrganization' }),
+              },
               {
                 // Each route names its portal page (`page`, a server `PortalPages` key); PageRoute lets in the
                 // groups granted that page and administrators. A route without a page is for administrators only.
@@ -108,8 +137,23 @@ const router = createBrowserRouter([
                     handle: crumbs({ labelKey: 'nav.identity' }),
                     children: [
                       { path: 'admin/users', element: <AdminUsersPage />, handle: page('users', { labelKey: 'nav.users' }) },
+                      {
+                        path: 'admin/invitations',
+                        element: <AdminInvitationsPage />,
+                        handle: page('users', { labelKey: 'nav.invitations' }),
+                      },
                       { path: 'admin/groups', element: <AdminGroupsPage />, handle: page('groups', { labelKey: 'nav.groups' }) },
+                      {
+                        path: 'admin/organizations',
+                        element: <AdminOrganizationsPage />,
+                        handle: page('organizations', { labelKey: 'nav.organizations' }),
+                      },
                       { path: 'admin/access', element: <AdminAccessPage />, handle: page('access', { labelKey: 'nav.access' }) },
+                      {
+                        path: 'admin/access-requests',
+                        element: <AdminAccessRequestsPage />,
+                        handle: page('access-requests', { labelKey: 'nav.accessRequests' }),
+                      },
                       {
                         path: 'admin/page-permissions',
                         element: <AdminPagePermissionsPage />,
@@ -125,6 +169,11 @@ const router = createBrowserRouter([
                   {
                     handle: crumbs({ labelKey: 'nav.security' }),
                     children: [
+                      {
+                        path: 'admin/statistics',
+                        element: <AdminStatisticsPage />,
+                        handle: page('statistics', { labelKey: 'nav.statistics' }),
+                      },
                       { path: 'admin/audit', element: <AdminAuditPage />, handle: page('audit', { labelKey: 'nav.audit' }) },
                       // No page: portal settings are for administrators only.
                       { path: 'admin/settings', element: <AdminSettingsPage />, handle: crumbs({ labelKey: 'nav.settings' }) },

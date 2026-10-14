@@ -7,4 +7,7 @@ public static class AuditErrors
 {
     public static Error ReadForbidden { get; } =
         Error.Forbidden("audit.read_forbidden", "Reading the audit log requires an administrator account or the audit page.");
+
+    public static Error StatisticsForbidden { get; } =
+        Error.Forbidden("audit.statistics_forbidden", "The statistics require an administrator account or the statistics page.");
 }

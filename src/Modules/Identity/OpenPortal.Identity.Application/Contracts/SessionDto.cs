@@ -26,13 +26,20 @@ public sealed record SessionUserDto(
 /// The policy this deployment enforces. Sent to anonymous callers too, because the sign-in and
 /// change-password forms need it before anyone is signed in. It discloses configuration, not data.
 /// </param>
-public sealed record SessionDto(bool IsAuthenticated, SessionUserDto? User, PasswordPolicyDto PasswordPolicy)
+/// <param name="Registration">Whether the sign-in page offers to create an account.</param>
+public sealed record SessionDto(
+    bool IsAuthenticated,
+    SessionUserDto? User,
+    PasswordPolicyDto PasswordPolicy,
+    RegistrationInfoDto Registration)
 {
     /// <summary>
     /// The anonymous session. Takes the policy as an argument because there is no default that is honest:
     /// the policy is deployment configuration, so a fabricated one could only ever disagree with the server.
+    /// Registration, by contrast, has an honest default when it cannot be read: closed.
     /// </summary>
-    public static SessionDto AnonymousFor(PasswordPolicyDto passwordPolicy) => new(false, null, passwordPolicy);
+    public static SessionDto AnonymousFor(PasswordPolicyDto passwordPolicy, RegistrationInfoDto? registration = null) =>
+        new(false, null, passwordPolicy, registration ?? RegistrationInfoDto.Closed);
 }
 
 /// <summary>

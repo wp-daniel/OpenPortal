@@ -114,7 +114,14 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
 
         var application = created.Value;
 
-        var configured = Configure(application, request.Roles, request.GroupClaims ?? GroupClaimModes.None, request.ApiScopes, now);
+        var configured = Configure(
+            application,
+            request.Roles,
+            request.GroupClaims ?? GroupClaimModes.None,
+            request.ApiScopes,
+            request.AllowAccessRequests,
+            request.Organizations,
+            now);
         if (configured.IsFailure)
         {
             return Result<ApplicationSecretDto>.Failure(configured.Error);
@@ -181,7 +188,14 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
 
         var apiScopesBefore = application.ApiScopes;
 
-        var configured = Configure(application, request.Roles, request.GroupClaims, request.ApiScopes, now);
+        var configured = Configure(
+            application,
+            request.Roles,
+            request.GroupClaims,
+            request.ApiScopes,
+            request.AllowAccessRequests,
+            request.Organizations,
+            now);
         if (configured.IsFailure)
         {
             return Result<ApplicationDto>.Failure(configured.Error);
@@ -356,16 +370,33 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
     }
 
     /// <summary>
-    /// Applies the roles, the group claim setting and the API scopes of a create or update request. Null leaves
-    /// each as it is. Returns the keys of the roles that were removed.
+    /// Applies the roles, the group claim setting, the API scopes, access requests and the organization mode of a
+    /// create or update request. Null leaves each as it is. Returns the keys of the roles that were removed.
     /// </summary>
     private static Result<IReadOnlyList<string>> Configure(
         PortalApplication application,
         IReadOnlyList<ApplicationRoleDto>? roles,
         string? groupClaims,
         IReadOnlyList<string>? apiScopes,
+        bool? allowAccessRequests,
+        string? organizations,
         DateTimeOffset now)
     {
+        if (organizations is not null)
+        {
+            if (AccessMapping.ParseOrganizationMode(organizations) is not { } organizationMode)
+            {
+                return Result<IReadOnlyList<string>>.Failure(AccessErrors.OrganizationModeInvalid);
+            }
+
+            application.SetOrganizationMode(organizationMode, now);
+        }
+
+        if (allowAccessRequests is bool allowed)
+        {
+            application.SetAccessRequests(allowed, now);
+        }
+
         if (apiScopes is not null)
         {
             var scoped = application.SetApiScopes(apiScopes, now);

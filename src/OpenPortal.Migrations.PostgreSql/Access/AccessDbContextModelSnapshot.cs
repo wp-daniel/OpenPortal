@@ -259,6 +259,9 @@ namespace OpenPortal.Migrations.PostgreSql.Access
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("AllowAccessRequests")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("AnnouncedPostLogoutRedirectUris")
                         .IsRequired()
                         .HasColumnType("text");
@@ -300,6 +303,13 @@ namespace OpenPortal.Migrations.PostgreSql.Access
 
                     b.Property<DateTimeOffset?>("LastSeenAtUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Organizations")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasDefaultValue("None");
 
                     b.Property<string>("PostLogoutRedirectUris")
                         .IsRequired()
@@ -455,6 +465,117 @@ namespace OpenPortal.Migrations.PostgreSql.Access
                     b.ToTable("GroupMembers", (string)null);
                 });
 
+            modelBuilder.Entity("OpenPortal.Access.Domain.Organizations.Organization", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Slug")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Organizations_Slug");
+
+                    b.ToTable("Organizations", (string)null);
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Organizations.OrganizationMember", b =>
+                {
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AddedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.HasKey("OrganizationId", "UserId");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_OrganizationMembers_UserId");
+
+                    b.ToTable("OrganizationMembers", (string)null);
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Requests.AccessRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ApplicationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DecidedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DecidedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("GrantedRoles")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationId")
+                        .HasDatabaseName("IX_AccessRequests_ApplicationId");
+
+                    b.HasIndex("Status", "CreatedAtUtc")
+                        .HasDatabaseName("IX_AccessRequests_Status_CreatedAtUtc");
+
+                    b.HasIndex("UserId", "ApplicationId")
+                        .HasDatabaseName("IX_AccessRequests_UserId_ApplicationId");
+
+                    b.ToTable("AccessRequests", (string)null);
+                });
+
             modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreAuthorization<System.Guid>", b =>
                 {
                     b.HasOne("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication<System.Guid>", "Application")
@@ -530,6 +651,24 @@ namespace OpenPortal.Migrations.PostgreSql.Access
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("OpenPortal.Access.Domain.Organizations.OrganizationMember", b =>
+                {
+                    b.HasOne("OpenPortal.Access.Domain.Organizations.Organization", null)
+                        .WithMany("Members")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Requests.AccessRequest", b =>
+                {
+                    b.HasOne("OpenPortal.Access.Domain.Applications.PortalApplication", null)
+                        .WithMany()
+                        .HasForeignKey("ApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication<System.Guid>", b =>
                 {
                     b.Navigation("Authorizations");
@@ -548,6 +687,11 @@ namespace OpenPortal.Migrations.PostgreSql.Access
                 });
 
             modelBuilder.Entity("OpenPortal.Access.Domain.Groups.Group", b =>
+                {
+                    b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Organizations.Organization", b =>
                 {
                     b.Navigation("Members");
                 });

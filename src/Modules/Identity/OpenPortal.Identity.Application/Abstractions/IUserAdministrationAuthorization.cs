@@ -16,6 +16,9 @@ public enum UserAdministrationOperation
     /// adds a colleague.
     /// </summary>
     ProvisionUsers,
+
+    /// <summary>Read account counts for the statistics page.</summary>
+    ViewStatistics,
 }
 
 /// <summary>

@@ -3,7 +3,9 @@ using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Audit.Application.Abstractions;
 using OpenPortal.Content.Application.Abstractions;
 using OpenPortal.Identity.Application.Abstractions;
+using OpenPortal.Notifications.Application.Abstractions;
 using OpenPortal.SharedKernel.Auditing;
+using OpenPortal.SharedKernel.Notifications;
 
 namespace OpenPortal.Tests.Integration;
 
@@ -30,6 +32,11 @@ public sealed class CompositionTests(OpenPortalFactory factory) : IClassFixture<
         typeof(IContentManagementService),
         typeof(ILanguageCatalog),
         typeof(IUserLookupService),
+        typeof(IRegistrationService),
+        typeof(IRegistrationSettingsService),
+        typeof(IInvitationService),
+        typeof(IUserStatisticsService),
+        typeof(IAccountMessaging),
         typeof(IApplicationRegistryService),
         typeof(IGroupService),
         typeof(IAccessAdministrationService),
@@ -37,6 +44,11 @@ public sealed class CompositionTests(OpenPortalFactory factory) : IClassFixture<
         typeof(IApplicationAnnouncementService),
         typeof(IApplicationApiService),
         typeof(IApplicationApiCaller),
+        typeof(IAccessCaller),
+        typeof(IAccessRequestService),
+        typeof(IOrganizationService),
+        typeof(IAccessStatisticsService),
+        typeof(IAccessProvisioningService),
         typeof(IAccessAdminAuthorization),
         typeof(IUserDirectory),
         typeof(IPagePermissionService),
@@ -47,8 +59,13 @@ public sealed class CompositionTests(OpenPortalFactory factory) : IClassFixture<
         typeof(IContentEditAuthorization),
         typeof(IAuditTrail),
         typeof(IAuditLogService),
+        typeof(IAuditStatisticsService),
         typeof(IAuditRequestContext),
         typeof(IAuditLogAuthorization),
+        typeof(INotifier),
+        typeof(INotificationService),
+        typeof(INotificationMaintenance),
+        typeof(INotificationContext),
     };
 
     [Theory]

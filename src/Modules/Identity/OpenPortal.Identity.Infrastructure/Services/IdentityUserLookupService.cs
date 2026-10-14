@@ -37,6 +37,13 @@ internal sealed class IdentityUserLookupService : IUserLookupService
         return user is null ? null : await FindAsync(user.Id, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyList<Guid>> ListAdministratorIdsAsync(CancellationToken cancellationToken)
+    {
+        var administrators = await _userManager.GetUsersInRoleAsync(Roles.Administrator).ConfigureAwait(false);
+
+        return administrators.Select(user => user.Id).ToList();
+    }
+
     public async Task<IReadOnlyList<UserReferenceDto>> FindManyAsync(
         IReadOnlyCollection<Guid> userIds,
         CancellationToken cancellationToken)
@@ -53,7 +60,7 @@ internal sealed class IdentityUserLookupService : IUserLookupService
         var users = await _userManager.Users
             .AsNoTracking()
             .Where(user => ids.Contains(user.Id))
-            .Select(user => new { user.Id, user.Email, user.DisplayName, user.LockoutEnd })
+            .Select(user => new { user.Id, user.Email, user.DisplayName, user.LockoutEnd, user.PendingApproval })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -64,7 +71,7 @@ internal sealed class IdentityUserLookupService : IUserLookupService
                 user.Id,
                 user.Email ?? string.Empty,
                 user.DisplayName,
-                IsActive: user.LockoutEnd is null || user.LockoutEnd <= now))
+                IsActive: !user.PendingApproval && (user.LockoutEnd is null || user.LockoutEnd <= now)))
             .ToList();
     }
 }

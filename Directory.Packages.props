@@ -9,6 +9,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
     <PackageVersion Include="Microsoft.AspNetCore.SpaProxy" Version="10.0.12" />
     <PackageVersion Include="Scalar.AspNetCore" Version="2.18.0" />
+    <PackageVersion Include="MailKit" Version="4.18.1" />
   </ItemGroup>
 
   <ItemGroup Label="Identity">

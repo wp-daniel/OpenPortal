@@ -8,6 +8,7 @@ using OpenPortal.Content.Infrastructure.Persistence;
 using OpenPortal.Identity.Domain.Users;
 using OpenPortal.Identity.Infrastructure.Bootstrap;
 using OpenPortal.Identity.Infrastructure.Persistence;
+using OpenPortal.Notifications.Infrastructure.Persistence;
 using OpenPortal.Web.Persistence;
 
 namespace OpenPortal.Web.Persistence;
@@ -67,6 +68,7 @@ public sealed class DatabaseInitializer
     private readonly ContentDbContext _contentContext;
     private readonly AccessDbContext _accessContext;
     private readonly AuditDbContext _auditContext;
+    private readonly NotificationsDbContext _notificationsContext;
     private readonly IdentityDataSeeder _roleSeeder;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IOptions<DatabaseOptions> _databaseOptions;
@@ -79,6 +81,7 @@ public sealed class DatabaseInitializer
         ContentDbContext contentContext,
         AccessDbContext accessContext,
         AuditDbContext auditContext,
+        NotificationsDbContext notificationsContext,
         IdentityDataSeeder roleSeeder,
         UserManager<ApplicationUser> userManager,
         IOptions<DatabaseOptions> databaseOptions,
@@ -90,6 +93,7 @@ public sealed class DatabaseInitializer
         _contentContext = contentContext;
         _accessContext = accessContext;
         _auditContext = auditContext;
+        _notificationsContext = notificationsContext;
         _roleSeeder = roleSeeder;
         _userManager = userManager;
         _databaseOptions = databaseOptions;
@@ -127,6 +131,7 @@ public sealed class DatabaseInitializer
         await _contentContext.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
         await _accessContext.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
         await _auditContext.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
+        await _notificationsContext.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Database migrations applied.");
     }

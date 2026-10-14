@@ -42,6 +42,7 @@ public static class AuditModuleServiceCollectionExtensions
 
         services.AddScoped<IAuditTrail, AuditTrail>();
         services.AddScoped<IAuditLogService, AuditLogService>();
+        services.AddScoped<IAuditStatisticsService, AuditStatisticsService>();
 
         services.AddSingleton<AuditRetentionService>();
         services.AddHostedService(provider => provider.GetRequiredService<AuditRetentionService>());

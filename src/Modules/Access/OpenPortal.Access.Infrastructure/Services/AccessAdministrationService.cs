@@ -348,6 +348,16 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false));
 
+        _db.AccessRequests.RemoveRange(await _db.AccessRequests
+            .Where(request => request.UserId == userId)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false));
+
+        _db.OrganizationMembers.RemoveRange(await _db.OrganizationMembers
+            .Where(member => member.UserId == userId)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false));
+
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Nothing grants the user anything any more, so this revokes every token they held.

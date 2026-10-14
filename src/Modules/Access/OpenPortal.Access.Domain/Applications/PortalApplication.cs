@@ -16,6 +16,21 @@ public enum ApplicationStatus
     Disabled = 2,
 }
 
+/// <summary>
+/// Whether an application serves several organizations (tenants) and needs to know which one the user signs in for.
+/// </summary>
+public enum OrganizationMode
+{
+    /// <summary>The application is told nothing about organizations.</summary>
+    None = 0,
+
+    /// <summary>Tokens name the organization the user signs in for, when they belong to one.</summary>
+    Optional = 1,
+
+    /// <summary>Only members of an organization may sign in, and tokens always name the organization.</summary>
+    Required = 2,
+}
+
 /// <summary>How the application came to be known to the portal.</summary>
 public enum ApplicationSource
 {
@@ -110,6 +125,15 @@ public sealed class PortalApplication
     /// credentials. Empty, the default, means the application cannot obtain a token of its own.
     /// </summary>
     public IReadOnlyList<string> ApiScopes { get; private set; } = [];
+
+    /// <summary>
+    /// Whether users who cannot open the application see it in their catalog and may ask for it. Off by default:
+    /// an application is invisible to whoever has not been given it.
+    /// </summary>
+    public bool AllowAccessRequests { get; private set; }
+
+    /// <summary>Whether the application is told the user's organization, and whether it needs one.</summary>
+    public OrganizationMode Organizations { get; private set; }
 
     /// <summary>
     /// True when the application has proposed redirect URIs that differ from the ones in force, so an
@@ -352,6 +376,31 @@ public sealed class PortalApplication
         }
 
         return Result.Success();
+    }
+
+    /// <summary>Chooses whether the application works per organization.</summary>
+    public void SetOrganizationMode(OrganizationMode mode, DateTimeOffset now)
+    {
+        if (!Enum.IsDefined(mode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
+        }
+
+        if (Organizations != mode)
+        {
+            Organizations = mode;
+            UpdatedAtUtc = now;
+        }
+    }
+
+    /// <summary>Lets users who cannot open the application ask for it, or stops new requests.</summary>
+    public void SetAccessRequests(bool allowed, DateTimeOffset now)
+    {
+        if (AllowAccessRequests != allowed)
+        {
+            AllowAccessRequests = allowed;
+            UpdatedAtUtc = now;
+        }
     }
 
     public bool HasApiScope(string? scope) =>

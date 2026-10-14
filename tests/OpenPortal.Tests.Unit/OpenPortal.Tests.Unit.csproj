@@ -12,6 +12,7 @@
     <ProjectReference Include="..\..\src\Modules\Audit\OpenPortal.Audit.Domain\OpenPortal.Audit.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Content\OpenPortal.Content.Domain\OpenPortal.Content.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Identity\OpenPortal.Identity.Domain\OpenPortal.Identity.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Notifications\OpenPortal.Notifications.Domain\OpenPortal.Notifications.Domain.csproj" />
     <ProjectReference Include="..\..\src\OpenPortal.SharedKernel\OpenPortal.SharedKernel.csproj" />
   </ItemGroup>
 

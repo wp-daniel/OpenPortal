@@ -117,6 +117,41 @@ export function formatDate(value: string | number | Date, options?: Intl.DateTim
   return new Intl.DateTimeFormat(state.language, options).format(new Date(value))
 }
 
+const RELATIVE_STEPS: readonly [Intl.RelativeTimeFormatUnit, number][] = [
+  ['second', 60],
+  ['minute', 60],
+  ['hour', 24],
+  ['day', 7],
+  ['week', 4.35],
+  ['month', 12],
+  ['year', Number.POSITIVE_INFINITY],
+]
+
+/** "3 minutes ago", "yesterday", in the active language; a moment under a minute ago is "now". */
+export function formatRelative(value: string | number | Date, now: number = Date.now()): string {
+  let amount = (new Date(value).getTime() - now) / 1000
+  const format = new Intl.RelativeTimeFormat(state.language, { numeric: 'auto' })
+
+  if (Math.abs(amount) < 45) {
+    return format.format(0, 'second')
+  }
+
+  for (const [unit, size] of RELATIVE_STEPS) {
+    if (Math.abs(amount) < size) {
+      return format.format(Math.round(amount), unit)
+    }
+
+    amount /= size
+  }
+
+  return format.format(Math.round(amount), 'year')
+}
+
+/** A number in the active language (thousands separators, percentages). */
+export function formatNumber(value: number, options?: Intl.NumberFormatOptions): string {
+  return new Intl.NumberFormat(state.language, options).format(value)
+}
+
 /** Joins items as a natural-language list ("a, b and c") in the active language. */
 export function formatList(items: readonly string[]): string {
   return new Intl.ListFormat(state.language, { style: 'long', type: 'conjunction' }).format(items)

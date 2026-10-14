@@ -36,6 +36,11 @@ internal sealed class AccessAdminAuthorization : IAccessAdminAuthorization
             AccessOperation.ViewUserAccess or AccessOperation.ManageUserGrants => [PortalPages.Access, PortalPages.Users],
             AccessOperation.ManageGroupGrants => [PortalPages.Access, PortalPages.Groups],
 
+            AccessOperation.ReviewAccessRequests => [PortalPages.AccessRequests],
+            AccessOperation.ListOrganizations => [PortalPages.Organizations, PortalPages.Users],
+            AccessOperation.ManageOrganizations => [PortalPages.Organizations],
+            AccessOperation.ViewStatistics => [PortalPages.Statistics],
+
             // Granting pages is never delegated: whoever could would be able to grant themselves anything.
             AccessOperation.ManagePagePermissions => [],
             _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null),
@@ -83,6 +88,7 @@ internal sealed class UserAdministrationAuthorization : IUserAdministrationAutho
         {
             UserAdministrationOperation.ListUsers => [PortalPages.Users, PortalPages.Groups, PortalPages.Access],
             UserAdministrationOperation.ManageUsers or UserAdministrationOperation.ProvisionUsers => [PortalPages.Users],
+            UserAdministrationOperation.ViewStatistics => [PortalPages.Statistics],
             _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null),
         };
 
@@ -133,6 +139,11 @@ internal sealed class AuditLogAuthorization : IAuditLogAuthorization
         await _permissions.HoldsAnyAsync([PortalPages.Audit], cancellationToken).ConfigureAwait(false)
             ? Result.Success()
             : Result.Failure(AuditErrors.ReadForbidden);
+
+    public async Task<Result> EnsureCanReadStatisticsAsync(CancellationToken cancellationToken) =>
+        await _permissions.HoldsAnyAsync([PortalPages.Statistics], cancellationToken).ConfigureAwait(false)
+            ? Result.Success()
+            : Result.Failure(AuditErrors.StatisticsForbidden);
 }
 
 /// <summary>Publishes the user's pages in the session: every page for an administrator, else their groups' pages.</summary>

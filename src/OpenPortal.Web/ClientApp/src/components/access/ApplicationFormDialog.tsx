@@ -3,7 +3,7 @@ import { ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { z } from 'zod'
 import { applicationsApi } from '@/api/access'
-import type { ApplicationApiScope, ApplicationSecret, ApplicationSummary, GroupClaimMode } from '@/api/types'
+import type { ApplicationApiScope, ApplicationSecret, ApplicationSummary, GroupClaimMode, OrganizationMode } from '@/api/types'
 import { FormField } from '@/components/FormField'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { notify } from '@/hooks/useToast'
@@ -29,7 +30,9 @@ import { linesToList } from '@/lib/access'
 
 type Field = 'clientId' | 'displayName' | 'description' | 'baseUrl' | 'redirectUris' | 'postLogoutRedirectUris' | 'roles'
 
-type FormTab = 'general' | 'roles' | 'api'
+type FormTab = 'general' | 'roles' | 'access' | 'api'
+
+const ORGANIZATION_MODES: readonly OrganizationMode[] = ['none', 'optional', 'required']
 
 /** A row of the roles editor. A role that is already saved keeps its key: the application checks that key. */
 interface RoleRow {
@@ -142,6 +145,8 @@ function ApplicationForm({
   const [nextRowId, setNextRowId] = useState(application?.roles.length ?? 0)
   const [groupClaims, setGroupClaims] = useState<GroupClaimMode>(application?.groupClaims ?? 'none')
   const [apiScopes, setApiScopes] = useState<ReadonlySet<ApplicationApiScope>>(() => new Set(application?.apiScopes ?? []))
+  const [allowAccessRequests, setAllowAccessRequests] = useState(application?.allowAccessRequests ?? false)
+  const [organizations, setOrganizations] = useState<OrganizationMode>(application?.organizations ?? 'none')
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({})
 
   const schema = useMemo(
@@ -176,6 +181,8 @@ function ApplicationForm({
     })),
     groupClaims,
     apiScopes: API_SCOPES.map((entry) => entry.scope).filter((scope) => apiScopes.has(scope)),
+    allowAccessRequests,
+    organizations,
   })
 
   /** Creating users implies managing access (the server enforces it too): the two boxes move together. */
@@ -266,6 +273,7 @@ function ApplicationForm({
           <TabsList variant="line" className="max-w-full flex-wrap justify-start group-data-[orientation=horizontal]/tabs:h-auto">
             <TabsTrigger value="general">{t('applications.tab.general')}</TabsTrigger>
             <TabsTrigger value="roles">{t('applications.tab.roles')}</TabsTrigger>
+            <TabsTrigger value="access">{t('applications.tab.access')}</TabsTrigger>
             <TabsTrigger value="api">{t('applications.tab.api')}</TabsTrigger>
           </TabsList>
           <Separator className="-mt-2" />
@@ -416,6 +424,43 @@ function ApplicationForm({
                   </div>
                 ))}
               </RadioGroup>
+            </fieldset>
+          </TabsContent>
+
+          <TabsContent value="access" className="grid items-start gap-6 pt-4">
+            <div className="flex items-start justify-between gap-6 rounded-lg border p-4">
+              <div className="grid gap-1">
+                <Label htmlFor="app-allow-requests">{t('applications.requests.title')}</Label>
+                <p className="text-muted-foreground text-xs">{t('applications.requests.hint')}</p>
+              </div>
+              <Switch id="app-allow-requests" checked={allowAccessRequests} onCheckedChange={setAllowAccessRequests} />
+            </div>
+
+            <fieldset className="grid gap-3">
+              <legend className="mb-1 text-sm font-medium">{t('applications.organizations.title')}</legend>
+              <p className="text-muted-foreground text-xs">{t('applications.organizations.hint')}</p>
+              <RadioGroup
+                value={organizations}
+                onValueChange={(value) => setOrganizations(value as OrganizationMode)}
+                className="gap-2"
+              >
+                {ORGANIZATION_MODES.map((mode) => (
+                  <div key={mode} className="flex items-start gap-3">
+                    <RadioGroupItem value={mode} id={`app-organizations-${mode}`} className="mt-0.5" />
+                    <div className="grid gap-0.5">
+                      <Label htmlFor={`app-organizations-${mode}`}>{t(`applications.organizations.${mode}`)}</Label>
+                      <p className="text-muted-foreground text-xs">{t(`applications.organizations.${mode}Hint`)}</p>
+                    </div>
+                  </div>
+                ))}
+              </RadioGroup>
+              {organizations !== 'none' && (
+                <p className="text-muted-foreground text-xs">
+                  {t('applications.organizations.claims')}{' '}
+                  <code className="text-foreground">org_id</code>, <code className="text-foreground">org_slug</code>,{' '}
+                  <code className="text-foreground">org_name</code>, <code className="text-foreground">org_role</code>
+                </p>
+              )}
             </fieldset>
           </TabsContent>
 

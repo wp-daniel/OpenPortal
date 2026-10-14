@@ -1,6 +1,7 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AppWindow,
+  Bell,
   ChevronRight,
   ChevronsUpDown,
   FileText,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { authApi } from '@/api/auth'
+import { accessRequestsApi, requestKeys } from '@/api/requests'
 import { BrandMark } from '@/components/BrandMark'
 import { UserAvatar } from '@/components/UserAvatar'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -33,6 +35,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
@@ -43,6 +46,7 @@ import {
 } from '@/components/ui/sidebar'
 import { useSession } from '@/hooks/useSession'
 import { useI18n } from '@/i18n/useI18n'
+import { useNotificationCount } from '@/lib/notifications'
 
 interface NavLeaf {
   readonly to: string
@@ -55,7 +59,11 @@ interface NavLeaf {
    * the page. Without one the link is for administrators only. Keep it equal to the route's `handle.page`.
    */
   readonly page?: string
+  /** A count shown beside the link (unread notifications, requests waiting). */
+  readonly badge?: BadgeKind
 }
+
+type BadgeKind = 'notifications' | 'accessRequests'
 
 interface NavEntry extends NavLeaf {
   readonly icon: LucideIcon
@@ -70,6 +78,7 @@ interface NavBranch {
 
 const portalLinks: readonly NavEntry[] = [
   { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard, end: true },
+  { to: '/notifications', labelKey: 'nav.notifications', icon: Bell, badge: 'notifications' },
   { to: '/account', labelKey: 'nav.account', icon: UserRound },
 ]
 
@@ -80,8 +89,11 @@ const adminBranches: readonly NavBranch[] = [
     icon: ShieldCheck,
     children: [
       { to: '/admin/users', labelKey: 'nav.users', page: 'users' },
+      { to: '/admin/invitations', labelKey: 'nav.invitations', page: 'users' },
       { to: '/admin/groups', labelKey: 'nav.groups', page: 'groups' },
+      { to: '/admin/organizations', labelKey: 'nav.organizations', page: 'organizations' },
       { to: '/admin/access', labelKey: 'nav.access', page: 'access' },
+      { to: '/admin/access-requests', labelKey: 'nav.accessRequests', page: 'access-requests', badge: 'accessRequests' },
       { to: '/admin/page-permissions', labelKey: 'nav.pagePermissions' },
     ],
   },
@@ -94,6 +106,7 @@ const adminBranches: readonly NavBranch[] = [
     labelKey: 'nav.security',
     icon: History,
     children: [
+      { to: '/admin/statistics', labelKey: 'nav.statistics', page: 'statistics' },
       { to: '/admin/audit', labelKey: 'nav.audit', page: 'audit' },
       { to: '/admin/settings', labelKey: 'nav.settings' },
     ],
@@ -179,6 +192,7 @@ export function AppSidebar() {
                     <span>{t(link.labelKey)}</span>
                   </Link>
                 </SidebarMenuButton>
+                {link.badge && <NavCount kind={link.badge} menu />}
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
@@ -270,6 +284,7 @@ function NavBranchItem({ branch, onNavigate }: { branch: NavBranch; onNavigate: 
                 <SidebarMenuSubButton asChild isActive={isActive(child)}>
                   <Link to={child.to} onClick={onNavigate}>
                     <span>{t(child.labelKey)}</span>
+                    {child.badge && <NavCount kind={child.badge} />}
                   </Link>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
@@ -278,6 +293,38 @@ function NavBranchItem({ branch, onNavigate }: { branch: NavBranch; onNavigate: 
         </CollapsibleContent>
       </SidebarMenuItem>
     </Collapsible>
+  )
+}
+
+/**
+ * How many things wait beside a link: unread notifications (the bell's own polled count) or access requests
+ * waiting for a reviewer. Nothing is shown at zero.
+ */
+function NavCount({ kind, menu = false }: { kind: BadgeKind; menu?: boolean }) {
+  const notifications = useNotificationCount(kind === 'notifications')
+
+  const requests = useQuery({
+    queryKey: requestKeys.pendingCount,
+    queryFn: ({ signal }) => accessRequestsApi.list({ page: 1, pageSize: 1, status: 'pending' }, signal),
+    enabled: kind === 'accessRequests',
+    refetchInterval: 60_000,
+    select: (page) => page.pendingCount,
+  })
+
+  const count = kind === 'notifications' ? (notifications.data?.unreadCount ?? 0) : (requests.data ?? 0)
+
+  if (count === 0) {
+    return null
+  }
+
+  const text = count > 99 ? '99+' : String(count)
+
+  return menu ? (
+    <SidebarMenuBadge>{text}</SidebarMenuBadge>
+  ) : (
+    <span className="bg-primary text-primary-foreground ml-auto rounded-full px-1.5 text-[0.65rem] leading-4 font-semibold tabular-nums">
+      {text}
+    </span>
   )
 }
 

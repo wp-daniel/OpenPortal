@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Info, Loader2, LockKeyhole, UserRound } from 'lucide-react'
+import { Building2, Info, KeyRound, Loader2, LockKeyhole, UserRound } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { z } from 'zod'
 import { accountApi } from '@/api/auth'
 import { ApiError } from '@/api/client'
 import type { AccountProfile, PasswordPolicy, SessionUser } from '@/api/types'
+import { MyAccessRequestsSection, MyOrganizationsSection } from '@/components/AccountAccessSections'
 import { AvatarUpload } from '@/components/AvatarUpload'
 import { FormField } from '@/components/FormField'
 import { PageHeader } from '@/components/PageHeader'
@@ -64,6 +65,14 @@ export function AccountPage() {
             <LockKeyhole />
             {t('account.tab.security')}
           </TabsTrigger>
+          <TabsTrigger value="organizations">
+            <Building2 />
+            {t('account.tab.organizations')}
+          </TabsTrigger>
+          <TabsTrigger value="requests">
+            <KeyRound />
+            {t('account.tab.requests')}
+          </TabsTrigger>
           <TabsTrigger value="details">
             <Info />
             {t('account.tab.details')}
@@ -98,6 +107,14 @@ export function AccountPage() {
           <TwoFactorSection />
         </TabsContent>
 
+        <TabsContent value="organizations" className="pt-4">
+          <MyOrganizationsSection />
+        </TabsContent>
+
+        <TabsContent value="requests" className="pt-4">
+          <MyAccessRequestsSection />
+        </TabsContent>
+
         <TabsContent value="details" className="pt-4">
           <AccountDetails user={user} profile={profile.data} />
         </TabsContent>
@@ -106,7 +123,7 @@ export function AccountPage() {
   )
 }
 
-const ACCOUNT_TABS = ['profile', 'security', 'details'] as const
+const ACCOUNT_TABS = ['profile', 'security', 'organizations', 'requests', 'details'] as const
 
 /** Read-only facts about the account that the user cannot edit here. */
 function AccountDetails({ user, profile }: { user: SessionUser | null; profile: AccountProfile | undefined }) {

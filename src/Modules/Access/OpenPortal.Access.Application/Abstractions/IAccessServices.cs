@@ -113,10 +113,129 @@ public interface IAccessEvaluator
     Task<IReadOnlyList<LaunchpadItemDto>> GetLaunchpadAsync(Guid userId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Which organization the tokens of <paramref name="clientId"/> name for the user. <paramref name="requested"/>
+    /// is the organization the sign-in asked for (slug or id) or the one an earlier token named; without one, a
+    /// user with a single organization gets it and one with several must choose, unless
+    /// <paramref name="interactive"/> is false (a refresh), where no choice can be made.
+    /// </summary>
+    Task<OrganizationDecision> EvaluateOrganizationAsync(
+        Guid userId,
+        string clientId,
+        string? requested,
+        bool interactive,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Whether the client <paramref name="clientId"/> may have a token of its own (client credentials): it must
     /// be active, and the answer lists the application API scopes enabled for it (empty when refused).
     /// </summary>
     Task<ApplicationTokenDecision> EvaluateApplicationAsync(string clientId, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// Organizations (tenants): who belongs to which, with which role. Every method re-checks the caller through
+/// <see cref="IAccessAdminAuthorization"/>, except <see cref="ListMineAsync"/>, which is the caller's own.
+/// </summary>
+public interface IOrganizationService
+{
+    Task<Result<IReadOnlyList<OrganizationSummaryDto>>> ListAsync(CancellationToken cancellationToken);
+
+    Task<Result<OrganizationDetailDto>> GetAsync(Guid organizationId, CancellationToken cancellationToken);
+
+    Task<Result<OrganizationDetailDto>> CreateAsync(CreateOrganizationRequest request, CancellationToken cancellationToken);
+
+    Task<Result<OrganizationDetailDto>> UpdateAsync(
+        Guid organizationId,
+        UpdateOrganizationRequest request,
+        CancellationToken cancellationToken);
+
+    /// <summary>Deletes the organization; its members' sessions in the applications that work per organization end.</summary>
+    Task<Result> DeleteAsync(Guid organizationId, CancellationToken cancellationToken);
+
+    /// <summary>Adds a member, or changes the role of one. Idempotent.</summary>
+    Task<Result<OrganizationDetailDto>> SetMemberAsync(
+        Guid organizationId,
+        Guid userId,
+        SetOrganizationMemberRequest request,
+        CancellationToken cancellationToken);
+
+    /// <summary>Removes a member, ending their sessions in the applications that work per organization. Idempotent.</summary>
+    Task<Result<OrganizationDetailDto>> RemoveMemberAsync(Guid organizationId, Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>The organizations one user belongs to (administration screens).</summary>
+    Task<Result<IReadOnlyList<OrganizationMembershipDto>>> ListForUserAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>The organizations the signed-in user belongs to (<see cref="IAccessCaller"/>).</summary>
+    Task<Result<IReadOnlyList<OrganizationMembershipDto>>> ListMineAsync(CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// Access requests: a user asks for an application they cannot open, a reviewer approves (which grants it, with
+/// roles) or rejects it. The user side always works on the signed-in user, whom <see cref="IAccessCaller"/>
+/// names, never on a parameter; the reviewer side re-checks the caller through <see cref="IAccessAdminAuthorization"/>
+/// (<see cref="AccessOperation.ReviewAccessRequests"/>).
+/// </summary>
+public interface IAccessRequestService
+{
+    /// <summary>The active applications that accept requests and the caller cannot open yet.</summary>
+    Task<Result<IReadOnlyList<RequestableApplicationDto>>> GetCatalogAsync(CancellationToken cancellationToken);
+
+    /// <summary>The caller's own requests, newest first.</summary>
+    Task<Result<IReadOnlyList<MyAccessRequestDto>>> ListMineAsync(CancellationToken cancellationToken);
+
+    /// <summary>Asks for an application. One pending request per application; none for one the caller can open.</summary>
+    Task<Result<MyAccessRequestDto>> SubmitAsync(SubmitAccessRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Withdraws one of the caller's pending requests.</summary>
+    Task<Result> CancelAsync(Guid requestId, CancellationToken cancellationToken);
+
+    /// <summary>The requests reviewers see: pending ones first (oldest first), then the decided ones.</summary>
+    Task<Result<AccessRequestPageDto>> ListAsync(AccessRequestQuery query, CancellationToken cancellationToken);
+
+    /// <summary>Grants the application to the requester with the chosen roles and closes the request.</summary>
+    Task<Result<AccessRequestDto>> ApproveAsync(Guid requestId, ReviewAccessRequest review, CancellationToken cancellationToken);
+
+    Task<Result<AccessRequestDto>> RejectAsync(Guid requestId, ReviewAccessRequest review, CancellationToken cancellationToken);
+}
+
+/// <summary>Counts of applications, groups, organizations, grants and waiting requests, for the statistics page.</summary>
+public interface IAccessStatisticsService
+{
+    /// <summary>Re-checks the caller (<see cref="AccessOperation.ViewStatistics"/>).</summary>
+    Task<Result<AccessStatisticsDto>> GetAsync(CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// Group and organization memberships promised by an invitation. <see cref="ValidateMembershipsAsync"/> runs when
+/// the invitation is made and checks that the inviter may give them; <see cref="ApplyMembershipsAsync"/> runs when
+/// the invited person has an account and performs no caller check (nobody is signed in yet), so the host calls it
+/// only for an accepted invitation.
+/// </summary>
+public interface IAccessProvisioningService
+{
+    /// <summary>Every group and organization exists, and the caller may manage groups (or organizations) if any is given.</summary>
+    Task<Result> ValidateMembershipsAsync(
+        IReadOnlyCollection<Guid> groupIds,
+        IReadOnlyCollection<Guid> organizationIds,
+        CancellationToken cancellationToken);
+
+    /// <summary>Adds the user to the groups and (as a member) to the organizations that still exist.</summary>
+    Task ApplyMembershipsAsync(
+        Guid userId,
+        string? userEmail,
+        IReadOnlyCollection<Guid> groupIds,
+        IReadOnlyCollection<Guid> organizationIds,
+        CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// The signed-in user, for the operations a user performs on their own behalf (asking for an application,
+/// choosing an organization). Supplied by the host from the request, so the module never takes it as a parameter.
+/// </summary>
+public interface IAccessCaller
+{
+    /// <summary>The signed-in user's id, or null for an anonymous caller.</summary>
+    Guid? UserId { get; }
 }
 
 /// <summary>
@@ -203,6 +322,12 @@ public interface IPagePermissionEvaluator
 {
     /// <summary>Keys of the catalog pages granted to any group the user belongs to.</summary>
     Task<IReadOnlyList<string>> GetPagesAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The users who belong to a group granted any of <paramref name="pageKeys"/> (administrators, who hold every
+    /// page without a grant, are not included).
+    /// </summary>
+    Task<IReadOnlyList<Guid>> GetHoldersAsync(IReadOnlyCollection<string> pageKeys, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -228,6 +353,10 @@ public enum AccessOperation
     ManageUserGrants,
     ManageGroupGrants,
     ManagePagePermissions,
+    ReviewAccessRequests,
+    ListOrganizations,
+    ManageOrganizations,
+    ViewStatistics,
 }
 
 /// <summary>

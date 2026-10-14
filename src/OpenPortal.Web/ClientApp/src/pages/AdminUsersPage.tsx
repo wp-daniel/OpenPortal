@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { History, KeyRound, Loader2, Pencil, Plus, ShieldCheck, ShieldOff, Smartphone, Trash2 } from 'lucide-react'
+import { History, KeyRound, Loader2, Pencil, Plus, ShieldCheck, ShieldOff, Smartphone, Trash2, UserCheck } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
 import type { PasswordPolicy, UserSummary } from '@/api/types'
 import { userAdminApi } from '@/api/users'
@@ -60,7 +60,7 @@ import {
   type UserDetailsForm,
 } from '@/lib/userDetails'
 
-const STATUSES = ['active', 'locked', 'unconfirmed', 'inactive'] as const
+const STATUSES = ['active', 'pending', 'locked', 'unconfirmed', 'inactive'] as const
 
 /**
  * Account management, for administrators and holders of the users page. Whether an account is an
@@ -70,7 +70,12 @@ export function AdminUsersPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [kind, setKind] = useState('')
-  const [status, setStatus] = useState('')
+  // A link (the dashboard's "needs attention") may open the list already filtered.
+  const [searchParams] = useSearchParams()
+  const [status, setStatus] = useState(() => {
+    const requested = searchParams.get('status') ?? ''
+    return (STATUSES as readonly string[]).includes(requested) ? requested : ''
+  })
   const [accessUser, setAccessUser] = useState<UserSummary | null>(null)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<UserSummary | null>(null)
@@ -104,6 +109,14 @@ export function AdminUsersPage() {
       setDeleting(null)
       notify.success(t('users.deleted'), user.email)
       await Promise.all([refresh(), refreshAccess()])
+    },
+  })
+
+  const approve = useMutation({
+    mutationFn: (user: UserSummary) => userAdminApi.approve(user.id),
+    onSuccess: async (_result, user) => {
+      notify.success(t('users.approved'), user.email)
+      await refresh()
     },
   })
 
@@ -243,12 +256,19 @@ export function AdminUsersPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          {user.isLockedOut ? (
+                          {user.pendingApproval ? (
+                            <Badge variant="warning">{t('users.pendingApproval')}</Badge>
+                          ) : user.isLockedOut ? (
                             <Badge variant="warning">{t('users.lockedOut')}</Badge>
                           ) : user.emailConfirmed ? (
                             <Badge variant="success">{t('users.active')}</Badge>
                           ) : (
                             <Badge variant="warning">{t('users.unconfirmed')}</Badge>
+                          )}
+                          {user.origin !== 'created' && (
+                            <Badge variant="outline" className="font-normal">
+                              {t(`users.origin.${user.origin}`)}
+                            </Badge>
                           )}
                           {user.twoFactorEnabled && (
                             <Badge variant="outline" title={t('users.twoFactorOn')}>
@@ -267,6 +287,12 @@ export function AdminUsersPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          {user.pendingApproval && (
+                            <Button size="sm" disabled={approve.isPending} onClick={() => approve.mutate(user)}>
+                              <UserCheck />
+                              {t('users.approve')}
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"

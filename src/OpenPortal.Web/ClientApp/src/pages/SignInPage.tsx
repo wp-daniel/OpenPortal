@@ -2,8 +2,10 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Loader2, Smartphone } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { z } from 'zod'
+import { Link } from 'react-router-dom'
 import { authApi, TWO_FACTOR_REQUIRED, TWO_FACTOR_SESSION_EXPIRED } from '@/api/auth'
 import { ApiError } from '@/api/client'
+import { ACCOUNT_PENDING_APPROVAL, EMAIL_NOT_CONFIRMED, registrationApi } from '@/api/registration'
 import { FormField } from '@/components/FormField'
 import { OTP_LENGTH, OtpCodeInput } from '@/components/OtpCodeInput'
 import { Section } from '@/components/Section'
@@ -11,7 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { SESSION_QUERY_KEY } from '@/hooks/useSession'
+import { SESSION_QUERY_KEY, useSession } from '@/hooks/useSession'
 import { notify } from '@/hooks/useToast'
 import { useI18n } from '@/i18n/useI18n'
 import type { TFunction } from '@/i18n/store'
@@ -56,7 +58,14 @@ function PasswordStep({ onTwoFactorRequired }: { onTwoFactorRequired: (rememberM
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof Fields, string>>>({})
   const queryClient = useQueryClient()
   const { t } = useI18n()
+  const { session } = useSession()
   const schema = useMemo(() => makeSchema(t), [t])
+  const [unconfirmed, setUnconfirmed] = useState<string | null>(null)
+
+  const resend = useMutation({
+    mutationFn: (email: string) => registrationApi.resendConfirmation(email),
+    onSuccess: () => notify.success(t('confirmEmail.resent'), t('confirmEmail.resentDescription')),
+  })
 
   const signIn = useMutation({
     mutationFn: (values: Fields) => authApi.login(values.email, values.password, values.rememberMe),
@@ -65,6 +74,19 @@ function PasswordStep({ onTwoFactorRequired }: { onTwoFactorRequired: (rememberM
     onError: (error, values) => {
       if (error instanceof ApiError && error.problem?.errorCode === TWO_FACTOR_REQUIRED) {
         onTwoFactorRequired(values.rememberMe)
+
+        return
+      }
+
+      // These two are only told to whoever knew the password, so they can be explained plainly.
+      if (error instanceof ApiError && error.problem?.errorCode === ACCOUNT_PENDING_APPROVAL) {
+        notify.warning(t('signIn.pendingApproval.title'), t('signIn.pendingApproval.description'))
+
+        return
+      }
+
+      if (error instanceof ApiError && error.problem?.errorCode === EMAIL_NOT_CONFIRMED) {
+        setUnconfirmed(values.email)
 
         return
       }
@@ -91,6 +113,7 @@ function PasswordStep({ onTwoFactorRequired }: { onTwoFactorRequired: (rememberM
     }
 
     setFieldErrors({})
+    setUnconfirmed(null)
     signIn.mutate(parsed.data)
   }
 
@@ -140,6 +163,31 @@ function PasswordStep({ onTwoFactorRequired }: { onTwoFactorRequired: (rememberM
           {signIn.isPending && <Loader2 className="animate-spin" />}
           {signIn.isPending ? t('signIn.submitting') : t('signIn.submit')}
         </Button>
+
+        {unconfirmed && (
+          <div role="alert" className="bg-warning/10 grid gap-2 rounded-lg border p-3 text-sm">
+            <p>{t('signIn.unconfirmed')}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="justify-self-start"
+              disabled={resend.isPending}
+              onClick={() => resend.mutate(unconfirmed)}
+            >
+              {resend.isPending && <Loader2 className="animate-spin" />}
+              {t('confirmEmail.resend')}
+            </Button>
+          </div>
+        )}
+
+        {session.registration.enabled && (
+          <p className="text-muted-foreground text-center text-sm">
+            {t('signIn.noAccount')}{' '}
+            <Link to="/register" className="text-foreground underline underline-offset-2">
+              {t('signIn.register')}
+            </Link>
+          </p>
+        )}
       </form>
     </Section>
   )

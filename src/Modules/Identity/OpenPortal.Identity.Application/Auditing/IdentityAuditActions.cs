@@ -48,6 +48,28 @@ public static class IdentityAuditActions
 
     /// <summary>The portal's security settings changed. Details carry the new values.</summary>
     public const string SecuritySettingsUpdated = "settings.security_updated";
+
+    /// <summary>The registration and invitation settings changed. Details carry the new values.</summary>
+    public const string RegistrationSettingsUpdated = "settings.registration_updated";
+
+    /// <summary>Someone created their own account. The actor is the new account; a failure is a refused address.</summary>
+    public const string Registered = "user.registered";
+
+    /// <summary>An administrator let a self-registered account sign in.</summary>
+    public const string RegistrationApproved = "user.registration_approved";
+
+    /// <summary>A self-registered account confirmed its address.</summary>
+    public const string EmailConfirmed = "account.email_confirmed";
+
+    /// <summary>An address was invited; the target is the invitation (labelled with the address).</summary>
+    public const string Invited = "user.invited";
+
+    public const string InvitationResent = "user.invitation_resent";
+
+    public const string InvitationRevoked = "user.invitation_revoked";
+
+    /// <summary>The invitation became an account; the actor is the new account.</summary>
+    public const string InvitationAccepted = "user.invitation_accepted";
 }
 
 /// <summary>Values of the <c>method</c> detail on a sign-in that needed a second factor.</summary>
@@ -64,5 +86,7 @@ public static class SignInFailureReasons
     public const string InvalidPassword = "invalid_password";
     public const string LockedOut = "locked_out";
     public const string NotAllowed = "not_allowed";
+    public const string PendingApproval = "pending_approval";
+    public const string EmailNotConfirmed = "email_not_confirmed";
     public const string InvalidCode = "invalid_code";
 }

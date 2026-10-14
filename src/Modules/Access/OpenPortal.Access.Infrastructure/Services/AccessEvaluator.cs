@@ -45,6 +45,54 @@ internal sealed class AccessEvaluator : IAccessEvaluator
             await _access.GroupClaimsAsync(application, userId, cancellationToken).ConfigureAwait(false));
     }
 
+    public async Task<OrganizationDecision> EvaluateOrganizationAsync(
+        Guid userId,
+        string clientId,
+        string? requested,
+        bool interactive,
+        CancellationToken cancellationToken)
+    {
+        var mode = await _db.Applications
+            .AsNoTracking()
+            .Where(application => application.ClientId == clientId)
+            .Select(application => (OrganizationMode?)application.Organizations)
+            .SingleOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (mode is null or OrganizationMode.None)
+        {
+            return new OrganizationDecision(OrganizationOutcome.NotUsed, null, []);
+        }
+
+        var memberships = await OrganizationQueries.MembershipsAsync(_db, userId, cancellationToken).ConfigureAwait(false);
+        var wanted = requested?.Trim();
+
+        if (!string.IsNullOrEmpty(wanted))
+        {
+            // Named by id (an earlier token) or by slug (a sign-in request); either way it must be one of theirs.
+            var match = memberships.FirstOrDefault(membership =>
+                string.Equals(membership.Slug, wanted, StringComparison.OrdinalIgnoreCase)
+                || (Guid.TryParse(wanted, out var id) && membership.Id == id));
+
+            return match is null
+                ? new OrganizationDecision(OrganizationOutcome.NotMember, null, [])
+                : new OrganizationDecision(OrganizationOutcome.Selected, match, []);
+        }
+
+        return memberships.Count switch
+        {
+            0 when mode == OrganizationMode.Required => new OrganizationDecision(OrganizationOutcome.Missing, null, []),
+            0 => new OrganizationDecision(OrganizationOutcome.Unaffiliated, null, []),
+            1 => new OrganizationDecision(OrganizationOutcome.Selected, memberships[0], []),
+
+            // Several, and nobody to ask (a refresh of a token that named none): an application that needs one
+            // refuses; one that can do without carries on without.
+            _ when interactive => new OrganizationDecision(OrganizationOutcome.ChoiceNeeded, null, memberships),
+            _ when mode == OrganizationMode.Required => new OrganizationDecision(OrganizationOutcome.Missing, null, []),
+            _ => new OrganizationDecision(OrganizationOutcome.Unaffiliated, null, []),
+        };
+    }
+
     public async Task<ApplicationTokenDecision> EvaluateApplicationAsync(string clientId, CancellationToken cancellationToken)
     {
         var application = await _db.Applications

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Identity.Application.Contracts;
+using OpenPortal.Notifications.Application.Abstractions;
 using OpenPortal.Web.Authorization;
 using OpenPortal.Web.Infrastructure;
 
@@ -23,11 +24,16 @@ public sealed class AdminUsersController : ControllerBase
 {
     private readonly IUserAdministrationService _users;
     private readonly IAccessAdministrationService _access;
+    private readonly INotificationMaintenance _notifications;
 
-    public AdminUsersController(IUserAdministrationService users, IAccessAdministrationService access)
+    public AdminUsersController(
+        IUserAdministrationService users,
+        IAccessAdministrationService access,
+        INotificationMaintenance notifications)
     {
         _users = users;
         _access = access;
+        _notifications = notifications;
     }
 
     /// <summary>Lists accounts, filtered and paged.</summary>
@@ -136,6 +142,21 @@ public sealed class AdminUsersController : ControllerBase
     }
 
     /// <summary>
+    /// Lets a self-registered account that waits for approval sign in, and tells its owner. To reject one, delete it.
+    /// </summary>
+    [RequirePortalPage(PortalPages.Users)]
+    [HttpPost("{userId:guid}/approve")]
+    [ProducesResponseType<UserSummaryDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<UserSummaryDto>> ApproveAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var approved = await _users.ApproveRegistrationAsync(userId, cancellationToken).ConfigureAwait(false);
+
+        return approved.IsSuccess ? Ok(approved.Value) : ProblemResults.FromResult(HttpContext, approved);
+    }
+
+    /// <summary>
     /// Deletes an account, then what the Access module holds about it (group memberships, direct grants and
     /// tokens). Nobody can delete themselves; only an administrator can delete an administrator.
     /// </summary>
@@ -154,6 +175,7 @@ public sealed class AdminUsersController : ControllerBase
         }
 
         // The account is gone either way; a failure here leaves only references the screens show as unknown.
+        await _notifications.ForgetRecipientAsync(userId, cancellationToken).ConfigureAwait(false);
         var forgotten = await _access.RemoveUserAsync(userId, cancellationToken).ConfigureAwait(false);
 
         return forgotten.IsSuccess ? NoContent() : ProblemResults.FromResult(HttpContext, forgotten);

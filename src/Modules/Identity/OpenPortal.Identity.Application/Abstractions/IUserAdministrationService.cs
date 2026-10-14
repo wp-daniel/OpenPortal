@@ -61,6 +61,12 @@ public interface IUserAdministrationService
     Task<Result> ResetTwoFactorAsync(Guid userId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Lets a self-registered account that waited for approval sign in, and tells its owner. Rejecting one is
+    /// deleting it.
+    /// </summary>
+    Task<Result<UserSummaryDto>> ApproveRegistrationAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Deletes an account. Nobody can delete themselves, and only an administrator can delete an
     /// administrator. What other modules hold about the user (groups, grants) is the host's to remove.
     /// </summary>

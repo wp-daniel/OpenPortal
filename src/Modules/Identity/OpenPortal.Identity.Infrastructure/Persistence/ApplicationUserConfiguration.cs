@@ -42,6 +42,14 @@ internal sealed class ApplicationUserConfiguration : IEntityTypeConfiguration<Ap
         builder.Property(user => user.CreatedAtUtc)
             .IsRequired();
 
+        // Existing accounts were all created by an administrator: they take that member's name, not "".
+        builder.Property(user => user.Origin)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(16)
+            .HasDefaultValue(AccountOrigin.Created)
+            .HasSentinel(AccountOrigin.Created);
+
         // Names are set explicitly so the schema does not change if Identity's default conventions do.
         builder.HasIndex(user => user.NormalizedUserName)
             .IsUnique()

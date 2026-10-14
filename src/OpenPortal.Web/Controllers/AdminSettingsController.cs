@@ -18,10 +18,37 @@ namespace OpenPortal.Web.Controllers;
 public sealed class AdminSettingsController : ControllerBase
 {
     private readonly ISecuritySettingsService _security;
+    private readonly IRegistrationSettingsService _registration;
 
-    public AdminSettingsController(ISecuritySettingsService security)
+    public AdminSettingsController(ISecuritySettingsService security, IRegistrationSettingsService registration)
     {
         _security = security;
+        _registration = registration;
+    }
+
+    /// <summary>Self-registration and invitations, and whether the portal can send email for them.</summary>
+    [HttpGet("registration")]
+    [ProducesResponseType<RegistrationSettingsDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<RegistrationSettingsDto>> GetRegistrationAsync(CancellationToken cancellationToken)
+    {
+        var settings = await _registration.GetAsync(cancellationToken).ConfigureAwait(false);
+
+        return settings.IsSuccess ? Ok(settings.Value) : ProblemResults.FromResult(HttpContext, settings);
+    }
+
+    [HttpPut("registration")]
+    [ProducesResponseType<RegistrationSettingsDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<RegistrationSettingsDto>> UpdateRegistrationAsync(
+        [FromBody] UpdateRegistrationSettingsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var settings = await _registration.UpdateAsync(request, cancellationToken).ConfigureAwait(false);
+
+        return settings.IsSuccess ? Ok(settings.Value) : ProblemResults.FromResult(HttpContext, settings);
     }
 
     [HttpGet("security")]

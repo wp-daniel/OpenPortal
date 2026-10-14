@@ -19,6 +19,70 @@ public static class UserErrors
     public static Error AccountNotAllowed { get; } =
         Error.Unauthorized(Prefix + "account_not_allowed", "The account is not allowed to sign in.");
 
+    public static Error AccountPendingApproval { get; } =
+        Error.Unauthorized(Prefix + "account_pending_approval", "The account is waiting for an administrator's approval.");
+
+    public static Error EmailNotConfirmed { get; } =
+        Error.Unauthorized(Prefix + "email_not_confirmed", "Confirm your email address with the link we sent before signing in.");
+
+    public static Error RegistrationClosed { get; } =
+        Error.Forbidden(Prefix + "registration_closed", "This portal does not accept new registrations.");
+
+    public static Error RegistrationDomainNotAllowed { get; } =
+        Error.Validation(Prefix + "registration_domain_not_allowed", "Accounts with this email domain cannot register here.");
+
+    public static Error RegistrationNotPending { get; } =
+        Error.Conflict(Prefix + "registration_not_pending", "The account is not waiting for approval.");
+
+    public static Error RegistrationModeInvalid { get; } =
+        Error.Validation(Prefix + "registration_mode_invalid", "The registration setting must be disabled, open or approval.");
+
+    public static Error RegistrationDomainInvalid { get; } =
+        Error.Validation(
+            Prefix + "registration_domain_invalid",
+            $"Each allowed domain must be a host name such as example.com, at most {Settings.RegistrationSettings.MaxDomains} of them.");
+
+    public static Error EmailDeliveryUnavailable { get; } =
+        Error.Conflict(
+            Prefix + "email_delivery_unavailable",
+            "Email confirmation needs email delivery, which is not configured (Email:Smtp:Host).");
+
+    public static Error EmailConfirmationInvalid { get; } =
+        Error.Validation(Prefix + "email_confirmation_invalid", "The confirmation link is not valid or has expired.");
+
+    public static Error InvitationLifetimeInvalid { get; } =
+        Error.Validation(
+            Prefix + "invitation_lifetime_invalid",
+            $"Invitations must stay valid between {Settings.RegistrationSettings.MinInvitationDays} and {Settings.RegistrationSettings.MaxInvitationDays} days.");
+
+    public static Error InvitationNotFound { get; } =
+        Error.NotFound(Prefix + "invitation_not_found", "The invitation does not exist.");
+
+    public static Error InvitationInvalid { get; } =
+        Error.NotFound(Prefix + "invitation_invalid", "This invitation is not valid: it was used, withdrawn or never existed.");
+
+    public static Error InvitationExpired { get; } =
+        Error.Conflict(Prefix + "invitation_expired", "This invitation has expired. Ask for a new one.");
+
+    public static Error InvitationClosed { get; } =
+        Error.Conflict(Prefix + "invitation_closed", "The invitation was already accepted or withdrawn.");
+
+    public static Error InvitationAlreadyPending { get; } =
+        Error.Conflict(Prefix + "invitation_already_pending", "An invitation to this address is already waiting; send it again instead.");
+
+    public static Error InvitationEmailInvalid { get; } =
+        Error.Validation(Prefix + "invitation_email_invalid", "The email address is not valid.");
+
+    public static Error InvitationMessageTooLong { get; } =
+        Error.Validation(
+            Prefix + "invitation_message_too_long",
+            $"The message must not exceed {Invitations.UserInvitation.MessageMaxLength} characters.");
+
+    public static Error InvitationTooManyMemberships { get; } =
+        Error.Validation(
+            Prefix + "invitation_too_many_memberships",
+            $"An invitation may name at most {Invitations.UserInvitation.MaxMemberships} groups and {Invitations.UserInvitation.MaxMemberships} organizations.");
+
     public static Error TwoFactorRequired { get; } =
         Error.Unauthorized(Prefix + "two_factor_required", "The account requires an additional verification step.");
 

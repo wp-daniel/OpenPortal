@@ -43,6 +43,9 @@ public static class AuditSubjectTypes
     public const string User = "user";
     public const string Application = "application";
     public const string Group = "group";
+    public const string Organization = "organization";
+    public const string AccessRequest = "access_request";
+    public const string Invitation = "invitation";
     public const string Page = "page";
     public const string Profile = "profile";
     public const string Project = "project";

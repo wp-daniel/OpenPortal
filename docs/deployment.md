@@ -104,12 +104,43 @@ keeps everything. Reading the log is the `audit` page: grant it to a group of au
 administrators. The CSV export (`/api/admin/audit/export`, at most 10,000 rows per download) is meant for
 archiving beyond the retention period.
 
+The statistics page (**Security → Statistics**, also shown on administrators' dashboards) is computed from the
+same log, so it covers what the retention keeps: a period older than `Audit:RetentionDays` is reported as
+partial.
+
+## Email
+
+Invitations, address confirmation for self-registration and "your account was approved" messages are sent by
+email once delivery is configured; until then the portal works without it (invitation links are shown to the
+administrator to pass on, and self-registration cannot require a confirmed address).
+
+```json
+"Email": {
+  "PublicUrl": "https://portal.example.com",
+  "From": "portal@example.com",
+  "FromName": "OpenPortal",
+  "Smtp": { "Host": "smtp.example.com", "Port": 587, "Security": "Auto", "Username": "portal@example.com" }
+}
+```
+
+Keep `Email:Smtp:Password` in user secrets or the environment (`Email__Smtp__Password`). Set `PublicUrl`: links in
+emails otherwise use the address of the request that caused them, which behind a proxy (or with a forged `Host`
+header) is not the portal's. For development, `Email:PickupDirectory` writes each message as an `.eml` file
+instead of sending it. Registration itself (off, open or with approval, allowed domains, confirmation, invitation
+lifetime) is set by administrators under **Security → Portal settings**.
+
+## Notifications
+
+Notifications are stored per recipient and shown in the bell and on `/notifications`; the client polls the unread
+count every 30 seconds while the tab is visible. Read ones are deleted after `Notifications:ReadRetentionDays`
+(30), all after `Notifications:RetentionDays` (180).
+
 ## Adding a migration
 
 After changing a module's model, add the migration for **both** providers:
 
 ```bash
-# SQLite
+# SQLite (contexts: IdentityDbContext, ContentDbContext, AccessDbContext, AuditDbContext, NotificationsDbContext)
 dotnet ef migrations add <Name> --project src/OpenPortal.Web --context AccessDbContext \
   --output-dir Persistence/Migrations/Access
 
