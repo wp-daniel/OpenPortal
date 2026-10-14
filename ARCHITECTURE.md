@@ -249,7 +249,7 @@ every grant. Clients approved before roles existed get the new scope permissions
 (`OidcClientUpgradeService`).
 
 **Organizations (multi-tenancy for the applications).** The portal is the identity provider of applications that
-may serve several organizations (a CRM with many customer companies); it does not partition itself. Access owns
+may serve several organizations (for example, many customer companies); it does not partition itself. Access owns
 `Organization` (name, immutable lower-case `Slug`) and `OrganizationMember` (user id, role `member`/`admin`), managed
 on the `organizations` page. An application's `Organizations` setting decides what happens at sign-in
 (`IAccessEvaluator.EvaluateOrganizationAsync`, called by `ConnectController`):

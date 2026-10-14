@@ -29,7 +29,7 @@ The application's client id and secret (shown once at approval, or regenerated i
 ```bash
 curl -s https://portal.example.com/connect/token \
   -d grant_type=client_credentials \
-  -d client_id=crm \
+  -d client_id=orders \
   -d client_secret="$OPENPORTAL_CLIENT_SECRET"
 ```
 

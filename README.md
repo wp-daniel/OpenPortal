@@ -28,7 +28,7 @@
 
 ---
 
-OpenPortal is a reusable base for any ASP.NET Core application — a CRM, a back office, an internal tool. It
+OpenPortal is a reusable base for any ASP.NET Core application — a back office, an internal tool, a line-of-business app. It
 gives you the parts every such application needs and nobody wants to write twice: accounts and sessions, an
 administration area, and a single place where other applications send their users to sign in and where you
 decide who may open what.
@@ -147,7 +147,7 @@ the portal decides who may:
 5. Roles: list them in the application's `OpenPortal:Roles` (or on the application's **Roles and claims** tab)
    and assign them on each grant under **Access**. The application receives the user's roles as `role` claims
    and, if its setting allows, their groups as `groups` claims; both are recomputed at every token refresh.
-6. Organizations (for an application that serves several tenants, such as a CRM): on the application's **Access**
+6. Organizations (for an application that serves several tenants): on the application's **Access**
    tab choose *optional* or *required*, and put users in organizations under **Organizations**. The tokens then
    carry `org_id`, `org_slug`, `org_name` and `org_role` (`User.GetOpenPortalOrganization()` in `OpenPortal.Client`);
    a member of several organizations picks one at sign-in (or the application sends `organization=<slug>`), and
