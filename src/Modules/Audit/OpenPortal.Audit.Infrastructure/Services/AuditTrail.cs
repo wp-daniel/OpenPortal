@@ -50,7 +50,8 @@ internal sealed partial class AuditTrail : IAuditTrail
                 auditEvent.Actor ?? _request.Actor,
                 auditEvent.Target,
                 details,
-                _request.Origin);
+                _request.Origin,
+                _request.OnBehalfOf);
 
             _db.Entries.Add(entry);
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

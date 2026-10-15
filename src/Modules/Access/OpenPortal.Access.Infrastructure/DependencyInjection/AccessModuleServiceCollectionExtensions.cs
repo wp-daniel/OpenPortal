@@ -6,6 +6,7 @@ using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Access.Infrastructure.Configuration;
 using OpenPortal.Access.Infrastructure.Persistence;
 using OpenPortal.Access.Infrastructure.Services;
+using OpenPortal.SharedKernel.Privacy;
 using OpenPortal.SharedKernel.Time;
 
 namespace OpenPortal.Access.Infrastructure.DependencyInjection;
@@ -55,6 +56,8 @@ public static class AccessModuleServiceCollectionExtensions
         services.AddScoped<IApplicationRegistryService, ApplicationRegistryService>();
         services.AddScoped<IGroupService, GroupService>();
         services.AddScoped<IAccessAdministrationService, AccessAdministrationService>();
+        services.AddScoped<IAccessUserMaintenance, AccessUserMaintenance>();
+        services.AddScoped<IPersonalDataSource, AccessPersonalData>();
         services.AddScoped<IAccessRequestService, AccessRequestService>();
         services.AddScoped<IOrganizationService, OrganizationService>();
         services.AddScoped<IAccessStatisticsService, AccessStatisticsService>();

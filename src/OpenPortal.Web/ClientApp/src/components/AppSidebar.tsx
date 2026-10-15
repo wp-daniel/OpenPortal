@@ -5,8 +5,10 @@ import {
   ChevronRight,
   ChevronsUpDown,
   FileText,
+  Headset,
   History,
   LayoutDashboard,
+  Megaphone,
   LogOut,
   ShieldCheck,
   UserRound,
@@ -16,6 +18,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { authApi } from '@/api/auth'
 import { accessRequestsApi, requestKeys } from '@/api/requests'
 import { BrandMark } from '@/components/BrandMark'
+import { useStopImpersonation } from '@/components/ImpersonationBanner'
 import { UserAvatar } from '@/components/UserAvatar'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
@@ -108,8 +111,14 @@ const adminBranches: readonly NavBranch[] = [
     children: [
       { to: '/admin/statistics', labelKey: 'nav.statistics', page: 'statistics' },
       { to: '/admin/audit', labelKey: 'nav.audit', page: 'audit' },
+      { to: '/admin/legal', labelKey: 'nav.legal', page: 'legal' },
       { to: '/admin/settings', labelKey: 'nav.settings' },
     ],
+  },
+  {
+    labelKey: 'nav.communication',
+    icon: Megaphone,
+    children: [{ to: '/admin/announcements', labelKey: 'nav.announcements', page: 'announcements' }],
   },
   {
     labelKey: 'nav.content',
@@ -336,6 +345,8 @@ function NavUser({ onNavigate }: { onNavigate: () => void }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
 
+  const stopImpersonation = useStopImpersonation()
+
   const signOut = useMutation({
     mutationFn: () => authApi.logout(),
     onSuccess: async () => {
@@ -393,6 +404,12 @@ function NavUser({ onNavigate }: { onNavigate: () => void }) {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
+            {user.impersonator && (
+              <DropdownMenuItem disabled={stopImpersonation.isPending} onSelect={() => stopImpersonation.mutate()}>
+                <Headset />
+                {t('impersonation.stop')}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem disabled={signOut.isPending} onSelect={() => signOut.mutate()}>
               <LogOut />
               {signOut.isPending ? t('nav.signingOut') : t('nav.signOut')}

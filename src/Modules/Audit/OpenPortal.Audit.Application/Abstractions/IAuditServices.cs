@@ -42,6 +42,12 @@ public interface IAuditRequestContext
     /// <summary>The signed-in caller, or null for an anonymous request or a background job.</summary>
     AuditSubject? Actor { get; }
 
+    /// <summary>
+    /// The account the actor is acting as while impersonating it for support, recorded next to the actor; null
+    /// otherwise.
+    /// </summary>
+    AuditSubject? OnBehalfOf { get; }
+
     AuditOrigin Origin { get; }
 }
 

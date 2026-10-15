@@ -4,6 +4,7 @@ using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Identity.Application.Auditing;
 using OpenPortal.Identity.Application.Contracts;
 using OpenPortal.Identity.Domain.Users;
+using OpenPortal.Identity.Infrastructure.Configuration;
 using OpenPortal.SharedKernel.Auditing;
 using OpenPortal.SharedKernel.Results;
 using OpenPortal.SharedKernel.Time;
@@ -35,6 +36,10 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
     private readonly IAuditTrail _audit;
     private readonly IClock _clock;
     private readonly RegistrationSettingsStore _registration;
+    private readonly IdentityLegalDocumentService _legal;
+    private readonly PrivacySettingsStore _privacy;
+    private readonly IOptions<IdentityModuleOptions> _moduleOptions;
+    private readonly SecuritySettingsStore _security;
     private readonly Lazy<string> _timingEqualisationHash;
 
     public IdentityAuthenticationService(
@@ -47,8 +52,16 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
         IOptions<IdentityOptions> identityOptions,
         IAuditTrail audit,
         IClock clock,
-        RegistrationSettingsStore registration)
+        RegistrationSettingsStore registration,
+        IdentityLegalDocumentService legal,
+        PrivacySettingsStore privacy,
+        IOptions<IdentityModuleOptions> moduleOptions,
+        SecuritySettingsStore security)
     {
+        _security = security;
+        _legal = legal;
+        _privacy = privacy;
+        _moduleOptions = moduleOptions;
         _registration = registration;
         _signInManager = signInManager;
         _userManager = userManager;
@@ -242,10 +255,11 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
     {
         var settings = await _registration.ReadAsync(cancellationToken).ConfigureAwait(false);
         var registration = new RegistrationInfoDto(settings.IsOpen, settings.Mode == Domain.Settings.RegistrationMode.Approval);
+        var legal = await _legal.GetInfoAsync(cancellationToken).ConfigureAwait(false);
 
         if (!_currentUser.IsAuthenticated)
         {
-            return Result<SessionDto>.Success(SessionDto.AnonymousFor(PasswordPolicy, registration));
+            return Result<SessionDto>.Success(SessionDto.AnonymousFor(PasswordPolicy, registration, legal));
         }
 
         var lookup = await _userLookup.FindCurrentAsync(cancellationToken).ConfigureAwait(false);
@@ -254,12 +268,22 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
         {
             // The cookie references an account that no longer exists. Report an anonymous session rather
             // than an error, and let the cookie expire naturally.
-            return Result<SessionDto>.Success(SessionDto.AnonymousFor(PasswordPolicy, registration));
+            return Result<SessionDto>.Success(SessionDto.AnonymousFor(PasswordPolicy, registration, legal));
         }
 
         var user = lookup.Value;
         var roles = await _userManager.GetRolesAsync(user).ConfigureAwait(false);
         var pages = await _pages.GetPagesAsync(user.Id, roles.ToArray(), cancellationToken).ConfigureAwait(false);
+        var pendingLegal = await _legal.PendingAsync(user.Id, cancellationToken).ConfigureAwait(false);
+        var privacy = await _privacy.ReadAsync(cancellationToken).ConfigureAwait(false);
+        var security = await _security.ReadAsync(cancellationToken).ConfigureAwait(false);
+        var impersonator = _currentUser.ImpersonatorId is { } impersonatorId && _currentUser.ImpersonationStartedAtUtc is { } startedAt
+            ? new SessionImpersonatorDto(
+                impersonatorId,
+                _currentUser.ImpersonatorEmail,
+                startedAt,
+                startedAt.AddMinutes(_moduleOptions.Value.ImpersonationMinutes))
+            : null;
 
         return Result<SessionDto>.Success(new SessionDto(
             IsAuthenticated: true,
@@ -271,9 +295,16 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
                 Roles: roles.Order(StringComparer.Ordinal).ToArray(),
                 Language: user.Language,
                 AvatarUpdatedAtUtc: user.AvatarUpdatedAtUtc,
-                Pages: pages),
+                Pages: pages,
+                PendingLegalDocuments: pendingLegal,
+                DeletionScheduledAtUtc: user.DeletionScheduledAtUtc,
+                Impersonator: impersonator),
             PasswordPolicy: PasswordPolicy,
-            Registration: registration));
+            Registration: registration,
+            Legal: legal,
+            Features: new SessionFeaturesDto(
+                SelfDeletion: privacy.SelfDeletionEnabled,
+                PersonalAccessTokens: security.PersonalAccessTokensEnabled)));
     }
 
     private Task RecordSignInAsync(

@@ -4,7 +4,8 @@ using Microsoft.OpenApi;
 namespace OpenPortal.Web.Infrastructure;
 
 /// <summary>
-/// Describes the cookie authentication scheme in the generated OpenAPI document.
+/// Describes the two ways to call the portal's API in the generated OpenAPI document: the browser's session cookie,
+/// or a personal access token (<c>Authorization: Bearer opp_…</c>) for scripts and command-line tools.
 /// <para>
 /// Without this the document would declare no security scheme at all, and anyone generating a client from
 /// it would see every endpoint as anonymously callable.
@@ -13,6 +14,7 @@ namespace OpenPortal.Web.Infrastructure;
 public sealed class SecuritySchemeTransformer : IOpenApiDocumentTransformer
 {
     private const string SchemeName = "cookieAuth";
+    private const string TokenSchemeName = "personalAccessToken";
 
     public Task TransformAsync(
         OpenApiDocument document,
@@ -43,6 +45,21 @@ public sealed class SecuritySchemeTransformer : IOpenApiDocumentTransformer
         };
 
         document.Security.Add(requirement);
+
+        document.Components.SecuritySchemes[TokenSchemeName] = new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            Description = "A personal access token (opp_…) created in Account > Tokens, while the portal allows them. "
+                + "Scope read allows GET requests only; write allows everything else too. Never accepted for the "
+                + "account's password, second factor, tokens, data download or deletion.",
+        };
+
+        // A separate requirement: either the cookie or the token.
+        document.Security.Add(new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecuritySchemeReference(TokenSchemeName, document, null)] = [],
+        });
 
         return Task.CompletedTask;
     }

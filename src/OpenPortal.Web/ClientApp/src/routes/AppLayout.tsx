@@ -1,7 +1,10 @@
 import { Outlet } from 'react-router-dom'
+import { AnnouncementBanner } from '@/components/AnnouncementBanner'
 import { AppBreadcrumbs } from '@/components/AppBreadcrumbs'
 import { AppSidebar } from '@/components/AppSidebar'
+import { ImpersonationBanner } from '@/components/ImpersonationBanner'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import { LegalLinks } from '@/components/LegalLinks'
 import { NotificationBell } from '@/components/NotificationBell'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Separator } from '@/components/ui/separator'
@@ -40,6 +43,7 @@ export function AppLayout() {
 
       {/* min-w-0: a wide table scrolls inside its card instead of widening the whole page. */}
       <SidebarInset className="min-w-0">
+        <ImpersonationBanner />
         <header className="bg-background/95 sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b px-4 backdrop-blur">
           <SidebarTrigger className="-ml-1" aria-label={t('nav.toggleSidebar')} />
           <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
@@ -51,13 +55,16 @@ export function AppLayout() {
           </div>
         </header>
 
+        <AnnouncementBanner className="mx-auto w-full max-w-6xl px-4 pt-6 md:px-6" />
+
         <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 md:px-6">
           <Outlet />
         </main>
 
         <footer className="border-t">
-          <div className="text-muted-foreground mx-auto max-w-6xl px-4 py-4 text-xs md:px-6">
-            OpenPortal · {currentYear}
+          <div className="text-muted-foreground mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-4 text-xs md:px-6">
+            <span>OpenPortal · {currentYear}</span>
+            <LegalLinks />
           </div>
         </footer>
       </SidebarInset>

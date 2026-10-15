@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using OpenPortal.Web.Security;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Identity.Application.Contracts;
+using OpenPortal.Web.Authorization;
 using OpenPortal.Web.Infrastructure;
 
 namespace OpenPortal.Web.Controllers;
@@ -43,6 +44,7 @@ public sealed class AccountController : ControllerBase
     }
 
     /// <summary>Returns the key (and otpauth URI for the QR code) to add to an authenticator app.</summary>
+    [InteractiveSessionOnly]
     [HttpPost("two-factor/setup")]
     [ProducesResponseType<TwoFactorSetupDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
@@ -54,6 +56,7 @@ public sealed class AccountController : ControllerBase
     }
 
     /// <summary>Turns two-factor on with a code from the app; the response holds the recovery codes, shown once.</summary>
+    [InteractiveSessionOnly]
     [HttpPost("two-factor/enable")]
     [EnableRateLimiting(RateLimitPolicies.SignIn)]
     [ProducesResponseType<RecoveryCodesDto>(StatusCodes.Status200OK)]
@@ -69,6 +72,7 @@ public sealed class AccountController : ControllerBase
     }
 
     /// <summary>Turns two-factor off after checking the password.</summary>
+    [InteractiveSessionOnly]
     [HttpPost("two-factor/disable")]
     [EnableRateLimiting(RateLimitPolicies.SignIn)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -84,6 +88,7 @@ public sealed class AccountController : ControllerBase
     }
 
     /// <summary>Replaces every recovery code after checking the password.</summary>
+    [InteractiveSessionOnly]
     [HttpPost("two-factor/recovery-codes")]
     [EnableRateLimiting(RateLimitPolicies.SignIn)]
     [ProducesResponseType<RecoveryCodesDto>(StatusCodes.Status200OK)]
@@ -151,6 +156,7 @@ public sealed class AccountController : ControllerBase
     /// than be logged out mid-response.
     /// </para>
     /// </summary>
+    [InteractiveSessionOnly]
     [HttpPost("change-password")]
     [EnableRateLimiting(RateLimitPolicies.SignIn)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

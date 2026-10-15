@@ -21,6 +21,7 @@ namespace OpenPortal.Identity.Infrastructure.Services;
 /// <inheritdoc />
 internal sealed class IdentityInvitationService : IInvitationService
 {
+    private readonly IdentityLegalDocumentService _legal;
     private readonly IdentityDbContext _dbContext;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
@@ -42,8 +43,10 @@ internal sealed class IdentityInvitationService : IInvitationService
         IAccountMessaging messaging,
         IClock clock,
         IAuditTrail audit,
-        INotifier notifier)
+        INotifier notifier,
+        IdentityLegalDocumentService legal)
     {
+        _legal = legal;
         _dbContext = dbContext;
         _userManager = userManager;
         _signInManager = signInManager;
@@ -303,6 +306,12 @@ internal sealed class IdentityInvitationService : IInvitationService
             return Result<AcceptedInvitationDto>.Failure(UserErrors.DuplicateEmail);
         }
 
+        var legal = await _legal.RequireAcceptedAsync(request.AcceptedLegalDocumentIds, cancellationToken).ConfigureAwait(false);
+        if (legal.IsFailure)
+        {
+            return Result<AcceptedInvitationDto>.Failure(legal.Error);
+        }
+
         var now = _clock.UtcNow;
         var account = ApplicationUser.Create(
             Guid.NewGuid(),
@@ -342,6 +351,7 @@ internal sealed class IdentityInvitationService : IInvitationService
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await _legal.RecordAsync(user.Id, legal.Value, cancellationToken).ConfigureAwait(false);
 
         user.RecordSignIn(now);
         await _userManager.UpdateAsync(user).ConfigureAwait(false);

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using OpenPortal.Identity.Application.Abstractions;
@@ -12,9 +13,9 @@ namespace OpenPortal.Web.Authentication;
 /// any HTTP dependency.
 /// </para>
 /// <para>
-/// Registered as scoped and resolved per request. Outside a request (for example a startup task) the
-/// <see cref="IHttpContextAccessor"/> returns no context, and this reports an anonymous caller rather than
-/// throwing: a background task genuinely has no caller.
+/// Registered as a singleton that reads the request through <see cref="IHttpContextAccessor"/>. Outside a
+/// request (for example a startup task) the accessor returns no context, and this reports an anonymous caller
+/// rather than throwing: a background task genuinely has no caller.
 /// </para>
 /// </summary>
 internal sealed class HttpContextCurrentUser : ICurrentUser
@@ -30,15 +31,7 @@ internal sealed class HttpContextCurrentUser : ICurrentUser
 
     public bool IsAuthenticated => Principal?.Identity?.IsAuthenticated ?? false;
 
-    public Guid? UserId
-    {
-        get
-        {
-            var value = Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            return Guid.TryParse(value, out var userId) ? userId : null;
-        }
-    }
+    public Guid? UserId => GuidClaim(ClaimTypes.NameIdentifier);
 
     public string? Email => Principal?.FindFirstValue(ClaimTypes.Email)
         ?? Principal?.FindFirstValue(ClaimTypes.Name);
@@ -62,4 +55,19 @@ internal sealed class HttpContextCurrentUser : ICurrentUser
             return roles;
         }
     }
+
+    public Guid? ImpersonatorId => GuidClaim(PortalClaimTypes.ImpersonatorId);
+
+    public string? ImpersonatorEmail => ImpersonatorId is null ? null : Principal?.FindFirstValue(PortalClaimTypes.ImpersonatorEmail);
+
+    public DateTimeOffset? ImpersonationStartedAtUtc =>
+        ImpersonatorId is not null
+        && long.TryParse(Principal?.FindFirstValue(PortalClaimTypes.ImpersonationStarted), NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds)
+            ? DateTimeOffset.FromUnixTimeSeconds(seconds)
+            : null;
+
+    public Guid? PersonalAccessTokenId => GuidClaim(PortalClaimTypes.PersonalAccessTokenId);
+
+    private Guid? GuidClaim(string type) =>
+        Guid.TryParse(Principal?.FindFirstValue(type), out var value) ? value : null;
 }

@@ -6,6 +6,8 @@ using OpenPortal.Audit.Domain;
 using OpenPortal.Content.Application.Abstractions;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Identity.Domain.Users;
+using OpenPortal.Notifications.Application.Abstractions;
+using OpenPortal.Notifications.Domain;
 using OpenPortal.SharedKernel.Results;
 
 namespace OpenPortal.Web.Authorization;
@@ -88,7 +90,9 @@ internal sealed class UserAdministrationAuthorization : IUserAdministrationAutho
         {
             UserAdministrationOperation.ListUsers => [PortalPages.Users, PortalPages.Groups, PortalPages.Access],
             UserAdministrationOperation.ManageUsers or UserAdministrationOperation.ProvisionUsers => [PortalPages.Users],
+            UserAdministrationOperation.ExchangeUsers => [PortalPages.Users],
             UserAdministrationOperation.ViewStatistics => [PortalPages.Statistics],
+            UserAdministrationOperation.ManageLegalDocuments => [PortalPages.Legal],
             _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null),
         };
 
@@ -144,6 +148,22 @@ internal sealed class AuditLogAuthorization : IAuditLogAuthorization
         await _permissions.HoldsAnyAsync([PortalPages.Statistics], cancellationToken).ConfigureAwait(false)
             ? Result.Success()
             : Result.Failure(AuditErrors.StatisticsForbidden);
+}
+
+/// <summary>Answers the Notifications module's authorization question: managing announcements needs their page.</summary>
+internal sealed class AnnouncementAuthorization : IAnnouncementAuthorization
+{
+    private readonly CurrentPagePermissions _permissions;
+
+    public AnnouncementAuthorization(CurrentPagePermissions permissions)
+    {
+        _permissions = permissions;
+    }
+
+    public async Task<Result> EnsureCanManageAsync(CancellationToken cancellationToken) =>
+        await _permissions.HoldsAnyAsync([PortalPages.Announcements], cancellationToken).ConfigureAwait(false)
+            ? Result.Success()
+            : Result.Failure(AnnouncementErrors.ManageForbidden);
 }
 
 /// <summary>Publishes the user's pages in the session: every page for an administrator, else their groups' pages.</summary>

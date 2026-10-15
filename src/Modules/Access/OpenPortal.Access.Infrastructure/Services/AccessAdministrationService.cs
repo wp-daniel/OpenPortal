@@ -22,6 +22,7 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
     private readonly IClock _clock;
     private readonly IAuditTrail _audit;
     private readonly UserGrantOperations _grants;
+    private readonly IAccessUserMaintenance _maintenance;
 
     public AccessAdministrationService(
         AccessDbContext db,
@@ -30,7 +31,8 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
         IAccessAdminAuthorization authorization,
         IClock clock,
         IAuditTrail audit,
-        UserGrantOperations grants)
+        UserGrantOperations grants,
+        IAccessUserMaintenance maintenance)
     {
         _db = db;
         _access = access;
@@ -39,6 +41,7 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
         _clock = clock;
         _audit = audit;
         _grants = grants;
+        _maintenance = maintenance;
     }
 
     public async Task<Result<AccessTreeDto>> GetTreeAsync(CancellationToken cancellationToken)
@@ -336,41 +339,7 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
             return guard;
         }
 
-        var applicationIds = await _access.GrantedApplicationIdsAsync(userId, cancellationToken).ConfigureAwait(false);
-
-        _db.UserGrants.RemoveRange(await _db.UserGrants
-            .Where(grant => grant.UserId == userId)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false));
-
-        _db.GroupMembers.RemoveRange(await _db.GroupMembers
-            .Where(member => member.UserId == userId)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false));
-
-        _db.AccessRequests.RemoveRange(await _db.AccessRequests
-            .Where(request => request.UserId == userId)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false));
-
-        _db.OrganizationMembers.RemoveRange(await _db.OrganizationMembers
-            .Where(member => member.UserId == userId)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false));
-
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        // Nothing grants the user anything any more, so this revokes every token they held.
-        var applications = await _db.Applications
-            .AsNoTracking()
-            .Where(application => applicationIds.Contains(application.Id))
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        foreach (var application in applications)
-        {
-            await _access.RevokeIfNoLongerAllowedAsync(application, [userId], cancellationToken).ConfigureAwait(false);
-        }
+        await _maintenance.ForgetUserAsync(userId, cancellationToken).ConfigureAwait(false);
 
         // Not audited on its own: it is the second half of deleting the account, which is.
         return Result.Success();

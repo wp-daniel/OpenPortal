@@ -7,6 +7,7 @@ using Microsoft.Extensions.Localization;
 using OpenPortal.Access.Application.Auditing;
 using OpenPortal.Content.Application.Auditing;
 using OpenPortal.Identity.Application.Auditing;
+using OpenPortal.Notifications.Application.Auditing;
 using OpenPortal.Web.Authorization;
 using OpenPortal.Web.Oidc;
 using OpenPortal.Web.Resources;
@@ -205,7 +206,7 @@ public sealed class AuditTests(OpenPortalFactory factory) : IClassFixture<OpenPo
         using var scope = factory.Services.CreateScope();
         var localizer = scope.ServiceProvider.GetRequiredService<IStringLocalizer<Messages>>();
 
-        var actions = new[] { typeof(IdentityAuditActions), typeof(AccessAuditActions), typeof(ContentAuditActions), typeof(OidcAuditActions) }
+        var actions = new[] { typeof(IdentityAuditActions), typeof(AccessAuditActions), typeof(ContentAuditActions), typeof(OidcAuditActions), typeof(NotificationAuditActions) }
             .SelectMany(type => type.GetFields(BindingFlags.Public | BindingFlags.Static))
             .Where(field => field.IsLiteral && field.FieldType == typeof(string))
             .Select(field => (string)field.GetRawConstantValue()!)

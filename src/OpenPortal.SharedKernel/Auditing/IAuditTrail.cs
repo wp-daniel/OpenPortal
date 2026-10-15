@@ -49,6 +49,13 @@ public static class AuditSubjectTypes
     public const string Page = "page";
     public const string Profile = "profile";
     public const string Project = "project";
+
+    public const string Announcement = "announcement";
+    public const string LegalDocument = "legal_document";
+    public const string PersonalAccessToken = "personal_access_token";
+
+    /// <summary>The portal itself, acting without a caller (a scheduled job).</summary>
+    public const string System = "system";
 }
 
 /// <summary>One audited event.</summary>

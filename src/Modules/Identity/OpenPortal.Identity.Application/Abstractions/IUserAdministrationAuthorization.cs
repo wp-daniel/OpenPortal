@@ -19,6 +19,12 @@ public enum UserAdministrationOperation
 
     /// <summary>Read account counts for the statistics page.</summary>
     ViewStatistics,
+
+    /// <summary>Write and publish the privacy notice and the terms of use.</summary>
+    ManageLegalDocuments,
+
+    /// <summary>Export the user list, or import accounts and invitations from a file.</summary>
+    ExchangeUsers,
 }
 
 /// <summary>

@@ -49,7 +49,12 @@ public sealed class TwoFactorLoginRequest
 }
 
 /// <summary>The portal's sign-in security settings.</summary>
-public sealed record SecuritySettingsDto(bool TwoFactorEnabled, string TwoFactorIssuer, DateTimeOffset? UpdatedAtUtc);
+/// <param name="PersonalAccessTokensEnabled">Whether account holders may create personal access tokens for the API.</param>
+public sealed record SecuritySettingsDto(
+    bool TwoFactorEnabled,
+    string TwoFactorIssuer,
+    bool PersonalAccessTokensEnabled,
+    DateTimeOffset? UpdatedAtUtc);
 
 /// <summary>New values for the portal's sign-in security settings.</summary>
 public sealed class UpdateSecuritySettingsRequest
@@ -59,4 +64,6 @@ public sealed class UpdateSecuritySettingsRequest
     [Required(AllowEmptyStrings = false, ErrorMessage = "validation.twoFactorIssuer.required")]
     [StringLength(SecuritySettings.IssuerMaxLength, ErrorMessage = "validation.twoFactorIssuer.max")]
     public string TwoFactorIssuer { get; init; } = SecuritySettings.DefaultIssuer;
+
+    public bool PersonalAccessTokensEnabled { get; init; }
 }

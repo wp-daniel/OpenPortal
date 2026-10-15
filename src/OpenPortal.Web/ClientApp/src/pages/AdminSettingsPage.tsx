@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { settingsApi } from '@/api/settings'
-import type { RegistrationMode, RegistrationSettings, SecuritySettings } from '@/api/types'
+import type { PrivacySettings, RegistrationMode, RegistrationSettings, SecuritySettings } from '@/api/types'
 import { FormField } from '@/components/FormField'
 import { PageHeader } from '@/components/PageHeader'
 import { Section } from '@/components/Section'
@@ -22,6 +22,7 @@ import { reportFormError, serverFieldErrors } from '@/lib/forms'
 
 const SETTINGS_KEY = ['admin-settings-security'] as const
 const REGISTRATION_KEY = ['admin-settings-registration'] as const
+const PRIVACY_KEY = ['admin-settings-privacy'] as const
 const REGISTRATION_MODES: readonly RegistrationMode[] = ['disabled', 'open', 'approval']
 
 /** Maximum length of the authenticator issuer name (`SecuritySettings.IssuerMaxLength` on the server). */
@@ -36,6 +37,7 @@ export function AdminSettingsPage() {
 
   const settings = useQuery({ queryKey: SETTINGS_KEY, queryFn: ({ signal }) => settingsApi.security(signal) })
   const registration = useQuery({ queryKey: REGISTRATION_KEY, queryFn: ({ signal }) => settingsApi.registration(signal) })
+  const privacy = useQuery({ queryKey: PRIVACY_KEY, queryFn: ({ signal }) => settingsApi.privacy(signal) })
 
   return (
     <div className="space-y-6">
@@ -64,7 +66,81 @@ export function AdminSettingsPage() {
       {registration.data && (
         <RegistrationForm key={registration.data.updatedAtUtc ?? 'defaults'} initial={registration.data} />
       )}
+
+      {privacy.isError && (
+        <ErrorPanel
+          message={describeError(privacy.error)}
+          traceId={traceIdOf(privacy.error)}
+          onRetry={() => void privacy.refetch()}
+        />
+      )}
+      {privacy.data && <PrivacyForm key={privacy.data.updatedAtUtc ?? 'defaults'} initial={privacy.data} />}
     </div>
+  )
+}
+
+/** Whether account holders may delete their own account, and how long they have to change their mind. */
+function PrivacyForm({ initial }: { initial: PrivacySettings }) {
+  const { t } = useI18n()
+  const queryClient = useQueryClient()
+  const [enabled, setEnabled] = useState(initial.selfDeletionEnabled)
+  const [days, setDays] = useState(String(initial.deletionGraceDays))
+  const [error, setError] = useState<string>()
+
+  const save = useMutation({
+    mutationFn: () => settingsApi.updatePrivacy({ selfDeletionEnabled: enabled, deletionGraceDays: Number(days) }),
+    meta: { handlesErrors: true },
+    onSuccess: async (saved) => {
+      queryClient.setQueryData(PRIVACY_KEY, saved)
+      await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY })
+      notify.success(t('settings.saved'))
+    },
+    onError: (failure) => reportFormError(failure, t('settings.saveFailed')),
+  })
+
+  function submit(event: FormEvent) {
+    event.preventDefault()
+    const value = Number(days)
+
+    if (!Number.isInteger(value) || value < 0 || value > 365) {
+      setError(t('settings.privacy.graceDaysInvalid'))
+      return
+    }
+
+    setError(undefined)
+    save.mutate()
+  }
+
+  const server = serverFieldErrors(save.error)
+
+  return (
+    <Section title={t('settings.privacy.title')} description={t('settings.privacy.description')}>
+      <form onSubmit={submit} noValidate className="grid max-w-2xl items-start gap-6">
+        <div className="flex items-start justify-between gap-6 rounded-lg border p-4">
+          <div className="grid gap-1">
+            <Label htmlFor="privacy-self-deletion">{t('settings.privacy.selfDeletion')}</Label>
+            <p className="text-muted-foreground text-sm">{t('settings.privacy.selfDeletionHint')}</p>
+          </div>
+          <Switch id="privacy-self-deletion" checked={enabled} onCheckedChange={setEnabled} />
+        </div>
+
+        <FormField
+          label={t('settings.privacy.graceDays')}
+          htmlFor="privacy-grace-days"
+          hint={t('settings.privacy.graceDaysHint')}
+          error={error ?? server.deletionGraceDays?.[0]}
+        >
+          <Input type="number" min={0} max={365} className="max-w-32" value={days} onChange={(event) => setDays(event.target.value)} />
+        </FormField>
+
+        <div>
+          <Button type="submit" disabled={save.isPending}>
+            {save.isPending && <Loader2 className="animate-spin" />}
+            {t('common.save')}
+          </Button>
+        </div>
+      </form>
+    </Section>
   )
 }
 
@@ -195,14 +271,18 @@ function SecurityForm({ initial }: { initial: SecuritySettings }) {
   const queryClient = useQueryClient()
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(initial.twoFactorEnabled)
   const [issuer, setIssuer] = useState(initial.twoFactorIssuer)
+  const [tokens, setTokens] = useState(initial.personalAccessTokensEnabled)
   const [issuerError, setIssuerError] = useState<string | undefined>()
 
   const save = useMutation({
-    mutationFn: () => settingsApi.updateSecurity({ twoFactorEnabled, twoFactorIssuer: issuer.trim() }),
+    mutationFn: () =>
+      settingsApi.updateSecurity({ twoFactorEnabled, twoFactorIssuer: issuer.trim(), personalAccessTokensEnabled: tokens }),
     meta: { handlesErrors: true },
-    onSuccess: (saved) => {
+    onSuccess: async (saved) => {
       notify.success(t('settings.saved'))
       queryClient.setQueryData(SETTINGS_KEY, saved)
+      // The session says whether the account page offers tokens.
+      await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY })
     },
     onError: (failure) => reportFormError(failure, t('settings.saveFailed')),
   })
@@ -229,7 +309,10 @@ function SecurityForm({ initial }: { initial: SecuritySettings }) {
   }
 
   const serverErrors = serverFieldErrors(save.error)
-  const dirty = twoFactorEnabled !== initial.twoFactorEnabled || issuer.trim() !== initial.twoFactorIssuer
+  const dirty =
+    twoFactorEnabled !== initial.twoFactorEnabled ||
+    issuer.trim() !== initial.twoFactorIssuer ||
+    tokens !== initial.personalAccessTokensEnabled
 
   return (
     <Section title={t('settings.security')} description={t('settings.securityDescription')}>
@@ -255,6 +338,14 @@ function SecurityForm({ initial }: { initial: SecuritySettings }) {
             onChange={(event) => setIssuer(event.target.value)}
           />
         </FormField>
+
+        <div className="flex items-start justify-between gap-6 rounded-lg border p-4">
+          <div className="grid gap-1">
+            <Label htmlFor="personalAccessTokensEnabled">{t('settings.tokens')}</Label>
+            <p className="text-muted-foreground text-sm">{t('settings.tokensDescription')}</p>
+          </div>
+          <Switch id="personalAccessTokensEnabled" checked={tokens} onCheckedChange={setTokens} />
+        </div>
 
         <div>
           <Button type="submit" disabled={save.isPending || !dirty}>

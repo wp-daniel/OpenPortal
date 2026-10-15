@@ -31,7 +31,13 @@ export const registrationApi = {
   previewInvitation: (token: string) => api.post<InvitationPreview>('/api/auth/invitations/preview', { token }),
 
   /** Creates the account and signs the caller in as it. */
-  async acceptInvitation(body: { token: string; password: string; firstName: string; lastName: string }): Promise<Session> {
+  async acceptInvitation(body: {
+    token: string
+    password: string
+    firstName: string
+    lastName: string
+    acceptedLegalDocumentIds: readonly string[]
+  }): Promise<Session> {
     try {
       return await api.post<Session>('/api/auth/invitations/accept', body)
     } finally {

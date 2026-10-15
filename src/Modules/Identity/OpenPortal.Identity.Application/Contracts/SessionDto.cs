@@ -9,6 +9,12 @@ namespace OpenPortal.Identity.Application.Contracts;
 /// </para>
 /// </summary>
 /// <param name="Pages">Keys of the portal pages the user may open (every page for an administrator).</param>
+/// <param name="PendingLegalDocuments">
+/// Versions of the privacy notice or the terms of use in force that the account must still accept; the client
+/// asks for them before anything else.
+/// </param>
+/// <param name="DeletionScheduledAtUtc">When the account will be deleted, if its owner asked for it; they can still cancel.</param>
+/// <param name="Impersonator">The administrator acting as this account for support, in a support session.</param>
 public sealed record SessionUserDto(
     Guid Id,
     string Email,
@@ -17,7 +23,13 @@ public sealed record SessionUserDto(
     IReadOnlyList<string> Roles,
     string? Language,
     DateTimeOffset? AvatarUpdatedAtUtc,
-    IReadOnlyList<string> Pages);
+    IReadOnlyList<string> Pages,
+    IReadOnlyList<PendingLegalDocumentDto> PendingLegalDocuments,
+    DateTimeOffset? DeletionScheduledAtUtc,
+    SessionImpersonatorDto? Impersonator);
+
+/// <summary>The administrator behind a support session.</summary>
+public sealed record SessionImpersonatorDto(Guid Id, string? Email, DateTimeOffset StartedAtUtc, DateTimeOffset EndsAtUtc);
 
 /// <summary>Current session state as observed by the client.</summary>
 /// <param name="IsAuthenticated">Whether a valid session cookie was presented.</param>
@@ -27,19 +39,26 @@ public sealed record SessionUserDto(
 /// change-password forms need it before anyone is signed in. It discloses configuration, not data.
 /// </param>
 /// <param name="Registration">Whether the sign-in page offers to create an account.</param>
+/// <param name="Legal">Which legal documents are published, so the client can link them.</param>
+/// <param name="Features">Optional features the portal offers.</param>
 public sealed record SessionDto(
     bool IsAuthenticated,
     SessionUserDto? User,
     PasswordPolicyDto PasswordPolicy,
-    RegistrationInfoDto Registration)
+    RegistrationInfoDto Registration,
+    LegalInfoDto Legal,
+    SessionFeaturesDto Features)
 {
     /// <summary>
     /// The anonymous session. Takes the policy as an argument because there is no default that is honest:
     /// the policy is deployment configuration, so a fabricated one could only ever disagree with the server.
     /// Registration, by contrast, has an honest default when it cannot be read: closed.
     /// </summary>
-    public static SessionDto AnonymousFor(PasswordPolicyDto passwordPolicy, RegistrationInfoDto? registration = null) =>
-        new(false, null, passwordPolicy, registration ?? RegistrationInfoDto.Closed);
+    public static SessionDto AnonymousFor(
+        PasswordPolicyDto passwordPolicy,
+        RegistrationInfoDto? registration = null,
+        LegalInfoDto? legal = null) =>
+        new(false, null, passwordPolicy, registration ?? RegistrationInfoDto.Closed, legal ?? LegalInfoDto.None, SessionFeaturesDto.None);
 }
 
 /// <summary>

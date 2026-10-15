@@ -17,12 +17,15 @@ export function AccessDeniedPage() {
   const [params] = useSearchParams()
   const application = params.get('app')?.slice(0, 120) || t('accessDenied.unknownApplication')
   const clientId = params.get('client')
-  const organization = params.get('reason') === 'organization'
+  const reason = params.get('reason')
+  const organization = reason === 'organization'
+  // A support session or an account waiting to be deleted never signs in to an application, whatever its grants.
+  const blocked = reason === 'impersonation' || reason === 'deletion'
 
   const catalog = useQuery({
     queryKey: requestKeys.catalog,
     queryFn: ({ signal }) => myAccessRequestsApi.catalog(signal),
-    enabled: clientId !== null && !organization,
+    enabled: clientId !== null && !organization && !blocked,
   })
 
   const requestable = clientId ? catalog.data?.find((item) => item.clientId === clientId) : undefined
@@ -36,9 +39,17 @@ export function AccessDeniedPage() {
           ) : (
             <ShieldX className="text-muted-foreground size-10" />
           )}
-          <h1 className="text-xl font-semibold tracking-tight">{t('accessDenied.title', { application })}</h1>
+          <h1 className="text-xl font-semibold tracking-tight">
+            {blocked ? t('accessDenied.blockedTitle') : t('accessDenied.title', { application })}
+          </h1>
           <p className="text-muted-foreground text-sm">
-            {organization ? t('accessDenied.organization') : t('accessDenied.description')}
+            {reason === 'impersonation'
+              ? t('accessDenied.impersonation')
+              : reason === 'deletion'
+                ? t('accessDenied.deletion')
+                : organization
+                  ? t('accessDenied.organization')
+                  : t('accessDenied.description')}
           </p>
 
           {requestable && (

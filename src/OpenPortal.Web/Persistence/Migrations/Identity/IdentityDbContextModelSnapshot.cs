@@ -224,6 +224,82 @@ namespace OpenPortal.Web.Persistence.Migrations.Identity
                     b.ToTable("Invitations", (string)null);
                 });
 
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Legal.LegalAcceptance", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("AcceptedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("UserId", "DocumentId");
+
+                    b.HasIndex("DocumentId");
+
+                    b.ToTable("LegalAcceptances", (string)null);
+                });
+
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Legal.LegalDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("PublishedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresAcceptance")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("UpdatedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Kind", "Version")
+                        .IsUnique();
+
+                    b.ToTable("LegalDocuments", (string)null);
+                });
+
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Settings.PrivacySettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("DeletionGraceDays")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("SelfDeletionEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("UpdatedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PrivacySettings", (string)null);
+                });
+
             modelBuilder.Entity("OpenPortal.Identity.Domain.Settings.RegistrationSettings", b =>
                 {
                     b.Property<int>("Id")
@@ -257,6 +333,9 @@ namespace OpenPortal.Web.Persistence.Migrations.Identity
                     b.Property<int>("Id")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("PersonalAccessTokensEnabled")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("INTEGER");
 
@@ -271,6 +350,56 @@ namespace OpenPortal.Web.Persistence.Migrations.Identity
                     b.HasKey("Id");
 
                     b.ToTable("SecuritySettings", (string)null);
+                });
+
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Tokens.PersonalAccessToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DisplayPrefix")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ExpiresAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("LastUsedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("RevokedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Scopes")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PersonalAccessTokens", (string)null);
                 });
 
             modelBuilder.Entity("OpenPortal.Identity.Domain.Users.ApplicationUser", b =>
@@ -306,6 +435,12 @@ namespace OpenPortal.Web.Persistence.Migrations.Identity
                         .HasColumnType("TEXT");
 
                     b.Property<long>("CreatedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("DeletionRequestedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("DeletionScheduledAtUtc")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Department")
@@ -475,6 +610,62 @@ namespace OpenPortal.Web.Persistence.Migrations.Identity
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
+                {
+                    b.HasOne("OpenPortal.Identity.Domain.Users.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Legal.LegalAcceptance", b =>
+                {
+                    b.HasOne("OpenPortal.Identity.Domain.Legal.LegalDocument", null)
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("OpenPortal.Identity.Domain.Users.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Legal.LegalDocument", b =>
+                {
+                    b.OwnsMany("OpenPortal.Identity.Domain.Legal.LegalDocumentText", "Texts", b1 =>
+                        {
+                            b1.Property<Guid>("DocumentId")
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("Language")
+                                .HasMaxLength(10)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("Body")
+                                .IsRequired()
+                                .HasMaxLength(100000)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("Title")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("TEXT");
+
+                            b1.HasKey("DocumentId", "Language");
+
+                            b1.ToTable("LegalDocumentTexts", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("DocumentId");
+                        });
+
+                    b.Navigation("Texts");
+                });
+
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Tokens.PersonalAccessToken", b =>
                 {
                     b.HasOne("OpenPortal.Identity.Domain.Users.ApplicationUser", null)
                         .WithMany()

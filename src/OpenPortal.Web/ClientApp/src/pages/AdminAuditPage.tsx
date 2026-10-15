@@ -211,6 +211,11 @@ function AuditLog({
                       </TableCell>
                       <TableCell>
                         <SubjectText subject={entry.actor} fallback={t('audit.anonymous')} />
+                        {entry.onBehalfOf && (
+                          <div className="text-muted-foreground mt-0.5 text-xs">
+                            {t('audit.onBehalfOf', { name: entry.onBehalfOf.label ?? entry.onBehalfOf.id })}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap items-center gap-2">
@@ -299,6 +304,9 @@ function AuditEntrySheet({ entry, onClose }: { entry: AuditEntry | null; onClose
           {entry && (
             <div className="grid gap-6 px-4 pb-6 text-sm">
               <SubjectBlock title={t('audit.column.actor')} subject={entry.actor} fallback={t('audit.anonymous')} onNavigate={onClose} />
+              {entry.onBehalfOf && (
+                <SubjectBlock title={t('audit.field.onBehalfOf')} subject={entry.onBehalfOf} fallback="—" onNavigate={onClose} />
+              )}
               <SubjectBlock title={t('audit.column.target')} subject={entry.target} fallback="—" onNavigate={onClose} />
 
               {details.length > 0 && (

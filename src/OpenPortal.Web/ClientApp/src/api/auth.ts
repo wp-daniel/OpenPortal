@@ -1,5 +1,9 @@
 import { api, invalidateAntiforgeryToken } from './client'
 import type {
+  AccountDeletion,
+  CreatedPersonalAccessToken,
+  PersonalAccessToken,
+  PersonalAccessTokenScope,
   AccountProfile,
   ChangePasswordRequest,
   RecoveryCodes,
@@ -42,6 +46,24 @@ export const authApi = {
       invalidateAntiforgeryToken()
     }
   },
+
+  /** Starts a support session as another account (administrators only). The identity changes: a new token follows. */
+  async impersonate(userId: string, reason: string): Promise<void> {
+    try {
+      await api.post<void>(`/api/admin/users/${userId}/impersonate`, { reason })
+    } finally {
+      invalidateAntiforgeryToken()
+    }
+  },
+
+  /** Ends the support session: back to the administrator's own account. */
+  async stopImpersonation(): Promise<void> {
+    try {
+      await api.post<void>('/api/auth/impersonation/stop')
+    } finally {
+      invalidateAntiforgeryToken()
+    }
+  },
 }
 
 export const accountApi = {
@@ -60,6 +82,23 @@ export const accountApi = {
   disableTwoFactor: (password: string) => api.post<void>('/api/account/two-factor/disable', { password }),
   regenerateRecoveryCodes: (password: string) =>
     api.post<RecoveryCodes>('/api/account/two-factor/recovery-codes', { password }),
+
+  /** A ZIP with everything the portal holds about the caller. */
+  exportData: (password: string) => api.postForFile('/api/account/data-export', { password }),
+  /** Schedules the deletion of the caller's account and signs them out (the antiforgery token goes with the identity). */
+  async requestDeletion(password: string): Promise<AccountDeletion> {
+    try {
+      return await api.post<AccountDeletion>('/api/account/deletion', { password })
+    } finally {
+      invalidateAntiforgeryToken()
+    }
+  },
+  cancelDeletion: () => api.delete<void>('/api/account/deletion'),
+
+  tokens: (signal?: AbortSignal) => api.get<PersonalAccessToken[]>('/api/account/tokens', signal),
+  createToken: (body: { name: string; scopes: PersonalAccessTokenScope[]; lifetimeDays: number }) =>
+    api.post<CreatedPersonalAccessToken>('/api/account/tokens', body),
+  revokeToken: (tokenId: string) => api.delete<void>(`/api/account/tokens/${tokenId}`),
 }
 
 /** The error code the password step answers with when the account still needs its second factor. */

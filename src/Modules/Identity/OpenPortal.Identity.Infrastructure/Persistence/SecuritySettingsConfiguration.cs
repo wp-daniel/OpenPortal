@@ -29,3 +29,22 @@ internal sealed class SecuritySettingsConfiguration : IEntityTypeConfiguration<S
             .IsRequired();
     }
 }
+
+/// <summary>
+/// EF Core configuration for <see cref="PrivacySettings"/>: at most one row, keyed by
+/// <see cref="PrivacySettings.SingletonId"/>. No row means the defaults.
+/// </summary>
+internal sealed class PrivacySettingsConfiguration : IEntityTypeConfiguration<PrivacySettings>
+{
+    public void Configure(EntityTypeBuilder<PrivacySettings> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("PrivacySettings");
+
+        builder.HasKey(settings => settings.Id);
+
+        builder.Property(settings => settings.Id)
+            .ValueGeneratedNever();
+    }
+}

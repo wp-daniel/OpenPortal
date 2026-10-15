@@ -91,8 +91,9 @@ Both are anonymous, exempt from rate limiting, and report only check names and s
 
 ## Rate limits
 
-Defaults per minute: 10 password checks (sign-in, change of password) per address, 120 token and announcement
-requests per address, 600 API requests per signed-in user or anonymous address. Over a limit the answer is 429
+Defaults per minute: 10 password checks (sign-in, change of password, account deletion) per address, 120 token and
+announcement requests per address, 600 API requests per signed-in user or anonymous address; and 5 personal data
+downloads per account per hour (`RateLimiting:Export`). Calls with a personal access token count as their owner. Over a limit the answer is 429
 with `Retry-After`. Counters live in each instance's memory. Tune them under `RateLimiting`; set
 `RateLimiting:Enabled=false` only when a gateway in front already limits.
 
@@ -128,6 +129,25 @@ emails otherwise use the address of the request that caused them, which behind a
 header) is not the portal's. For development, `Email:PickupDirectory` writes each message as an `.eml` file
 instead of sending it. Registration itself (off, open or with approval, allowed domains, confirmation, invitation
 lifetime) is set by administrators under **Security → Portal settings**.
+
+## Privacy
+
+- **Legal documents.** The privacy notice and the terms of use are written and published from **Security →
+  Privacy and terms** (the `legal` page, delegable). Publishing a version that requires acceptance asks every
+  account to accept it at its next visit and before any application sign-in (`/connect/authorize` redirects to
+  `/legal/accept`, or answers `consent_required` with `prompt=none`). Published versions never change.
+- **Account deletion.** Self-service deletion is on by default with a 30-day grace period (**Security → Portal
+  settings → Privacy**). A request ends the account's sessions and tokens at once; a background job in every
+  instance deletes the accounts whose grace period ended, once an hour (several instances are safe). The audit log
+  keeps its entries about the account until `Audit:RetentionDays`.
+- **Data export.** `POST /api/account/data-export` builds a ZIP from every module (`IPersonalDataSource`);
+  nothing secret (password hash, second-factor keys, token hashes) is included.
+
+## Support sessions and tokens
+
+- **Impersonation** is for administrators only and ends by itself after `Identity:ImpersonationMinutes` (60).
+- **Personal access tokens** are off until an administrator turns them on (**Security → Portal settings**);
+  turning them off stops every token at once. See [personal-access-tokens.md](personal-access-tokens.md).
 
 ## Notifications
 

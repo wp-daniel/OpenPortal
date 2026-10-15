@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OpenPortal.Identity.Application.Abstractions;
@@ -25,6 +26,8 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
     private readonly IAuditTrail _audit;
     private readonly INotifier _notifier;
     private readonly IAccountMessaging _messaging;
+    private readonly IdentityAccountErasure _erasure;
+    private readonly PersonalAccessTokenStore _tokens;
 
     public IdentityUserAdministrationService(
         UserManager<ApplicationUser> userManager,
@@ -35,8 +38,12 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         IClock clock,
         IAuditTrail audit,
         INotifier notifier,
-        IAccountMessaging messaging)
+        IAccountMessaging messaging,
+        IdentityAccountErasure erasure,
+        PersonalAccessTokenStore tokens)
     {
+        _tokens = tokens;
+        _erasure = erasure;
         _notifier = notifier;
         _messaging = messaging;
         _userManager = userManager;
@@ -63,43 +70,8 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         var page = Math.Max(1, query.Page);
         var pageSize = Math.Clamp(query.PageSize, 1, UserListQuery.MaxPageSize);
 
-        var usersQuery = _userManager.Users.AsNoTracking();
-
-        var search = query.Search?.Trim();
-        if (!string.IsNullOrEmpty(search))
-        {
-            // Compare against upper-cased values rather than using a LIKE pattern: SQLite's LIKE is
-            // case-insensitive for ASCII while PostgreSQL's is case-sensitive, so an explicit upper-case
-            // comparison keeps search behaviour identical on every provider.
-            var term = search.ToUpperInvariant();
-            usersQuery = usersQuery.Where(user =>
-                (user.NormalizedEmail != null && user.NormalizedEmail.Contains(term))
-                || user.DisplayName.ToUpper().Contains(term)
-                || (user.PhoneNumber != null && user.PhoneNumber.Contains(search))
-                || (user.Company != null && user.Company.ToUpper().Contains(term)));
-        }
-
-        if (query.Administrator is bool administrator)
-        {
-            usersQuery = usersQuery.Where(user => _dbContext.UserRoles.Any(userRole =>
-                userRole.UserId == user.Id
-                && _dbContext.Roles.Any(r => r.Id == userRole.RoleId && r.Name == Roles.Administrator)) == administrator);
-        }
-
         var now = _clock.UtcNow;
-        var inactiveSince = now.AddDays(-UserStatusFilter.InactiveAfterDays);
-        usersQuery = query.Status?.Trim().ToLowerInvariant() switch
-        {
-            UserStatusFilter.Locked => usersQuery.Where(user =>
-                user.LockoutEnabled && user.LockoutEnd != null && user.LockoutEnd > now),
-            UserStatusFilter.Unconfirmed => usersQuery.Where(user => !user.EmailConfirmed),
-            UserStatusFilter.Pending => usersQuery.Where(user => user.PendingApproval),
-            UserStatusFilter.Inactive => usersQuery.Where(user =>
-                user.LastSignInAtUtc == null || user.LastSignInAtUtc < inactiveSince),
-            UserStatusFilter.Active => usersQuery.Where(user =>
-                !(user.LockoutEnabled && user.LockoutEnd != null && user.LockoutEnd > now)),
-            _ => usersQuery,
-        };
+        var usersQuery = Filter(query, now);
 
         var totalCount = await usersQuery.CountAsync(cancellationToken).ConfigureAwait(false);
 
@@ -120,6 +92,139 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         return Result<PagedResult<UserSummaryDto>>.Success(
             new PagedResult<UserSummaryDto>(items, page, pageSize, totalCount));
     }
+
+/// <summary>The accounts matching a filter of the user list, unsorted and unpaged.</summary>
+    private IQueryable<ApplicationUser> Filter(UserListFilter filter, DateTimeOffset now)
+    {
+        var usersQuery = _userManager.Users.AsNoTracking();
+
+        if (filter.Ids is { Length: > 0 } ids)
+        {
+            usersQuery = usersQuery.Where(user => ids.Contains(user.Id));
+        }
+
+        var search = filter.Search?.Trim();
+        if (!string.IsNullOrEmpty(search))
+        {
+            // Compare against upper-cased values rather than using a LIKE pattern: SQLite's LIKE is
+            // case-insensitive for ASCII while PostgreSQL's is case-sensitive, so an explicit upper-case
+            // comparison keeps search behaviour identical on every provider.
+            var term = search.ToUpperInvariant();
+            usersQuery = usersQuery.Where(user =>
+                (user.NormalizedEmail != null && user.NormalizedEmail.Contains(term))
+                || user.DisplayName.ToUpper().Contains(term)
+                || (user.PhoneNumber != null && user.PhoneNumber.Contains(search))
+                || (user.Company != null && user.Company.ToUpper().Contains(term)));
+        }
+
+        if (filter.Administrator is bool administrator)
+        {
+            usersQuery = usersQuery.Where(user => _dbContext.UserRoles.Any(userRole =>
+                userRole.UserId == user.Id
+                && _dbContext.Roles.Any(r => r.Id == userRole.RoleId && r.Name == Roles.Administrator)) == administrator);
+        }
+
+        var inactiveSince = now.AddDays(-UserStatusFilter.InactiveAfterDays);
+        usersQuery = filter.Status?.Trim().ToLowerInvariant() switch
+        {
+            UserStatusFilter.Locked => usersQuery.Where(user =>
+                user.LockoutEnabled && user.LockoutEnd != null && user.LockoutEnd > now),
+            UserStatusFilter.Unconfirmed => usersQuery.Where(user => !user.EmailConfirmed),
+            UserStatusFilter.Pending => usersQuery.Where(user => user.PendingApproval),
+            UserStatusFilter.Deletion => usersQuery.Where(user => user.DeletionScheduledAtUtc != null),
+            UserStatusFilter.Inactive => usersQuery.Where(user =>
+                user.LastSignInAtUtc == null || user.LastSignInAtUtc < inactiveSince),
+            UserStatusFilter.Active => usersQuery.Where(user =>
+                !(user.LockoutEnabled && user.LockoutEnd != null && user.LockoutEnd > now)),
+            _ => usersQuery,
+        };
+
+        return usersQuery;
+    }
+
+    public async Task<Result<IReadOnlyList<UserSummaryDto>>> ExportUsersAsync(
+        UserListFilter filter,
+        int maxRows,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(filter);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxRows);
+
+        var guard = await _guard.EnsureCanAsync(UserAdministrationOperation.ExchangeUsers, cancellationToken).ConfigureAwait(false);
+        if (guard.IsFailure)
+        {
+            return Result<IReadOnlyList<UserSummaryDto>>.Failure(guard.Error);
+        }
+
+        var now = _clock.UtcNow;
+        var users = await Filter(filter, now)
+            .OrderBy(user => user.NormalizedEmail)
+            .Take(maxRows)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var rolesByUser = await LoadRolesAsync(users.Select(user => user.Id).ToArray(), cancellationToken).ConfigureAwait(false);
+
+        // A download of personal data about many people is itself worth a line in the log.
+        await _audit.RecordAsync(
+                AuditEvent.Succeeded(
+                    IdentityAuditActions.UsersExported,
+                    details: new Dictionary<string, string?>
+                    {
+                        ["rows"] = users.Count.ToString(CultureInfo.InvariantCulture),
+                        ["search"] = filter.Search,
+                        ["status"] = filter.Status,
+                        ["selected"] = filter.Ids is { Length: > 0 } ids ? ids.Length.ToString(CultureInfo.InvariantCulture) : null,
+                    }),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return Result<IReadOnlyList<UserSummaryDto>>.Success(users
+            .Select(user => ToSummary(user, rolesByUser.GetValueOrDefault(user.Id) ?? [], now))
+            .ToList());
+    }
+
+    public async Task<Result> RevokeSessionsAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var guard = await _guard.EnsureCanAsync(UserAdministrationOperation.ManageUsers, cancellationToken).ConfigureAwait(false);
+        if (guard.IsFailure)
+        {
+            return guard;
+        }
+
+        if (_currentUser.UserId == userId)
+        {
+            return Result.Failure(UserErrors.CannotDeleteSelf);
+        }
+
+        var lookup = await _userLookup.FindAsync(userId, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
+        {
+            return Result.Failure(lookup.Error);
+        }
+
+        var changeable = await _guard.EnsureMayChangeAsync(lookup.Value).ConfigureAwait(false);
+        if (changeable.IsFailure)
+        {
+            return changeable;
+        }
+
+        var rotated = await _userManager.UpdateSecurityStampAsync(lookup.Value).ConfigureAwait(false);
+        if (!rotated.Succeeded)
+        {
+            return Result.Failure(rotated.ToError(UserErrors.SaveFailed));
+        }
+
+        await _tokens.RevokeAllAsync(userId, cancellationToken).ConfigureAwait(false);
+
+        await _audit.RecordAsync(AuditEvent.Succeeded(IdentityAuditActions.SessionsRevoked, lookup.Value.ToAuditSubject()), cancellationToken)
+            .ConfigureAwait(false);
+
+        return Result.Success();
+    }
+
+    public Task RecordImportAsync(IReadOnlyDictionary<string, string?> summary, CancellationToken cancellationToken) =>
+        _audit.RecordAsync(AuditEvent.Succeeded(IdentityAuditActions.UsersImported, details: summary), cancellationToken);
 
     public async Task<Result<UserSummaryDto>> GetUserAsync(Guid userId, CancellationToken cancellationToken)
     {
@@ -492,19 +597,7 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
             return changeable;
         }
 
-        // Named before it goes: the entry keeps the email the account had.
-        var subject = lookup.Value.ToAuditSubject();
-
-        // Roles, claims, logins and the picture go with the account (cascading keys in the Identity schema).
-        var deleted = await _userManager.DeleteAsync(lookup.Value).ConfigureAwait(false);
-        if (!deleted.Succeeded)
-        {
-            return Result.Failure(deleted.ToError(UserErrors.DeleteFailed));
-        }
-
-        await _audit.RecordAsync(AuditEvent.Succeeded(IdentityAuditActions.UserDeleted, subject), cancellationToken).ConfigureAwait(false);
-
-        return Result.Success();
+        return await _erasure.EraseAsync(lookup.Value, actor: null, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Tells the account's owner about a change to it, linking to their security settings.</summary>
@@ -592,5 +685,6 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         LastSignInAtUtc: user.LastSignInAtUtc,
         TwoFactorEnabled: user.TwoFactorEnabled,
         PendingApproval: user.PendingApproval,
-        Origin: RegistrationMapping.ToContract(user.Origin));
+        Origin: RegistrationMapping.ToContract(user.Origin),
+        DeletionScheduledAtUtc: user.DeletionScheduledAtUtc);
 }

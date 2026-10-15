@@ -38,6 +38,25 @@ export interface SessionUser {
   readonly avatarUpdatedAtUtc: string | null
   /** Keys of the portal pages the user may open (every page for an administrator). */
   readonly pages: readonly string[]
+  /** Versions of the privacy notice or terms in force the account must still accept, before anything else. */
+  readonly pendingLegalDocuments: readonly PendingLegalDocument[]
+  /** When the account will be deleted, if its owner asked for it (they can still cancel). */
+  readonly deletionScheduledAtUtc: string | null
+  /** The administrator acting as this account, in a support session. */
+  readonly impersonator: SessionImpersonator | null
+}
+
+export interface SessionImpersonator {
+  readonly id: string
+  readonly email: string | null
+  readonly startedAtUtc: string
+  readonly endsAtUtc: string
+}
+
+/** Optional features the portal offers. */
+export interface SessionFeatures {
+  readonly selfDeletion: boolean
+  readonly personalAccessTokens: boolean
 }
 
 /**
@@ -66,6 +85,9 @@ export interface Session {
   readonly user: SessionUser | null
   readonly passwordPolicy: PasswordPolicy
   readonly registration: RegistrationInfo
+  /** Which legal documents are published (to link them). */
+  readonly legal: LegalInfo
+  readonly features: SessionFeatures
 }
 
 export interface AccountProfile extends UserDetails {
@@ -128,6 +150,8 @@ export interface UserSummary extends UserDetails {
   readonly pendingApproval: boolean
   /** How the account came to exist. */
   readonly origin: AccountOrigin
+  /** When the account will be deleted at its owner's request; null when no deletion is scheduled. */
+  readonly deletionScheduledAtUtc: string | null
 }
 
 export type AccountOrigin = 'created' | 'registered' | 'invited' | 'provisioned'
@@ -455,6 +479,8 @@ export interface AuditEntry {
   readonly action: string
   readonly outcome: AuditOutcome
   readonly actor: AuditSubject | null
+  /** The account the actor was acting as, in an administrator's support session. */
+  readonly onBehalfOf: AuditSubject | null
   readonly target: AuditSubject | null
   readonly details: Readonly<Record<string, string | null>>
   readonly ipAddress: string | null
@@ -506,11 +532,13 @@ export interface SecuritySettings {
   readonly twoFactorEnabled: boolean
   readonly twoFactorIssuer: string
   readonly updatedAtUtc: string | null
+  readonly personalAccessTokensEnabled: boolean
 }
 
 export interface UpdateSecuritySettingsRequest {
   readonly twoFactorEnabled: boolean
   readonly twoFactorIssuer: string
+  readonly personalAccessTokensEnabled: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -665,6 +693,8 @@ export interface RegisterRequest {
   readonly password: string
   readonly firstName: string
   readonly lastName: string
+  /** The versions in force of the privacy notice and terms the person accepted. */
+  readonly acceptedLegalDocumentIds: readonly string[]
 }
 
 export type RegistrationOutcome = 'signed_in' | 'confirmation_sent' | 'approval_pending' | 'confirmed'
@@ -790,4 +820,173 @@ export interface PortalStatistics {
   readonly activity: ActivityStatistics
   readonly users: UserStatistics
   readonly access: AccessStatistics
+}
+
+// ---------------------------------------------------------------------------
+// Announcements
+// ---------------------------------------------------------------------------
+
+export type AnnouncementSeverity = 'info' | 'warning' | 'maintenance'
+export type AnnouncementAudience = 'everyone' | 'signed_in'
+
+/** An announcement showing now, in the reader's language. */
+export interface ActiveAnnouncement {
+  id: string
+  severity: AnnouncementSeverity
+  title: string
+  body: string | null
+  dismissible: boolean
+  endsAtUtc: string | null
+  /** Changes on every edit, so a reader who hid it sees the new text. */
+  version: string
+}
+
+export interface AnnouncementText {
+  language: string
+  title: string
+  body: string | null
+}
+
+export interface Announcement {
+  id: string
+  severity: AnnouncementSeverity
+  audience: AnnouncementAudience
+  startsAtUtc: string | null
+  endsAtUtc: string | null
+  dismissible: boolean
+  texts: AnnouncementText[]
+  status: 'scheduled' | 'active' | 'ended'
+  createdAtUtc: string
+  updatedAtUtc: string | null
+}
+
+export interface SaveAnnouncement {
+  severity: AnnouncementSeverity
+  audience: AnnouncementAudience
+  startsAtUtc: string | null
+  endsAtUtc: string | null
+  dismissible: boolean
+  texts: AnnouncementText[]
+}
+
+// ---------------------------------------------------------------------------
+// Privacy notice and terms of use
+// ---------------------------------------------------------------------------
+
+export type LegalDocumentKind = 'privacy' | 'terms'
+
+export interface LegalInfo {
+  readonly privacy: boolean
+  readonly terms: boolean
+}
+
+export interface PendingLegalDocument {
+  readonly id: string
+  readonly kind: LegalDocumentKind
+  readonly version: number
+  readonly title: string
+}
+
+/** The version in force, in the reader's language. `body` is Markdown. */
+export interface PublishedLegalDocument {
+  readonly id: string
+  readonly kind: LegalDocumentKind
+  readonly version: number
+  readonly language: string
+  readonly title: string
+  readonly body: string
+  readonly requiresAcceptance: boolean
+  readonly publishedAtUtc: string
+}
+
+export interface LegalDocumentText {
+  language: string
+  title: string
+  body: string
+}
+
+export interface LegalDocument {
+  readonly id: string
+  readonly kind: LegalDocumentKind
+  readonly version: number
+  readonly status: 'draft' | 'published' | 'superseded'
+  readonly requiresAcceptance: boolean
+  readonly texts: readonly LegalDocumentText[]
+  readonly createdAtUtc: string
+  readonly updatedAtUtc: string | null
+  readonly publishedAtUtc: string | null
+  readonly acceptanceCount: number
+}
+
+export interface SaveLegalDocument {
+  requiresAcceptance: boolean
+  texts: LegalDocumentText[]
+}
+
+// ---------------------------------------------------------------------------
+// Privacy rights
+// ---------------------------------------------------------------------------
+
+export interface AccountDeletion {
+  readonly requestedAtUtc: string
+  readonly scheduledAtUtc: string
+}
+
+export interface PrivacySettings {
+  readonly selfDeletionEnabled: boolean
+  readonly deletionGraceDays: number
+  readonly updatedAtUtc: string | null
+}
+
+// ---------------------------------------------------------------------------
+// User import, export and bulk actions
+// ---------------------------------------------------------------------------
+
+export interface UserImportRow {
+  readonly row: number
+  readonly email: string
+  readonly outcome: 'invited' | 'updated' | 'skipped' | 'error'
+  readonly errorCode: string | null
+}
+
+export interface UserImportResult {
+  readonly dryRun: boolean
+  readonly invited: number
+  readonly updated: number
+  readonly skipped: number
+  readonly failed: number
+  readonly rows: readonly UserImportRow[]
+}
+
+export type UserBulkAction = 'approve' | 'add_to_group' | 'remove_from_group' | 'sign_out' | 'delete'
+
+export interface UserBulkResult {
+  readonly userId: string
+  readonly succeeded: boolean
+  readonly errorCode: string | null
+}
+
+// ---------------------------------------------------------------------------
+// Personal access tokens
+// ---------------------------------------------------------------------------
+
+export type PersonalAccessTokenScope = 'read' | 'write'
+
+export interface PersonalAccessToken {
+  readonly id: string
+  readonly name: string
+  /** The beginning of the token, to recognise it. */
+  readonly prefix: string
+  readonly scopes: readonly PersonalAccessTokenScope[]
+  readonly status: 'active' | 'expired' | 'revoked'
+  readonly createdAtUtc: string
+  readonly expiresAtUtc: string
+  readonly lastUsedAtUtc: string | null
+  readonly revokedAtUtc: string | null
+}
+
+export interface CreatedPersonalAccessToken {
+  readonly token: PersonalAccessToken
+  /** The token itself: shown once. */
+  readonly value: string
 }

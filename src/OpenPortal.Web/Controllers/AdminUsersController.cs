@@ -1,11 +1,14 @@
+using System.Globalization;
+using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Identity.Application.Contracts;
-using OpenPortal.Notifications.Application.Abstractions;
+using OpenPortal.Identity.Domain.Users;
+using OpenPortal.SharedKernel.Results;
 using OpenPortal.Web.Authorization;
 using OpenPortal.Web.Infrastructure;
+using OpenPortal.Web.Users;
 
 namespace OpenPortal.Web.Controllers;
 
@@ -23,17 +26,29 @@ namespace OpenPortal.Web.Controllers;
 public sealed class AdminUsersController : ControllerBase
 {
     private readonly IUserAdministrationService _users;
-    private readonly IAccessAdministrationService _access;
-    private readonly INotificationMaintenance _notifications;
+    private readonly AccountEraser _eraser;
+    private readonly IImpersonationService _impersonation;
+    private readonly UserCsv _csv;
+    private readonly UserBulkActions _bulk;
+    private readonly IPersonalAccessTokenService _tokens;
+    private readonly ICurrentUser _currentUser;
 
     public AdminUsersController(
         IUserAdministrationService users,
-        IAccessAdministrationService access,
-        INotificationMaintenance notifications)
+        AccountEraser eraser,
+        IImpersonationService impersonation,
+        UserCsv csv,
+        UserBulkActions bulk,
+        IPersonalAccessTokenService tokens,
+        ICurrentUser currentUser)
     {
         _users = users;
-        _access = access;
-        _notifications = notifications;
+        _eraser = eraser;
+        _impersonation = impersonation;
+        _csv = csv;
+        _bulk = bulk;
+        _tokens = tokens;
+        _currentUser = currentUser;
     }
 
     /// <summary>Lists accounts, filtered and paged.</summary>
@@ -168,16 +183,130 @@ public sealed class AdminUsersController : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> DeleteAsync(Guid userId, CancellationToken cancellationToken)
     {
-        var deleted = await _users.DeleteUserAsync(userId, cancellationToken).ConfigureAwait(false);
-        if (deleted.IsFailure)
+        var deleted = await _eraser.DeleteAsync(userId, cancellationToken).ConfigureAwait(false);
+
+        return deleted.IsSuccess ? NoContent() : ProblemResults.FromResult(HttpContext, deleted);
+    }
+
+    /// <summary>
+    /// Starts a support session as an ordinary account: the caller's session becomes one as that account, marked
+    /// as a support session, until they end it or <c>Identity:ImpersonationMinutes</c> pass. Audited, and the
+    /// account's owner is told. Administrators only, from their own browser session.
+    /// </summary>
+    [Authorize(Policy = Policies.AdministratorOnly)]
+    [InteractiveSessionOnly]
+    [HttpPost("{userId:guid}/impersonate")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ImpersonateAsync(
+        Guid userId,
+        [FromBody] StartImpersonationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var started = await _impersonation.StartAsync(userId, request, cancellationToken).ConfigureAwait(false);
+
+        return started.IsSuccess ? NoContent() : ProblemResults.FromResult(HttpContext, started);
+    }
+
+    /// <summary>
+    /// Downloads the accounts matching the filter (or the selected <c>ids</c>) as CSV, sorted by email, at most
+    /// 10,000 rows. The administrator column is there only for administrators. Recorded in the audit log.
+    /// </summary>
+    [RequirePortalPage(PortalPages.Users)]
+    [HttpGet("export")]
+    [Produces("text/csv", "application/problem+json")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ExportAsync([FromQuery] UserListFilter filter, CancellationToken cancellationToken)
+    {
+        var users = await _users.ExportUsersAsync(filter, UserBulkLimits.MaxExportRows, cancellationToken).ConfigureAwait(false);
+        if (users.IsFailure)
         {
-            return ProblemResults.FromResult(HttpContext, deleted);
+            return ProblemResults.FromResult(HttpContext, users);
         }
 
-        // The account is gone either way; a failure here leaves only references the screens show as unknown.
-        await _notifications.ForgetRecipientAsync(userId, cancellationToken).ConfigureAwait(false);
-        var forgotten = await _access.RemoveUserAsync(userId, cancellationToken).ConfigureAwait(false);
+        var isAdministrator = _currentUser.Roles.Contains(Roles.Administrator, StringComparer.Ordinal);
+        var fileName = $"openportal-users-{DateTime.UtcNow.ToString("yyyyMMdd-HHmm", CultureInfo.InvariantCulture)}.csv";
 
-        return forgotten.IsSuccess ? NoContent() : ProblemResults.FromResult(HttpContext, forgotten);
+        return File(UserCsv.Export(users.Value, isAdministrator), Csv.ContentType, fileName);
+    }
+
+    /// <summary>
+    /// Imports a CSV (a <c>file</c> part, at most 1 MB and 1,000 rows, with an <c>email</c> column): new addresses
+    /// are invited (with <c>firstName</c>, <c>lastName</c>, <c>groups</c> and <c>organizations</c>, names separated by
+    /// <c>|</c>), existing accounts are updated when <c>updateExisting</c> is true and skipped otherwise. With
+    /// <c>dryRun</c> nothing is written: the answer says what would happen to each row.
+    /// </summary>
+    [RequirePortalPage(PortalPages.Users)]
+    [HttpPost("import")]
+    [RequestSizeLimit(UserCsv.MaxImportBytes + 64 * 1024)]
+    [ProducesResponseType<UserImportResultDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<UserImportResultDto>> ImportAsync(
+        IFormFile? file,
+        [FromQuery] bool dryRun,
+        [FromQuery] bool updateExisting,
+        CancellationToken cancellationToken)
+    {
+        if (file is null || file.Length == 0 || file.Length > UserCsv.MaxImportBytes)
+        {
+            return ProblemResults.FromResult(HttpContext, Result.Failure(UserImportErrors.FileInvalid));
+        }
+
+        string text;
+        using (var reader = new StreamReader(file.OpenReadStream(), Encoding.UTF8, detectEncodingFromByteOrderMarks: true))
+        {
+            text = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        var imported = await _csv.ImportAsync(text, dryRun, updateExisting, cancellationToken).ConfigureAwait(false);
+
+        return imported.IsSuccess ? Ok(imported.Value) : ProblemResults.FromResult(HttpContext, imported);
+    }
+
+    /// <summary>
+    /// One action on up to 100 accounts: <c>approve</c>, <c>add_to_group</c> / <c>remove_from_group</c> (with
+    /// <c>groupId</c>), <c>sign_out</c> (every session and token) or <c>delete</c>. Each account is checked as if
+    /// handled alone; the answer says what happened to each.
+    /// </summary>
+    [RequirePortalPage(PortalPages.Users)]
+    [HttpPost("bulk")]
+    [ProducesResponseType<IReadOnlyList<UserBulkResultDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<IReadOnlyList<UserBulkResultDto>>> BulkAsync(
+        [FromBody] UserBulkRequest request,
+        CancellationToken cancellationToken)
+    {
+        var results = await _bulk.RunAsync(request, cancellationToken).ConfigureAwait(false);
+
+        return results.IsSuccess ? Ok(results.Value) : ProblemResults.FromResult(HttpContext, results);
+    }
+
+    /// <summary>The account's personal access tokens (never their value).</summary>
+    [RequirePortalPage(PortalPages.Users)]
+    [HttpGet("{userId:guid}/tokens")]
+    [ProducesResponseType<IReadOnlyList<PersonalAccessTokenDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<IReadOnlyList<PersonalAccessTokenDto>>> ListTokensAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var tokens = await _tokens.ListForUserAsync(userId, cancellationToken).ConfigureAwait(false);
+
+        return tokens.IsSuccess ? Ok(tokens.Value) : ProblemResults.FromResult(HttpContext, tokens);
+    }
+
+    /// <summary>Revokes one of the account's personal access tokens.</summary>
+    [RequirePortalPage(PortalPages.Users)]
+    [HttpDelete("{userId:guid}/tokens/{tokenId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RevokeTokenAsync(Guid userId, Guid tokenId, CancellationToken cancellationToken)
+    {
+        var revoked = await _tokens.RevokeForUserAsync(userId, tokenId, cancellationToken).ConfigureAwait(false);
+
+        return revoked.IsSuccess ? NoContent() : ProblemResults.FromResult(HttpContext, revoked);
     }
 }

@@ -7,16 +7,17 @@ using OpenPortal.Notifications.Infrastructure.Configuration;
 using OpenPortal.Notifications.Infrastructure.Persistence;
 using OpenPortal.Notifications.Infrastructure.Services;
 using OpenPortal.SharedKernel.Notifications;
+using OpenPortal.SharedKernel.Privacy;
 using OpenPortal.SharedKernel.Time;
 
 namespace OpenPortal.Notifications.Infrastructure.DependencyInjection;
 
 /// <summary>
 /// Registers the Notifications module: the <see cref="INotifier"/> every module notifies with, the signed-in
-/// user's notification center and the retention sweep.
+/// user's notification center, the announcements shown across the portal and the retention sweep.
 /// <para>
-/// The host supplies <see cref="INotificationContext"/>: who is calling, and who the roles of a notice's audience
-/// name.
+/// The host supplies <see cref="INotificationContext"/> (who is calling, and who the roles of a notice's audience
+/// name) and <see cref="IAnnouncementAuthorization"/> (who may manage announcements).
 /// </para>
 /// </summary>
 public static class NotificationsModuleServiceCollectionExtensions
@@ -43,6 +44,8 @@ public static class NotificationsModuleServiceCollectionExtensions
         services.AddScoped<INotifier, Notifier>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<INotificationMaintenance, NotificationMaintenanceService>();
+        services.AddScoped<IAnnouncementService, AnnouncementService>();
+        services.AddScoped<IPersonalDataSource, NotificationPersonalData>();
 
         services.AddSingleton<NotificationRetentionService>();
         services.AddHostedService(provider => provider.GetRequiredService<NotificationRetentionService>());

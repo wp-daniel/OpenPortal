@@ -367,6 +367,34 @@ retention is reported as incomplete. Identity and Access add their counts (`IUse
 
 ---
 
+## Privacy, support sessions and tokens
+
+**Legal documents** live in the Identity module because acceptance is a property of an account. A version is
+immutable once published, so an acceptance row (account, version, time) always points at the exact text accepted.
+The gate is enforced where it matters: registration and invitation acceptance refuse without the versions in force,
+and the OpenID Connect authorization endpoint sends the browser to `/legal/accept` before issuing a code; the
+client's `AccountGate` is only the friendly version of the same rule.
+
+**Personal data export and erasure** cross every module, which never reference each other. Export goes through a
+shared-kernel port, `IPersonalDataSource`: each module describes what it holds about a person (never secrets) and
+the host zips the sections. Erasure is composed by the host (`AccountEraser`) from caller-free maintenance
+contracts (`IAccountErasure`, `IAccessUserMaintenance`, `INotificationMaintenance`) that are never exposed to
+an endpoint; an administrator's delete goes through the checked `DeleteUserAsync` first. A requested deletion
+waits for a grace period; a hosted service in every instance erases what is due (idempotent).
+
+**Support sessions** replace the administrator's cookie with one for the account plus three claims (who, since
+when). Those claims survive security stamp re-validation (`OnRefreshingPrincipal`) and expire with the cookie's
+`OnValidatePrincipal`; losing them silently would leave an administrator inside someone else's account. The
+audit trail records the administrator as actor and the account as `OnBehalfOf`. `[InteractiveSessionOnly]` keeps
+both support sessions and tokens away from what only the owner should do.
+
+**Personal access tokens** reuse the whole authorization model: the token handler produces the same claims as a
+session (id, email, roles), so pages, policies and module checks apply unchanged. A policy scheme picks the token or
+the cookie per request; when a token is presented the cookie is not read, which is why antiforgery can be skipped
+for it. Scopes are coarse (read = safe methods) and enforced by one global filter.
+
+---
+
 ## Hardening
 
 The protections every request passes through, in pipeline order (`Program.cs`):

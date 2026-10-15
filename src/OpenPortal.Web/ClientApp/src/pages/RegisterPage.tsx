@@ -7,6 +7,7 @@ import { ApiError } from '@/api/client'
 import { registrationApi } from '@/api/registration'
 import type { RegistrationOutcome } from '@/api/types'
 import { FormField } from '@/components/FormField'
+import { LegalConsent, useLegalConsent } from '@/components/LegalConsent'
 import { Section } from '@/components/Section'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -45,6 +46,8 @@ function RegisterForm({ onRegistered }: { onRegistered: (outcome: RegistrationOu
   const policy = session.passwordPolicy
   const [fields, setFields] = useState<Record<Field, string>>({ firstName: '', lastName: '', email: '', password: '' })
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({})
+  const consent = useLegalConsent()
+  const [consentError, setConsentError] = useState<string>()
 
   const schema = useMemo(
     () =>
@@ -64,6 +67,7 @@ function RegisterForm({ onRegistered }: { onRegistered: (outcome: RegistrationOu
         lastName: fields.lastName.trim(),
         email: fields.email.trim(),
         password: fields.password,
+        acceptedLegalDocumentIds: consent.documentIds,
       }),
     meta: { handlesErrors: true },
     onSuccess: async (result) => {
@@ -81,13 +85,18 @@ function RegisterForm({ onRegistered }: { onRegistered: (outcome: RegistrationOu
     event.preventDefault()
     const parsed = schema.safeParse(fields)
 
+    const consentMissing = !consent.satisfied
+    setConsentError(consentMissing ? t('legal.consent.required') : undefined)
+
     if (!parsed.success) {
       setErrors(zodFieldErrors<Field>(parsed.error))
       return
     }
 
     setErrors({})
-    register.mutate()
+    if (!consentMissing) {
+      register.mutate()
+    }
   }
 
   const server = serverFieldErrors(register.error)
@@ -127,7 +136,9 @@ function RegisterForm({ onRegistered }: { onRegistered: (outcome: RegistrationOu
           />
         </FormField>
 
-        <Button type="submit" className="w-full" disabled={register.isPending}>
+        <LegalConsent consent={consent} error={consentError} />
+
+        <Button type="submit" className="w-full" disabled={register.isPending || consent.isPending}>
           {register.isPending && <Loader2 className="animate-spin" />}
           {t('register.submit')}
         </Button>

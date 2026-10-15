@@ -42,6 +42,7 @@ These end up in the files the portal serves to browsers (`wwwroot`).
 | [React](https://react.dev) / React DOM | MIT | © Meta Platforms, Inc. and affiliates |
 | [React Router](https://reactrouter.com) | MIT | © React Training LLC 2015-2019, Remix Software Inc. 2020-2021, Shopify Inc. 2022-2023 |
 | [Zod](https://zod.dev) | MIT | © 2025 Colin McDonnell |
+| [react-markdown](https://github.com/remarkjs/react-markdown) (privacy notice and terms of use) with the unified, remark, micromark, mdast and hast packages it uses | MIT | © Espen Hovlandsdal; © Titus Wormer |
 | [tslib](https://github.com/microsoft/tslib) (through Radix UI's `react-remove-scroll` and `aria-hidden`) | 0BSD | © Microsoft Corporation |
 | [Recharts](https://recharts.org) (the statistics charts, through shadcn's `chart`) with Redux Toolkit, React Redux, Immer, Reselect, es-toolkit, decimal.js-light, eventemitter3, tiny-invariant | MIT | © 2015-present recharts; © 2015-present Dan Abramov and the Redux contributors; © 2017 Michel Weststrate; © 2018 Reselect contributors; © 2024 Viva Republica, Inc; © 2015 Michael Mclaughlin; © 2014 Arnout Kazemier; © 2019 Alexander Reardon |
 | [victory-vendor](https://github.com/FormidableLabs/victory) (the D3 modules Recharts draws with: `d3-scale`, `d3-shape`, …) | MIT and ISC | © 2015-present Formidable Labs; © Mike Bostock (D3, ISC) |

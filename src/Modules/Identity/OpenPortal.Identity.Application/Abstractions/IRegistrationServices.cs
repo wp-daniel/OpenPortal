@@ -82,6 +82,9 @@ public static class AccountMessageKinds
 
     /// <summary>Values: <c>name</c>.</summary>
     public const string RegistrationApproved = "registration_approved";
+
+    /// <summary>Values: <c>name</c>, <c>expires</c> (the scheduled deletion, an ISO date).</summary>
+    public const string DeletionScheduled = "deletion_scheduled";
 }
 
 /// <summary>One email about an account.</summary>

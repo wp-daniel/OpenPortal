@@ -14,6 +14,10 @@ import { AcceptInvitationPage } from '@/pages/AcceptInvitationPage'
 import { AccessDeniedPage } from '@/pages/AccessDeniedPage'
 import { AccountPage } from '@/pages/AccountPage'
 import { AdminAccessPage } from '@/pages/AdminAccessPage'
+import { AdminLegalPage } from '@/pages/AdminLegalPage'
+import { AcceptLegalPage, LegalDocumentPage } from '@/pages/LegalPages'
+import { DeletionPendingPage } from '@/pages/DeletionPendingPage'
+import { AdminAnnouncementsPage } from '@/pages/AdminAnnouncementsPage'
 import { AdminAccessRequestsPage } from '@/pages/AdminAccessRequestsPage'
 import { AdminInvitationsPage } from '@/pages/AdminInvitationsPage'
 import { AdminOrganizationsPage } from '@/pages/AdminOrganizationsPage'
@@ -35,7 +39,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage'
 import { SignInPage } from '@/pages/SignInPage'
 import { AppLayout } from '@/routes/AppLayout'
 import { AuthLayout } from '@/routes/AuthLayout'
-import { PageRoute, ProtectedRoute, PublicOnlyRoute } from '@/routes/guards'
+import { AccountGate, PageRoute, ProtectedRoute, PublicOnlyRoute } from '@/routes/guards'
 
 /**
  * Mutations a form handles itself set `meta: { handlesErrors: true }`. Every other failed mutation gets a
@@ -112,100 +116,136 @@ const router = createBrowserRouter([
         children: [{ path: 'confirm-email', element: <ConfirmEmailPage /> }],
       },
       {
+        // The privacy notice and the terms of use are for everyone: the registration form links them.
+        element: <AuthLayout wide />,
+        children: [
+          { path: 'privacy', element: <LegalDocumentPage kind="privacy" /> },
+          { path: 'terms', element: <LegalDocumentPage kind="terms" /> },
+        ],
+      },
+      {
         element: <ProtectedRoute />,
         children: [
           {
-            element: <AppLayout />,
-            // Each `handle.crumbs` adds steps to the header breadcrumb trail (see AppBreadcrumbs).
+            // What the account must settle before the portal: shown outside its frame.
+            element: <AuthLayout wide />,
             children: [
-              { index: true, element: <DashboardPage />, handle: crumbs({ labelKey: 'nav.dashboard', to: '/' }) },
-              { path: 'account', element: <AccountPage />, handle: crumbs({ labelKey: 'nav.account' }) },
-              { path: 'access-denied', element: <AccessDeniedPage />, handle: crumbs({ labelKey: 'nav.accessDenied' }) },
-              { path: 'notifications', element: <NotificationsPage />, handle: crumbs({ labelKey: 'nav.notifications' }) },
+              { path: 'legal/accept', element: <AcceptLegalPage /> },
+              { path: 'account/deletion', element: <DeletionPendingPage /> },
+            ],
+          },
+          {
+            element: <AccountGate />,
+            children: [
               {
-                path: 'select-organization',
-                element: <SelectOrganizationPage />,
-                handle: crumbs({ labelKey: 'nav.selectOrganization' }),
-              },
-              {
-                // Each route names its portal page (`page`, a server `PortalPages` key); PageRoute lets in the
-                // groups granted that page and administrators. A route without a page is for administrators only.
-                element: <PageRoute />,
-                handle: crumbs({ labelKey: 'nav.administration' }),
+                element: <AppLayout />,
+                // Each `handle.crumbs` adds steps to the header breadcrumb trail (see AppBreadcrumbs).
                 children: [
+                  { index: true, element: <DashboardPage />, handle: crumbs({ labelKey: 'nav.dashboard', to: '/' }) },
+                  { path: 'account', element: <AccountPage />, handle: crumbs({ labelKey: 'nav.account' }) },
+                  { path: 'access-denied', element: <AccessDeniedPage />, handle: crumbs({ labelKey: 'nav.accessDenied' }) },
+                  { path: 'notifications', element: <NotificationsPage />, handle: crumbs({ labelKey: 'nav.notifications' }) },
                   {
-                    handle: crumbs({ labelKey: 'nav.identity' }),
+                    path: 'select-organization',
+                    element: <SelectOrganizationPage />,
+                    handle: crumbs({ labelKey: 'nav.selectOrganization' }),
+                  },
+                  {
+                    // Each route names its portal page (`page`, a server `PortalPages` key); PageRoute lets in the
+                    // groups granted that page and administrators. A route without a page is for administrators only.
+                    element: <PageRoute />,
+                    handle: crumbs({ labelKey: 'nav.administration' }),
                     children: [
-                      { path: 'admin/users', element: <AdminUsersPage />, handle: page('users', { labelKey: 'nav.users' }) },
                       {
-                        path: 'admin/invitations',
-                        element: <AdminInvitationsPage />,
-                        handle: page('users', { labelKey: 'nav.invitations' }),
+                        handle: crumbs({ labelKey: 'nav.identity' }),
+                        children: [
+                          { path: 'admin/users', element: <AdminUsersPage />, handle: page('users', { labelKey: 'nav.users' }) },
+                          {
+                            path: 'admin/invitations',
+                            element: <AdminInvitationsPage />,
+                            handle: page('users', { labelKey: 'nav.invitations' }),
+                          },
+                          { path: 'admin/groups', element: <AdminGroupsPage />, handle: page('groups', { labelKey: 'nav.groups' }) },
+                          {
+                            path: 'admin/organizations',
+                            element: <AdminOrganizationsPage />,
+                            handle: page('organizations', { labelKey: 'nav.organizations' }),
+                          },
+                          { path: 'admin/access', element: <AdminAccessPage />, handle: page('access', { labelKey: 'nav.access' }) },
+                          {
+                            path: 'admin/access-requests',
+                            element: <AdminAccessRequestsPage />,
+                            handle: page('access-requests', { labelKey: 'nav.accessRequests' }),
+                          },
+                          {
+                            path: 'admin/page-permissions',
+                            element: <AdminPagePermissionsPage />,
+                            handle: crumbs({ labelKey: 'nav.pagePermissions' }),
+                          },
+                        ],
                       },
-                      { path: 'admin/groups', element: <AdminGroupsPage />, handle: page('groups', { labelKey: 'nav.groups' }) },
                       {
-                        path: 'admin/organizations',
-                        element: <AdminOrganizationsPage />,
-                        handle: page('organizations', { labelKey: 'nav.organizations' }),
-                      },
-                      { path: 'admin/access', element: <AdminAccessPage />, handle: page('access', { labelKey: 'nav.access' }) },
-                      {
-                        path: 'admin/access-requests',
-                        element: <AdminAccessRequestsPage />,
-                        handle: page('access-requests', { labelKey: 'nav.accessRequests' }),
+                        path: 'admin/applications',
+                        element: <AdminApplicationsPage />,
+                        handle: page('applications', { labelKey: 'nav.applications' }),
                       },
                       {
-                        path: 'admin/page-permissions',
-                        element: <AdminPagePermissionsPage />,
-                        handle: crumbs({ labelKey: 'nav.pagePermissions' }),
+                        handle: crumbs({ labelKey: 'nav.security' }),
+                        children: [
+                          {
+                            path: 'admin/statistics',
+                            element: <AdminStatisticsPage />,
+                            handle: page('statistics', { labelKey: 'nav.statistics' }),
+                          },
+                          { path: 'admin/audit', element: <AdminAuditPage />, handle: page('audit', { labelKey: 'nav.audit' }) },
+                          {
+                            path: 'admin/legal',
+                            element: <AdminLegalPage />,
+                            handle: page('legal', { labelKey: 'nav.legal' }),
+                          },
+                          // No page: portal settings are for administrators only.
+                          { path: 'admin/settings', element: <AdminSettingsPage />, handle: crumbs({ labelKey: 'nav.settings' }) },
+                        ],
+                      },
+                      {
+                        handle: crumbs({ labelKey: 'nav.communication' }),
+                        children: [
+                          {
+                            path: 'admin/announcements',
+                            element: <AdminAnnouncementsPage />,
+                            handle: page('announcements', { labelKey: 'nav.announcements' }),
+                          },
+                        ],
+                      },
+                      {
+                        handle: crumbs({ labelKey: 'nav.content' }),
+                        children: [
+                          {
+                            path: 'admin/content/profile',
+                            element: <ContentProfilePage />,
+                            handle: page('content.profile', { labelKey: 'nav.profile' }),
+                          },
+                          {
+                            path: 'admin/content/projects',
+                            element: <ContentProjectPage />,
+                            handle: page('content.projects', { labelKey: 'nav.projects' }),
+                          },
+                          {
+                            path: 'admin/content/projects/:projectId',
+                            element: <ContentProjectPage />,
+                            handle: page(
+                              'content.projects',
+                              { labelKey: 'nav.projects', to: '/admin/content/projects' },
+                              { labelKey: 'common.edit' },
+                            ),
+                          },
+                        ],
                       },
                     ],
                   },
-                  {
-                    path: 'admin/applications',
-                    element: <AdminApplicationsPage />,
-                    handle: page('applications', { labelKey: 'nav.applications' }),
-                  },
-                  {
-                    handle: crumbs({ labelKey: 'nav.security' }),
-                    children: [
-                      {
-                        path: 'admin/statistics',
-                        element: <AdminStatisticsPage />,
-                        handle: page('statistics', { labelKey: 'nav.statistics' }),
-                      },
-                      { path: 'admin/audit', element: <AdminAuditPage />, handle: page('audit', { labelKey: 'nav.audit' }) },
-                      // No page: portal settings are for administrators only.
-                      { path: 'admin/settings', element: <AdminSettingsPage />, handle: crumbs({ labelKey: 'nav.settings' }) },
-                    ],
-                  },
-                  {
-                    handle: crumbs({ labelKey: 'nav.content' }),
-                    children: [
-                      {
-                        path: 'admin/content/profile',
-                        element: <ContentProfilePage />,
-                        handle: page('content.profile', { labelKey: 'nav.profile' }),
-                      },
-                      {
-                        path: 'admin/content/projects',
-                        element: <ContentProjectPage />,
-                        handle: page('content.projects', { labelKey: 'nav.projects' }),
-                      },
-                      {
-                        path: 'admin/content/projects/:projectId',
-                        element: <ContentProjectPage />,
-                        handle: page(
-                          'content.projects',
-                          { labelKey: 'nav.projects', to: '/admin/content/projects' },
-                          { labelKey: 'common.edit' },
-                        ),
-                      },
-                    ],
-                  },
+                  { path: '*', element: <NotFoundPage />, handle: crumbs({ labelKey: 'nav.notFound' }) },
                 ],
               },
-              { path: '*', element: <NotFoundPage />, handle: crumbs({ labelKey: 'nav.notFound' }) },
             ],
           },
         ],

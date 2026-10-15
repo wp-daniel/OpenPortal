@@ -147,6 +147,40 @@ public sealed class ApplicationUser : IdentityUser<Guid>
     /// </summary>
     public DateTimeOffset? AvatarUpdatedAtUtc { get; private set; }
 
+    /// <summary>When the owner asked for the account to be deleted; null when no deletion is scheduled.</summary>
+    public DateTimeOffset? DeletionRequestedAtUtc { get; private set; }
+
+    /// <summary>
+    /// When the account will be deleted, at the end of the grace period its owner can still cancel in; null when no
+    /// deletion is scheduled.
+    /// </summary>
+    public DateTimeOffset? DeletionScheduledAtUtc { get; private set; }
+
+    /// <summary>Schedules the deletion the owner asked for. Asking again keeps the first date.</summary>
+    public void RequestDeletion(DateTimeOffset now, TimeSpan gracePeriod)
+    {
+        if (DeletionScheduledAtUtc is not null)
+        {
+            return;
+        }
+
+        DeletionRequestedAtUtc = now;
+        DeletionScheduledAtUtc = now + gracePeriod;
+    }
+
+    /// <summary>Withdraws a scheduled deletion. Returns false when none was scheduled.</summary>
+    public bool CancelDeletion()
+    {
+        if (DeletionScheduledAtUtc is null)
+        {
+            return false;
+        }
+
+        DeletionRequestedAtUtc = null;
+        DeletionScheduledAtUtc = null;
+        return true;
+    }
+
     /// <summary>Records that the picture was replaced (a timestamp) or removed (<see langword="null"/>).</summary>
     public void MarkAvatarChanged(DateTimeOffset? changedAtUtc)
     {

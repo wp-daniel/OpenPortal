@@ -84,6 +84,7 @@ internal sealed class AuditLogService : IAuditLogService
             entries = entries.Where(entry =>
                 entry.Action.ToUpper().Contains(term)
                 || (entry.ActorLabel != null && entry.ActorLabel.ToUpper().Contains(term))
+                || (entry.OnBehalfOfLabel != null && entry.OnBehalfOfLabel.ToUpper().Contains(term))
                 || (entry.TargetLabel != null && entry.TargetLabel.ToUpper().Contains(term))
                 || (entry.IpAddress != null && entry.IpAddress.Contains(search)));
         }
@@ -105,7 +106,7 @@ internal sealed class AuditLogService : IAuditLogService
         var subject = filter.Subject?.Trim();
         if (!string.IsNullOrEmpty(subject))
         {
-            entries = entries.Where(entry => entry.ActorId == subject || entry.TargetId == subject);
+            entries = entries.Where(entry => entry.ActorId == subject || entry.TargetId == subject || entry.OnBehalfOfId == subject);
         }
 
         if (filter.From is { } from)
@@ -133,6 +134,7 @@ internal sealed class AuditLogService : IAuditLogService
         entry.Action,
         entry.Outcome == AuditOutcome.Success ? AuditOutcomeNames.Success : AuditOutcomeNames.Failure,
         Subject(entry.ActorType, entry.ActorId, entry.ActorLabel),
+        entry.OnBehalfOfId is null ? null : new AuditSubjectDto(AuditSubjectTypes.User, entry.OnBehalfOfId, entry.OnBehalfOfLabel),
         Subject(entry.TargetType, entry.TargetId, entry.TargetLabel),
         ReadDetails(entry.Details),
         entry.IpAddress,

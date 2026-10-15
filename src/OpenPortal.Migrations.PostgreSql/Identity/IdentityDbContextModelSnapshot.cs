@@ -233,6 +233,82 @@ namespace OpenPortal.Migrations.PostgreSql.Identity
                     b.ToTable("Invitations", (string)null);
                 });
 
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Legal.LegalAcceptance", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AcceptedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId", "DocumentId");
+
+                    b.HasIndex("DocumentId");
+
+                    b.ToTable("LegalAcceptances", (string)null);
+                });
+
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Legal.LegalDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset?>("PublishedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("RequiresAcceptance")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Kind", "Version")
+                        .IsUnique();
+
+                    b.ToTable("LegalDocuments", (string)null);
+                });
+
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Settings.PrivacySettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DeletionGraceDays")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("SelfDeletionEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PrivacySettings", (string)null);
+                });
+
             modelBuilder.Entity("OpenPortal.Identity.Domain.Settings.RegistrationSettings", b =>
                 {
                     b.Property<int>("Id")
@@ -266,6 +342,9 @@ namespace OpenPortal.Migrations.PostgreSql.Identity
                     b.Property<int>("Id")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("PersonalAccessTokensEnabled")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean");
 
@@ -280,6 +359,56 @@ namespace OpenPortal.Migrations.PostgreSql.Identity
                     b.HasKey("Id");
 
                     b.ToTable("SecuritySettings", (string)null);
+                });
+
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Tokens.PersonalAccessToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DisplayPrefix")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("LastUsedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTimeOffset?>("RevokedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Scopes")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PersonalAccessTokens", (string)null);
                 });
 
             modelBuilder.Entity("OpenPortal.Identity.Domain.Users.ApplicationUser", b =>
@@ -315,6 +444,12 @@ namespace OpenPortal.Migrations.PostgreSql.Identity
                         .HasColumnType("character varying(100)");
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DeletionRequestedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DeletionScheduledAtUtc")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Department")
@@ -484,6 +619,62 @@ namespace OpenPortal.Migrations.PostgreSql.Identity
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
+                {
+                    b.HasOne("OpenPortal.Identity.Domain.Users.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Legal.LegalAcceptance", b =>
+                {
+                    b.HasOne("OpenPortal.Identity.Domain.Legal.LegalDocument", null)
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("OpenPortal.Identity.Domain.Users.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Legal.LegalDocument", b =>
+                {
+                    b.OwnsMany("OpenPortal.Identity.Domain.Legal.LegalDocumentText", "Texts", b1 =>
+                        {
+                            b1.Property<Guid>("DocumentId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Language")
+                                .HasMaxLength(10)
+                                .HasColumnType("character varying(10)");
+
+                            b1.Property<string>("Body")
+                                .IsRequired()
+                                .HasMaxLength(100000)
+                                .HasColumnType("character varying(100000)");
+
+                            b1.Property<string>("Title")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)");
+
+                            b1.HasKey("DocumentId", "Language");
+
+                            b1.ToTable("LegalDocumentTexts", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("DocumentId");
+                        });
+
+                    b.Navigation("Texts");
+                });
+
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Tokens.PersonalAccessToken", b =>
                 {
                     b.HasOne("OpenPortal.Identity.Domain.Users.ApplicationUser", null)
                         .WithMany()

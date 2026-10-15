@@ -63,6 +63,7 @@ public sealed class ConnectController : ControllerBase
     private readonly IOpenIddictApplicationManager _applications;
     private readonly IOpenIddictAuthorizationManager _authorizations;
     private readonly IAuditTrail _audit;
+    private readonly ILegalDocumentService _legal;
 
     public ConnectController(
         IAccessEvaluator access,
@@ -70,14 +71,26 @@ public sealed class ConnectController : ControllerBase
         PortalAuthentication authentication,
         IOpenIddictApplicationManager applications,
         IOpenIddictAuthorizationManager authorizations,
-        IAuditTrail audit)
+        IAuditTrail audit,
+        ILegalDocumentService legal)
     {
         _audit = audit;
+        _legal = legal;
         _access = access;
         _users = users;
         _authentication = authentication;
         _applications = applications;
         _authorizations = authorizations;
+    }
+
+    /// <summary>This authorization request again, without a prompt (so coming back does not ask to sign in anew).</summary>
+    private string ThisRequest()
+    {
+        var parameters = (Request.HasFormContentType ? Request.Form.AsEnumerable() : Request.Query.AsEnumerable())
+            .Where(pair => pair.Key != Parameters.Prompt)
+            .ToList();
+
+        return Request.PathBase + Request.Path + QueryString.Create(parameters);
     }
 
     [HttpGet("~/connect/authorize")]
@@ -114,6 +127,39 @@ public sealed class ConnectController : ControllerBase
             return Challenge(
                 new AuthenticationProperties { RedirectUri = Request.PathBase + Request.Path + Request.QueryString },
                 IdentityConstants.ApplicationScheme);
+        }
+
+        // A support session acts for someone else: it never signs in to the other applications as them.
+        if (session.Principal?.FindFirst(PortalClaimTypes.ImpersonatorId) is not null)
+        {
+            if (request.HasPromptValue(PromptValues.None))
+            {
+                return Refuse(Errors.LoginRequired, "Applications cannot be opened while impersonating an account.");
+            }
+
+            return Redirect($"{Request.PathBase}/access-denied?reason=impersonation");
+        }
+
+        // An account waiting to be deleted signs in to the portal only (to cancel the deletion), never to an application.
+        if (user.DeletionScheduled)
+        {
+            if (request.HasPromptValue(PromptValues.None))
+            {
+                return Refuse(Errors.LoginRequired, "The account is scheduled for deletion.");
+            }
+
+            return Redirect($"{Request.PathBase}/access-denied?reason=deletion");
+        }
+
+        // The privacy notice and terms in force come first: an application cannot be used to skip them.
+        if ((await _legal.PendingAsync(user.Id, cancellationToken).ConfigureAwait(false)).Count > 0)
+        {
+            if (request.HasPromptValue(PromptValues.None))
+            {
+                return Refuse(Errors.ConsentRequired, "The user must accept the portal's current terms first.");
+            }
+
+            return Redirect($"{Request.PathBase}/legal/accept?returnUrl={Uri.EscapeDataString(ThisRequest())}");
         }
 
         var decision = await _access.EvaluateAsync(user.Id, request.ClientId!, cancellationToken).ConfigureAwait(false);
@@ -247,7 +293,7 @@ public sealed class ConnectController : ControllerBase
         }
 
         var user = await _users.FindAsync(userId, cancellationToken).ConfigureAwait(false);
-        if (user is null || !user.IsActive)
+        if (user is null || !user.IsActive || user.DeletionScheduled)
         {
             await RecordRefusalAsync(userId, user?.Email, request.ClientId!, applicationName: null, "account_inactive", cancellationToken).ConfigureAwait(false);
 
@@ -294,7 +340,7 @@ public sealed class ConnectController : ControllerBase
     public async Task<IActionResult> UserInfoAsync(CancellationToken cancellationToken)
     {
         if (!Guid.TryParse(User.GetClaim(Claims.Subject), out var userId)
-            || await _users.FindAsync(userId, cancellationToken).ConfigureAwait(false) is not { IsActive: true } user)
+            || await _users.FindAsync(userId, cancellationToken).ConfigureAwait(false) is not { IsActive: true, DeletionScheduled: false } user)
         {
             return Challenge(
                 new AuthenticationProperties(new Dictionary<string, string?>

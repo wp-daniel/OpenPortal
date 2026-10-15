@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -12,6 +14,7 @@ using OpenPortal.Identity.Infrastructure.Bootstrap;
 using OpenPortal.Identity.Infrastructure.Configuration;
 using OpenPortal.Identity.Infrastructure.Persistence;
 using OpenPortal.Identity.Infrastructure.Services;
+using OpenPortal.SharedKernel.Privacy;
 using OpenPortal.SharedKernel.Time;
 
 namespace OpenPortal.Identity.Infrastructure.DependencyInjection;
@@ -58,6 +61,19 @@ public static class IdentityModuleServiceCollectionExtensions
         services.AddScoped<IAuthenticationService, IdentityAuthenticationService>();
         services.AddScoped<IAccountService, IdentityAccountService>();
         services.AddScoped<IUserAdministrationService, IdentityUserAdministrationService>();
+        services.AddScoped<IdentityAccountErasure>();
+        services.AddScoped<IdentityLegalDocumentService>();
+        services.AddScoped<ILegalDocumentService>(provider => provider.GetRequiredService<IdentityLegalDocumentService>());
+        services.AddScoped<PrivacySettingsStore>();
+        services.AddScoped<IPrivacySettingsService, IdentityPrivacySettingsService>();
+        services.AddScoped<IAccountPrivacyService, IdentityAccountPrivacyService>();
+        services.AddScoped<IImpersonationService, IdentityImpersonationService>();
+        services.AddScoped<PersonalAccessTokenStore>();
+        services.AddScoped<IdentityPersonalAccessTokenService>();
+        services.AddScoped<IPersonalAccessTokenService>(provider => provider.GetRequiredService<IdentityPersonalAccessTokenService>());
+        services.AddScoped<IPersonalAccessTokenValidator>(provider => provider.GetRequiredService<IdentityPersonalAccessTokenService>());
+        services.AddScoped<IPersonalDataSource, IdentityPersonalData>();
+        services.AddScoped<IAccountErasure>(provider => provider.GetRequiredService<IdentityAccountErasure>());
         services.AddScoped<IUserLookupService, IdentityUserLookupService>();
         services.AddScoped<IUserAvatarService, IdentityUserAvatarService>();
         services.AddScoped<ITwoFactorService, IdentityTwoFactorService>();
@@ -94,8 +110,32 @@ public static class IdentityModuleServiceCollectionExtensions
             .Configure<IOptions<IdentityModuleOptions>>(
                 (cookie, module) => ApplyCookieOptions(cookie, module.Value));
 
+        // A support session keeps who is behind it when the security stamp is re-validated: the refreshed principal
+        // is rebuilt from the impersonated account alone, and losing the marker would leave the administrator
+        // inside that account as if it were their own.
+        services.Configure<SecurityStampValidatorOptions>(options =>
+            options.OnRefreshingPrincipal = context =>
+            {
+                if (context.CurrentPrincipal?.Identity is not null && context.NewPrincipal?.Identity is ClaimsIdentity identity)
+                {
+                    foreach (var claim in context.CurrentPrincipal.Claims.Where(claim => ImpersonationClaims.Contains(claim.Type)))
+                    {
+                        identity.AddClaim(new Claim(claim.Type, claim.Value));
+                    }
+                }
+
+                return Task.CompletedTask;
+            });
+
         return services;
     }
+
+    private static readonly HashSet<string> ImpersonationClaims =
+    [
+        PortalClaimTypes.ImpersonatorId,
+        PortalClaimTypes.ImpersonatorEmail,
+        PortalClaimTypes.ImpersonationStarted,
+    ];
 
     private static void ApplyIdentityOptions(IdentityOptions identity, IdentityModuleOptions module)
     {
@@ -156,6 +196,24 @@ public static class IdentityModuleServiceCollectionExtensions
 
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             return Task.CompletedTask;
+        };
+
+        // A support session ends by itself after Identity:ImpersonationMinutes: the cookie is refused and the
+        // administrator signs in again as themselves. Then the usual security stamp check.
+        var validateStamp = cookie.Events.OnValidatePrincipal;
+        cookie.Events.OnValidatePrincipal = async context =>
+        {
+            var started = context.Principal?.FindFirst(PortalClaimTypes.ImpersonationStarted)?.Value;
+            if (started is not null
+                && (!long.TryParse(started, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds)
+                    || DateTimeOffset.FromUnixTimeSeconds(seconds).AddMinutes(module.ImpersonationMinutes) <= DateTimeOffset.UtcNow))
+            {
+                context.RejectPrincipal();
+                await Microsoft.AspNetCore.Authentication.AuthenticationHttpContextExtensions.SignOutAsync(context.HttpContext, IdentityConstants.ApplicationScheme).ConfigureAwait(false);
+                return;
+            }
+
+            await validateStamp(context).ConfigureAwait(false);
         };
 
         cookie.Events.OnRedirectToAccessDenied = context =>

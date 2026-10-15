@@ -30,6 +30,8 @@ public static class PortalPages
     public const string ContentProfile = "content.profile";
     public const string ContentProjects = "content.projects";
     public const string Audit = "audit";
+    public const string Announcements = "announcements";
+    public const string Legal = "legal";
 
     /// <summary>Every grantable page, in the order the administration screens list them.</summary>
     public static IReadOnlyList<PortalPageDto> All { get; } =
@@ -44,6 +46,8 @@ public static class PortalPages
         new(ContentProjects, "nav.projects", "nav.content"),
         new(Audit, "nav.audit", "nav.security"),
         new(Statistics, "nav.statistics", "nav.security"),
+        new(Legal, "nav.legal", "nav.security"),
+        new(Announcements, "nav.announcements", "nav.communication"),
     ];
 }
 

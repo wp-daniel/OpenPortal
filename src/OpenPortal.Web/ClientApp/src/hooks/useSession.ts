@@ -35,6 +35,8 @@ export function useSession() {
       user: null,
       passwordPolicy: UNAVAILABLE_PASSWORD_POLICY,
       registration: { enabled: false, requiresApproval: false },
+      legal: { privacy: false, terms: false },
+      features: { selfDeletion: false, personalAccessTokens: false },
     },
     isPending,
     isError,

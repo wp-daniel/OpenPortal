@@ -28,13 +28,24 @@ internal sealed class HttpAuditRequestContext : IAuditRequestContext
         _application = application;
     }
 
-    /// <summary>The signed-in user, or the application calling the application API with a token of its own.</summary>
+    /// <summary>
+    /// The signed-in user, or the application calling the application API with a token of its own. While an
+    /// administrator impersonates an account, the actor is the administrator: they are the one acting.
+    /// </summary>
     public AuditSubject? Actor =>
-        _currentUser.UserId is { } userId
+        _currentUser.ImpersonatorId is { } impersonatorId
+            ? new AuditSubject(AuditSubjectTypes.User, impersonatorId.ToString(), _currentUser.ImpersonatorEmail)
+            : _currentUser.UserId is { } userId
+                ? new AuditSubject(AuditSubjectTypes.User, userId.ToString(), _currentUser.Email)
+                : _application.ClientId is { } clientId
+                    ? new AuditSubject(AuditSubjectTypes.Application, clientId, null)
+                    : null;
+
+    /// <summary>The impersonated account, while an administrator acts as it.</summary>
+    public AuditSubject? OnBehalfOf =>
+        _currentUser.ImpersonatorId is not null && _currentUser.UserId is { } userId
             ? new AuditSubject(AuditSubjectTypes.User, userId.ToString(), _currentUser.Email)
-            : _application.ClientId is { } clientId
-                ? new AuditSubject(AuditSubjectTypes.Application, clientId, null)
-                : null;
+            : null;
 
     public AuditOrigin Origin
     {

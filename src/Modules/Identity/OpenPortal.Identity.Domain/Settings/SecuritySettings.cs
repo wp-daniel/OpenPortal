@@ -32,6 +32,12 @@ public sealed class SecuritySettings
     /// <summary>The name authenticator apps show next to the account (the <c>issuer</c> of the otpauth URI).</summary>
     public string TwoFactorIssuer { get; private set; } = DefaultIssuer;
 
+    /// <summary>
+    /// Whether account holders may create personal access tokens to call the API from scripts. Turning it off makes
+    /// every existing token stop working at once, without deleting it.
+    /// </summary>
+    public bool PersonalAccessTokensEnabled { get; private set; }
+
     public DateTimeOffset? UpdatedAtUtc { get; private set; }
 
     public static SecuritySettings Defaults() => new();
@@ -40,7 +46,7 @@ public sealed class SecuritySettings
     /// Applies new values; the result says whether anything changed. A colon is refused because it separates
     /// the issuer from the account in the authenticator label.
     /// </summary>
-    public Result<bool> Update(bool twoFactorEnabled, string? twoFactorIssuer, DateTimeOffset now)
+    public Result<bool> Update(bool twoFactorEnabled, string? twoFactorIssuer, DateTimeOffset now, bool personalAccessTokensEnabled = false)
     {
         var issuer = twoFactorIssuer?.Trim();
 
@@ -49,13 +55,16 @@ public sealed class SecuritySettings
             return Result<bool>.Failure(UserErrors.TwoFactorIssuerInvalid);
         }
 
-        if (TwoFactorEnabled == twoFactorEnabled && string.Equals(TwoFactorIssuer, issuer, StringComparison.Ordinal))
+        if (TwoFactorEnabled == twoFactorEnabled
+            && string.Equals(TwoFactorIssuer, issuer, StringComparison.Ordinal)
+            && PersonalAccessTokensEnabled == personalAccessTokensEnabled)
         {
             return Result<bool>.Success(false);
         }
 
         TwoFactorEnabled = twoFactorEnabled;
         TwoFactorIssuer = issuer;
+        PersonalAccessTokensEnabled = personalAccessTokensEnabled;
         UpdatedAtUtc = now;
 
         return Result<bool>.Success(true);

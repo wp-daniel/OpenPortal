@@ -49,6 +49,8 @@ internal sealed class AuditEntryConfiguration : IEntityTypeConfiguration<AuditEn
         builder.Property(entry => entry.ActorType).HasMaxLength(AuditEntry.SubjectTypeMaxLength);
         builder.Property(entry => entry.ActorId).HasMaxLength(AuditEntry.SubjectIdMaxLength);
         builder.Property(entry => entry.ActorLabel).HasMaxLength(AuditEntry.LabelMaxLength);
+        builder.Property(entry => entry.OnBehalfOfId).HasMaxLength(AuditEntry.SubjectIdMaxLength);
+        builder.Property(entry => entry.OnBehalfOfLabel).HasMaxLength(AuditEntry.LabelMaxLength);
         builder.Property(entry => entry.TargetType).HasMaxLength(AuditEntry.SubjectTypeMaxLength);
         builder.Property(entry => entry.TargetId).HasMaxLength(AuditEntry.SubjectIdMaxLength);
         builder.Property(entry => entry.TargetLabel).HasMaxLength(AuditEntry.LabelMaxLength);
@@ -63,5 +65,6 @@ internal sealed class AuditEntryConfiguration : IEntityTypeConfiguration<AuditEn
         // "Everything about this user" looks the id up on both sides.
         builder.HasIndex(entry => entry.ActorId).HasDatabaseName("IX_AuditEntries_ActorId");
         builder.HasIndex(entry => entry.TargetId).HasDatabaseName("IX_AuditEntries_TargetId");
+        builder.HasIndex(entry => entry.OnBehalfOfId).HasDatabaseName("IX_AuditEntries_OnBehalfOfId");
     }
 }

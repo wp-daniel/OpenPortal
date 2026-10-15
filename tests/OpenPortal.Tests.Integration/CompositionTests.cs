@@ -6,6 +6,7 @@ using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Notifications.Application.Abstractions;
 using OpenPortal.SharedKernel.Auditing;
 using OpenPortal.SharedKernel.Notifications;
+using OpenPortal.SharedKernel.Privacy;
 
 namespace OpenPortal.Tests.Integration;
 
@@ -66,6 +67,17 @@ public sealed class CompositionTests(OpenPortalFactory factory) : IClassFixture<
         typeof(INotificationService),
         typeof(INotificationMaintenance),
         typeof(INotificationContext),
+        typeof(IAccountErasure),
+        typeof(IAccessUserMaintenance),
+        typeof(IAnnouncementService),
+        typeof(IAnnouncementAuthorization),
+        typeof(ILegalDocumentService),
+        typeof(IPrivacySettingsService),
+        typeof(IAccountPrivacyService),
+        typeof(IImpersonationService),
+        typeof(IPersonalAccessTokenService),
+        typeof(IPersonalAccessTokenValidator),
+        typeof(IEnumerable<IPersonalDataSource>),
     };
 
     [Theory]

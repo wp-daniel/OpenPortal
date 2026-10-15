@@ -92,6 +92,9 @@ public sealed class ApiClient : IDisposable
     public Task<HttpResponseMessage> PostFormAsync(string path, IDictionary<string, string> fields) =>
         _http.PostAsync(path, new FormUrlEncodedContent(fields));
 
+    /// <summary>Posts a body as given (a multipart upload), with the antiforgery header like every other call.</summary>
+    public Task<HttpResponseMessage> PostFormDataAsync(string path, HttpContent content) => _http.PostAsync(path, content);
+
     public Task<HttpResponseMessage> PutAsync(string path, object body) =>
         _http.PutAsJsonAsync(path, body);
 

@@ -26,6 +26,12 @@ public static class IdentityNotificationTypes
 
     /// <summary>To the user: their self-registered account was approved.</summary>
     public const string RegistrationApproved = "account.registration_approved";
+
+    /// <summary>To the user reviewers: someone asked for their account to be deleted (<c>user</c>, <c>email</c>, <c>date</c>).</summary>
+    public const string DeletionRequested = "user.deletion_requested";
+
+    /// <summary>To the user: an administrator acted as them for support (<c>admin</c>, <c>reason</c>).</summary>
+    public const string Impersonated = "account.impersonated";
 }
 
 /// <summary>The kinds of work Identity notices are addressed to; the host maps each to the people who may do it.</summary>

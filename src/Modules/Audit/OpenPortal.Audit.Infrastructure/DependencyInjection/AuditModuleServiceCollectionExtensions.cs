@@ -7,6 +7,7 @@ using OpenPortal.Audit.Infrastructure.Configuration;
 using OpenPortal.Audit.Infrastructure.Persistence;
 using OpenPortal.Audit.Infrastructure.Services;
 using OpenPortal.SharedKernel.Auditing;
+using OpenPortal.SharedKernel.Privacy;
 using OpenPortal.SharedKernel.Time;
 
 namespace OpenPortal.Audit.Infrastructure.DependencyInjection;
@@ -43,6 +44,7 @@ public static class AuditModuleServiceCollectionExtensions
         services.AddScoped<IAuditTrail, AuditTrail>();
         services.AddScoped<IAuditLogService, AuditLogService>();
         services.AddScoped<IAuditStatisticsService, AuditStatisticsService>();
+        services.AddScoped<IPersonalDataSource, AuditPersonalData>();
 
         services.AddSingleton<AuditRetentionService>();
         services.AddHostedService(provider => provider.GetRequiredService<AuditRetentionService>());

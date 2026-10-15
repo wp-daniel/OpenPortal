@@ -71,4 +71,19 @@ public interface IUserAdministrationService
     /// administrator. What other modules hold about the user (groups, grants) is the host's to remove.
     /// </summary>
     Task<Result> DeleteUserAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Every account matching the filter, sorted by email, up to <paramref name="maxRows"/>, for a download. Needs
+    /// <see cref="UserAdministrationOperation.ExchangeUsers"/>; recorded in the audit log.
+    /// </summary>
+    Task<Result<IReadOnlyList<UserSummaryDto>>> ExportUsersAsync(UserListFilter filter, int maxRows, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Ends every portal session of the account (its security stamp rotates) and its personal access tokens. Not
+    /// yourself; an administrator only by an administrator. The host also revokes its application tokens.
+    /// </summary>
+    Task<Result> RevokeSessionsAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>Records the outcome of a user file import (the rows themselves are audited one by one).</summary>
+    Task RecordImportAsync(IReadOnlyDictionary<string, string?> summary, CancellationToken cancellationToken);
 }

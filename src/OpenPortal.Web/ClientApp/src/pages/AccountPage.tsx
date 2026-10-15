@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Building2, Info, KeyRound, Loader2, LockKeyhole, UserRound } from 'lucide-react'
+import { Building2, Info, KeyRound, KeySquare, Loader2, LockKeyhole, ShieldCheck, UserRound } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { z } from 'zod'
 import { accountApi } from '@/api/auth'
@@ -9,8 +9,10 @@ import { MyAccessRequestsSection, MyOrganizationsSection } from '@/components/Ac
 import { AvatarUpload } from '@/components/AvatarUpload'
 import { FormField } from '@/components/FormField'
 import { PageHeader } from '@/components/PageHeader'
+import { PrivacySection } from '@/components/PrivacySection'
 import { Section } from '@/components/Section'
 import { LoadingState } from '@/components/StatePanels'
+import { TokensSection } from '@/components/TokensSection'
 import { TwoFactorSection } from '@/components/TwoFactorSection'
 import { UserDetailsFields } from '@/components/UserDetailsFields'
 import { Badge } from '@/components/ui/badge'
@@ -73,6 +75,16 @@ export function AccountPage() {
             <KeyRound />
             {t('account.tab.requests')}
           </TabsTrigger>
+          {session.features.personalAccessTokens && (
+            <TabsTrigger value="tokens">
+              <KeySquare />
+              {t('account.tab.tokens')}
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="privacy">
+            <ShieldCheck />
+            {t('account.tab.privacy')}
+          </TabsTrigger>
           <TabsTrigger value="details">
             <Info />
             {t('account.tab.details')}
@@ -115,6 +127,14 @@ export function AccountPage() {
           <MyAccessRequestsSection />
         </TabsContent>
 
+        <TabsContent value="tokens" className="space-y-6 pt-4">
+          {session.features.personalAccessTokens && <TokensSection />}
+        </TabsContent>
+
+        <TabsContent value="privacy" className="space-y-6 pt-4">
+          <PrivacySection />
+        </TabsContent>
+
         <TabsContent value="details" className="pt-4">
           <AccountDetails user={user} profile={profile.data} />
         </TabsContent>
@@ -123,7 +143,7 @@ export function AccountPage() {
   )
 }
 
-const ACCOUNT_TABS = ['profile', 'security', 'organizations', 'requests', 'details'] as const
+const ACCOUNT_TABS = ['profile', 'security', 'organizations', 'requests', 'tokens', 'privacy', 'details'] as const
 
 /** Read-only facts about the account that the user cannot edit here. */
 function AccountDetails({ user, profile }: { user: SessionUser | null; profile: AccountProfile | undefined }) {

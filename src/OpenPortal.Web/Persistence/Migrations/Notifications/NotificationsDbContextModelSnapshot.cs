@@ -17,6 +17,42 @@ namespace OpenPortal.Web.Persistence.Migrations.Notifications
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
 
+            modelBuilder.Entity("OpenPortal.Notifications.Domain.Announcement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Audience")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Dismissible")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("EndsAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("StartsAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("UpdatedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Announcements", (string)null);
+                });
+
             modelBuilder.Entity("OpenPortal.Notifications.Domain.Notification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -57,6 +93,37 @@ namespace OpenPortal.Web.Persistence.Migrations.Notifications
                         .HasDatabaseName("IX_Notifications_RecipientId_ReadAtUtc");
 
                     b.ToTable("Notifications", (string)null);
+                });
+
+            modelBuilder.Entity("OpenPortal.Notifications.Domain.Announcement", b =>
+                {
+                    b.OwnsMany("OpenPortal.Notifications.Domain.AnnouncementText", "Texts", b1 =>
+                        {
+                            b1.Property<Guid>("AnnouncementId")
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("Language")
+                                .HasMaxLength(10)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("Body")
+                                .HasMaxLength(1000)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("Title")
+                                .IsRequired()
+                                .HasMaxLength(120)
+                                .HasColumnType("TEXT");
+
+                            b1.HasKey("AnnouncementId", "Language");
+
+                            b1.ToTable("AnnouncementTexts", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("AnnouncementId");
+                        });
+
+                    b.Navigation("Texts");
                 });
 #pragma warning restore 612, 618
         }

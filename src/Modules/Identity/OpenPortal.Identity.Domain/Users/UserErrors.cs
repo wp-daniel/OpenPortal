@@ -182,4 +182,28 @@ public static class UserErrors
 
     public static Error DeleteFailed { get; } =
         Error.Failure(Prefix + "delete_failed", "The account could not be deleted.");
+
+    public static Error PasswordIncorrect { get; } =
+        Error.Validation(Prefix + "password_incorrect", "The password is not correct.");
+
+    public static Error SelfDeletionDisabled { get; } =
+        Error.Forbidden(Prefix + "self_deletion_disabled", "Accounts cannot be deleted by their owners on this portal; ask an administrator.");
+
+    public static Error LastAdministrator { get; } =
+        Error.Conflict(Prefix + "last_administrator", "The only administrator cannot delete their account; make someone else an administrator first.");
+
+    public static Error DeletionNotScheduled { get; } =
+        Error.Conflict(Prefix + "deletion_not_scheduled", "No deletion is scheduled for this account.");
+
+    public static Error GraceDaysInvalid { get; } =
+        Error.Validation(Prefix + "grace_days_invalid", "The grace period is between 0 and 365 days.");
+
+    public static Error ImpersonationRefused { get; } =
+        Error.Forbidden(Prefix + "impersonation_refused", "This account cannot be impersonated: it is yours, an administrator, or not active.");
+
+    public static Error NotImpersonating { get; } =
+        Error.Conflict(Prefix + "not_impersonating", "This session is not impersonating anyone.");
+
+    public static Error ReasonRequired { get; } =
+        Error.Validation(Prefix + "reason_required", "Say why you need to act as this account (at most 200 characters).");
 }

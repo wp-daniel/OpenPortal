@@ -31,6 +31,9 @@ public sealed class RateLimitingOptions
     /// <summary>The token endpoint and application announcements, per address (servers, not browsers).</summary>
     public WindowLimit Machine { get; set; } = new() { PermitLimit = 120, WindowSeconds = 60 };
 
+    /// <summary>Downloads of a whole account's personal data, per account: heavy to build, rarely needed.</summary>
+    public WindowLimit Export { get; set; } = new() { PermitLimit = 5, WindowSeconds = 3600 };
+
     public sealed class WindowLimit
     {
         public int PermitLimit { get; set; }
@@ -44,6 +47,7 @@ public static class RateLimitPolicies
 {
     public const string SignIn = "sign-in";
     public const string Machine = "machine";
+    public const string Export = "export";
 }
 
 /// <summary>
@@ -73,6 +77,7 @@ public static class RateLimitingSetup
             {
                 limiter.AddPolicy(RateLimitPolicies.SignIn, _ => RateLimitPartition.GetNoLimiter(string.Empty));
                 limiter.AddPolicy(RateLimitPolicies.Machine, _ => RateLimitPartition.GetNoLimiter(string.Empty));
+                limiter.AddPolicy(RateLimitPolicies.Export, _ => RateLimitPartition.GetNoLimiter(string.Empty));
                 return;
             }
 
@@ -84,6 +89,7 @@ public static class RateLimitingSetup
 
             limiter.AddPolicy(RateLimitPolicies.SignIn, context => Window($"sign-in:{AddressOf(context)}", options.SignIn));
             limiter.AddPolicy(RateLimitPolicies.Machine, context => Window($"machine:{AddressOf(context)}", options.Machine));
+            limiter.AddPolicy(RateLimitPolicies.Export, context => Window($"export:{CallerKey(context)}", options.Export));
         });
 
         return services;

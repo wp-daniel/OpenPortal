@@ -7,6 +7,7 @@ import { ApiError } from '@/api/client'
 import { registrationApi } from '@/api/registration'
 import type { InvitationPreview } from '@/api/types'
 import { FormField } from '@/components/FormField'
+import { LegalConsent, useLegalConsent } from '@/components/LegalConsent'
 import { Section } from '@/components/Section'
 import { LoadingState } from '@/components/StatePanels'
 import { Button } from '@/components/ui/button'
@@ -81,6 +82,8 @@ function AcceptForm({ token, invitation }: { token: string; invitation: Invitati
     password: '',
   })
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({})
+  const consent = useLegalConsent()
+  const [consentError, setConsentError] = useState<string>()
 
   const schema = useMemo(
     () =>
@@ -99,6 +102,7 @@ function AcceptForm({ token, invitation }: { token: string; invitation: Invitati
         firstName: fields.firstName.trim(),
         lastName: fields.lastName.trim(),
         password: fields.password,
+        acceptedLegalDocumentIds: consent.documentIds,
       }),
     meta: { handlesErrors: true },
     // Signed in: the public-only route takes the new account to the dashboard.
@@ -110,13 +114,18 @@ function AcceptForm({ token, invitation }: { token: string; invitation: Invitati
     event.preventDefault()
     const parsed = schema.safeParse(fields)
 
+    const consentMissing = !consent.satisfied
+    setConsentError(consentMissing ? t('legal.consent.required') : undefined)
+
     if (!parsed.success) {
       setErrors(zodFieldErrors<Field>(parsed.error))
       return
     }
 
     setErrors({})
-    accept.mutate()
+    if (!consentMissing) {
+      accept.mutate()
+    }
   }
 
   const server = serverFieldErrors(accept.error)
@@ -164,7 +173,9 @@ function AcceptForm({ token, invitation }: { token: string; invitation: Invitati
           <Input type="password" autoComplete="new-password" value={fields.password} onChange={(event) => set('password')(event.target.value)} />
         </FormField>
 
-        <Button type="submit" className="w-full" disabled={accept.isPending}>
+        <LegalConsent consent={consent} error={consentError} />
+
+        <Button type="submit" className="w-full" disabled={accept.isPending || consent.isPending}>
           {accept.isPending && <Loader2 className="animate-spin" />}
           {t('invitation.submit')}
         </Button>

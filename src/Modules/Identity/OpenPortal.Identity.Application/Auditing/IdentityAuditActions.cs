@@ -70,6 +70,46 @@ public static class IdentityAuditActions
 
     /// <summary>The invitation became an account; the actor is the new account.</summary>
     public const string InvitationAccepted = "user.invitation_accepted";
+
+    /// <summary>A version of the privacy notice or the terms of use was put in force; the target is the version.</summary>
+    public const string LegalDocumentPublished = "legal.document_published";
+
+    /// <summary>The caller accepted the versions in force named in the details.</summary>
+    public const string LegalAccepted = "account.legal_accepted";
+
+    /// <summary>The caller downloaded a copy of their personal data.</summary>
+    public const string DataExported = "account.data_exported";
+
+    /// <summary>The caller asked for their account to be deleted; details carry the scheduled date.</summary>
+    public const string DeletionRequested = "account.deletion_requested";
+
+    public const string DeletionCancelled = "account.deletion_cancelled";
+
+    /// <summary>The privacy settings (self-service deletion, grace period) changed.</summary>
+    public const string PrivacySettingsUpdated = "settings.privacy_updated";
+
+    /// <summary>An administrator started acting as an account for support; details carry the reason.</summary>
+    public const string ImpersonationStarted = "user.impersonation_started";
+
+    public const string ImpersonationEnded = "user.impersonation_ended";
+
+    /// <summary>The user list was downloaded; details carry the filter and the row count.</summary>
+    public const string UsersExported = "user.exported";
+
+    /// <summary>A user file was imported; details carry how many rows were invited, updated, skipped or refused.</summary>
+    public const string UsersImported = "user.import_completed";
+
+    /// <summary>Every session and token of an account was ended by an administrator.</summary>
+    public const string SessionsRevoked = "user.sessions_revoked";
+
+    /// <summary>The caller created a personal access token; the target is the token.</summary>
+    public const string TokenCreated = "account.token_created";
+
+    /// <summary>The caller revoked one of their personal access tokens.</summary>
+    public const string TokenRevoked = "account.token_revoked";
+
+    /// <summary>An administrator revoked someone else's personal access token.</summary>
+    public const string UserTokenRevoked = "user.token_revoked";
 }
 
 /// <summary>Values of the <c>method</c> detail on a sign-in that needed a second factor.</summary>

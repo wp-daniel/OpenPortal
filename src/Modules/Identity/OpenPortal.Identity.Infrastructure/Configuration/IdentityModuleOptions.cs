@@ -16,6 +16,12 @@ public sealed class IdentityModuleOptions
 
     public CookiePolicy Cookie { get; set; } = new();
 
+    /// <summary>
+    /// How long an administrator's support session (acting as another account) lasts before it ends by itself and
+    /// they must sign in again.
+    /// </summary>
+    public int ImpersonationMinutes { get; set; } = 60;
+
     public sealed class PasswordPolicy
     {
         public int RequiredLength { get; set; } = 12;

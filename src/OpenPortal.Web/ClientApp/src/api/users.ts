@@ -1,5 +1,14 @@
 import { api, withQuery } from './client'
-import type { CreateUserRequest, PagedResult, UpdateUserRequest, UserSummary } from './types'
+import type {
+  CreateUserRequest,
+  PagedResult,
+  PersonalAccessToken,
+  UpdateUserRequest,
+  UserBulkAction,
+  UserBulkResult,
+  UserImportResult,
+  UserSummary,
+} from './types'
 
 export const userAdminApi = {
   list: (
@@ -37,6 +46,38 @@ export const userAdminApi = {
 
   /** Deletes the account, its group memberships and its application grants. */
   remove: (userId: string) => api.delete<void>(`/api/admin/users/${userId}`),
+
+  /** Where the CSV of the filter (or of the selected ids) downloads from: a plain link, the cookie goes along. */
+  exportUrl: (params: { search?: string; administrator?: boolean; status?: string; ids?: readonly string[] }) => {
+    const path = withQuery('/api/admin/users/export', {
+      search: params.search,
+      administrator: params.administrator === undefined ? undefined : String(params.administrator),
+      status: params.status,
+    })
+    const ids = (params.ids ?? []).map((id) => `ids=${encodeURIComponent(id)}`).join('&')
+
+    return ids ? `${path}${path.includes('?') ? '&' : '?'}${ids}` : path
+  },
+
+  /** Imports a CSV: new addresses are invited, existing accounts updated or skipped. A dry run writes nothing. */
+  importCsv: (file: File, options: { dryRun: boolean; updateExisting: boolean }) => {
+    const form = new FormData()
+    form.append('file', file, file.name)
+
+    return api.post<UserImportResult>(
+      withQuery('/api/admin/users/import', { dryRun: String(options.dryRun), updateExisting: String(options.updateExisting) }),
+      form,
+    )
+  },
+
+  /** One action on several accounts; the answer says what happened to each. */
+  bulk: (action: UserBulkAction, userIds: readonly string[], groupId?: string) =>
+    api.post<UserBulkResult[]>('/api/admin/users/bulk', { action, userIds, groupId }),
+
+  tokens: (userId: string, signal?: AbortSignal) =>
+    api.get<PersonalAccessToken[]>(`/api/admin/users/${userId}/tokens`, signal),
+
+  revokeToken: (userId: string, tokenId: string) => api.delete<void>(`/api/admin/users/${userId}/tokens/${tokenId}`),
 }
 
 /** The multipart body every avatar upload sends: one `file` part, judged by its bytes on the server. */

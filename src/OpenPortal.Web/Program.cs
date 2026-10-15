@@ -27,7 +27,9 @@ using OpenPortal.Web.Middleware;
 using OpenPortal.Web.Notifications;
 using OpenPortal.Web.Oidc;
 using OpenPortal.Web.Persistence;
+using OpenPortal.Web.Privacy;
 using OpenPortal.Web.Security;
+using OpenPortal.Web.Users;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -133,6 +135,7 @@ builder.Services.AddAuditModule(
 // Notifications: the notifier every module tells people with (INotifier) and each user's notification center. The
 // host says who is calling and which people each kind of work (a notice's roles) names.
 builder.Services.AddScoped<INotificationContext, HostNotificationContext>();
+builder.Services.AddScoped<IAnnouncementAuthorization, AnnouncementAuthorization>();
 
 builder.Services.AddNotificationsModule(
     builder.Configuration,
@@ -166,6 +169,7 @@ builder.Services
     .AddControllers(options =>
     {
         options.Filters.Add<ValidateAntiforgeryTokenFilter>();
+        options.Filters.Add<PersonalAccessTokenScopeFilter>();
 
         // Keep "Async" in action names so CreatedAtAction(nameof(GetAsync), ...) resolves. With MVC's default
         // the suffix is trimmed, the lookup finds no route, and a create that already succeeded answers 500.
@@ -210,6 +214,9 @@ builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 
 builder.Services.AddOpenPortalAuthorization();
 
+// Personal access tokens: scripts call the portal's own API as their owner with Authorization: Bearer opp_….
+builder.Services.AddPersonalAccessTokenAuthentication();
+
 // Antiforgery for a cookie-authenticated API. The token cookie is readable by script on purpose: it is
 // a per-session nonce, not a credential, and the client echoes it in a header so a cross-site form post
 // cannot forge a state-changing request. The session cookie itself stays HttpOnly.
@@ -237,6 +244,14 @@ builder.Services.AddOpenPortalGeo(builder.Configuration);
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<DatabaseInitializer>();
+builder.Services.AddScoped<AccountEraser>();
+builder.Services.AddScoped<UserCsv>();
+builder.Services.AddScoped<UserBulkActions>();
+
+// Privacy rights: the copy of a person's data (gathered from every module) and the scheduled account deletions.
+builder.Services.AddScoped<PersonalDataExport>();
+builder.Services.AddSingleton<AccountDeletionService>();
+builder.Services.AddHostedService(provider => provider.GetRequiredService<AccountDeletionService>());
 
 // Hardening: browser security headers, request rate limits, a trusted reverse proxy's forwarded headers, and
 // the health endpoints a load balancer or orchestrator probes.

@@ -45,6 +45,14 @@ public sealed class AuditEntry
 
     public string? ActorLabel { get; private set; }
 
+    /// <summary>
+    /// The account the actor was acting as, while an administrator was impersonating it for support; null
+    /// otherwise. The actor is always the person who really acted.
+    /// </summary>
+    public string? OnBehalfOfId { get; private set; }
+
+    public string? OnBehalfOfLabel { get; private set; }
+
     public string? TargetType { get; private set; }
 
     public string? TargetId { get; private set; }
@@ -71,7 +79,8 @@ public sealed class AuditEntry
         AuditSubject? actor,
         AuditSubject? target,
         string? details,
-        AuditOrigin origin)
+        AuditOrigin origin,
+        AuditSubject? onBehalfOf = null)
     {
         ArgumentOutOfRangeException.ThrowIfEqual(Guid.Empty, id);
         ArgumentException.ThrowIfNullOrWhiteSpace(action);
@@ -86,6 +95,8 @@ public sealed class AuditEntry
             ActorType = Clip(actor?.Type, SubjectTypeMaxLength),
             ActorId = Clip(actor?.Id, SubjectIdMaxLength),
             ActorLabel = Clip(actor?.Label, LabelMaxLength),
+            OnBehalfOfId = Clip(onBehalfOf?.Id, SubjectIdMaxLength),
+            OnBehalfOfLabel = Clip(onBehalfOf?.Label, LabelMaxLength),
             TargetType = Clip(target?.Type, SubjectTypeMaxLength),
             TargetId = Clip(target?.Id, SubjectIdMaxLength),
             TargetLabel = Clip(target?.Label, LabelMaxLength),

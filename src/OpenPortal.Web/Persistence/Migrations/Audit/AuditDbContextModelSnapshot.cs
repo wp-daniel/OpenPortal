@@ -55,6 +55,14 @@ namespace OpenPortal.Web.Persistence.Migrations.Audit
                     b.Property<long>("OccurredAtUtc")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("OnBehalfOfId")
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OnBehalfOfLabel")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Outcome")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -83,6 +91,9 @@ namespace OpenPortal.Web.Persistence.Migrations.Audit
 
                     b.HasIndex("OccurredAtUtc")
                         .HasDatabaseName("IX_AuditEntries_OccurredAtUtc");
+
+                    b.HasIndex("OnBehalfOfId")
+                        .HasDatabaseName("IX_AuditEntries_OnBehalfOfId");
 
                     b.HasIndex("TargetId")
                         .HasDatabaseName("IX_AuditEntries_TargetId");

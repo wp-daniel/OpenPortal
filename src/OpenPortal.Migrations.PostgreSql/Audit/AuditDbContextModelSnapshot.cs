@@ -60,6 +60,14 @@ namespace OpenPortal.Migrations.PostgreSql.Audit
                     b.Property<DateTimeOffset>("OccurredAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("OnBehalfOfId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("OnBehalfOfLabel")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.Property<string>("Outcome")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -88,6 +96,9 @@ namespace OpenPortal.Migrations.PostgreSql.Audit
 
                     b.HasIndex("OccurredAtUtc")
                         .HasDatabaseName("IX_AuditEntries_OccurredAtUtc");
+
+                    b.HasIndex("OnBehalfOfId")
+                        .HasDatabaseName("IX_AuditEntries_OnBehalfOfId");
 
                     b.HasIndex("TargetId")
                         .HasDatabaseName("IX_AuditEntries_TargetId");

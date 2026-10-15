@@ -15,6 +15,7 @@ namespace OpenPortal.Identity.Infrastructure.Services;
 /// <inheritdoc />
 internal sealed class IdentityRegistrationService : IRegistrationService
 {
+    private readonly IdentityLegalDocumentService _legal;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly RegistrationSettingsStore _settings;
@@ -30,8 +31,10 @@ internal sealed class IdentityRegistrationService : IRegistrationService
         IAccountMessaging messaging,
         IClock clock,
         IAuditTrail audit,
-        INotifier notifier)
+        INotifier notifier,
+        IdentityLegalDocumentService legal)
     {
+        _legal = legal;
         _userManager = userManager;
         _signInManager = signInManager;
         _settings = settings;
@@ -70,6 +73,12 @@ internal sealed class IdentityRegistrationService : IRegistrationService
         if (confirm && !_messaging.CanSendEmail)
         {
             return Result<RegistrationResultDto>.Failure(UserErrors.EmailDeliveryUnavailable);
+        }
+
+        var legal = await _legal.RequireAcceptedAsync(request.AcceptedLegalDocumentIds, cancellationToken).ConfigureAwait(false);
+        if (legal.IsFailure)
+        {
+            return Result<RegistrationResultDto>.Failure(legal.Error);
         }
 
         if (await _userManager.FindByEmailAsync(email).ConfigureAwait(false) is not null)
@@ -114,6 +123,8 @@ internal sealed class IdentityRegistrationService : IRegistrationService
             await _userManager.DeleteAsync(user).ConfigureAwait(false);
             return Result<RegistrationResultDto>.Failure(role.ToError(UserErrors.RoleAssignmentFailed));
         }
+
+        await _legal.RecordAsync(user.Id, legal.Value, cancellationToken).ConfigureAwait(false);
 
         await _audit.RecordAsync(
                 new AuditEvent

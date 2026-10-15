@@ -914,7 +914,7 @@
   <data name="error.identity.invitation_message_too_long" xml:space="preserve"><value>Le message ne peut pas dépasser 500 caractères.</value></data>
   <data name="error.identity.invitation_too_many_memberships" xml:space="preserve"><value>Une invitation peut indiquer au plus 50 groupes et 50 organisations.</value></data>
   <data name="validation.application.required" xml:space="preserve"><value>Choisissez une application.</value></data>
-  <data name="validation.reason.max" xml:space="preserve"><value>Le motif ne peut pas dépasser 500 caractères.</value></data>
+  <data name="validation.reason.max" xml:space="preserve"><value>Le motif ne doit pas dépasser 200 caractères.</value></data>
   <data name="validation.message.max" xml:space="preserve"><value>Le message ne peut pas dépasser 500 caractères.</value></data>
   <data name="validation.registrationMode.required" xml:space="preserve"><value>Choisissez le fonctionnement de l'inscription.</value></data>
   <data name="validation.invitationLifetime.range" xml:space="preserve"><value>Les invitations doivent rester valables entre 1 et 90 jours.</value></data>
@@ -1278,4 +1278,317 @@
   <data name="statistics.reason.pending_approval" xml:space="preserve"><value>En attente d'approbation</value></data>
   <data name="statistics.reason.email_not_confirmed" xml:space="preserve"><value>E-mail non confirmé</value></data>
   <data name="statistics.reason.unknown" xml:space="preserve"><value>Autre</value></data>
+  <data name="error.auth.interactive_session_required" xml:space="preserve"><value>Seul le titulaire du compte peut le faire, connecté au portail avec son mot de passe.</value></data>
+  <data name="nav.announcements" xml:space="preserve"><value>Annonces</value></data>
+  <data name="nav.communication" xml:space="preserve"><value>Communication</value></data>
+  <data name="audit.action.announcement.created" xml:space="preserve"><value>Annonce créée</value></data>
+  <data name="audit.action.announcement.updated" xml:space="preserve"><value>Annonce modifiée</value></data>
+  <data name="audit.action.announcement.deleted" xml:space="preserve"><value>Annonce supprimée</value></data>
+  <data name="audit.category.announcement" xml:space="preserve"><value>Annonces</value></data>
+  <data name="audit.subject.announcement" xml:space="preserve"><value>Annonce</value></data>
+  <data name="audit.subject.legal_document" xml:space="preserve"><value>Document juridique</value></data>
+  <data name="audit.subject.personal_access_token" xml:space="preserve"><value>Jeton personnel</value></data>
+  <data name="audit.subject.system" xml:space="preserve"><value>Système</value></data>
+  <data name="error.announcements.not_found" xml:space="preserve"><value>L'annonce n'existe pas.</value></data>
+  <data name="error.announcements.manage_forbidden" xml:space="preserve"><value>La gestion des annonces nécessite un compte administrateur ou la page Annonces.</value></data>
+  <data name="error.announcements.invalid" xml:space="preserve"><value>Le type ou le public de l'annonce n'est pas valide.</value></data>
+  <data name="error.announcements.window_invalid" xml:space="preserve"><value>Une annonce doit se terminer après son début.</value></data>
+  <data name="error.announcements.text_required" xml:space="preserve"><value>Une annonce doit avoir un texte dans au moins une langue.</value></data>
+  <data name="error.announcements.language_invalid" xml:space="preserve"><value>Chaque texte doit avoir un code de langue valide et différent.</value></data>
+  <data name="error.announcements.title_required" xml:space="preserve"><value>Chaque texte doit avoir un titre.</value></data>
+  <data name="error.announcements.text_too_long" xml:space="preserve"><value>Le titre comporte au plus 120 caractères et le message 1000.</value></data>
+  <data name="announcements.title" xml:space="preserve"><value>Annonces</value></data>
+  <data name="announcements.description" xml:space="preserve"><value>Bannières affichées dans tout le portail : nouveautés, avertissements et maintenances planifiées, chacune pour une période donnée.</value></data>
+  <data name="announcements.create" xml:space="preserve"><value>Nouvelle annonce</value></data>
+  <data name="announcements.listTitle" xml:space="preserve"><value>Toutes les annonces</value></data>
+  <data name="announcements.search" xml:space="preserve"><value>Rechercher des annonces</value></data>
+  <data name="announcements.empty.title" xml:space="preserve"><value>Aucune annonce</value></data>
+  <data name="announcements.empty.description" xml:space="preserve"><value>Rédigez-en une pour informer tout le monde d'une nouveauté ou d'une maintenance planifiée.</value></data>
+  <data name="announcements.column.title" xml:space="preserve"><value>Annonce</value></data>
+  <data name="announcements.column.audience" xml:space="preserve"><value>Public</value></data>
+  <data name="announcements.column.window" xml:space="preserve"><value>Affichée</value></data>
+  <data name="announcements.column.status" xml:space="preserve"><value>Statut</value></data>
+  <data name="announcements.status.scheduled" xml:space="preserve"><value>Planifiée</value></data>
+  <data name="announcements.status.active" xml:space="preserve"><value>Affichée</value></data>
+  <data name="announcements.status.ended" xml:space="preserve"><value>Terminée</value></data>
+  <data name="announcements.severity.info" xml:space="preserve"><value>Information</value></data>
+  <data name="announcements.severity.warning" xml:space="preserve"><value>Avertissement</value></data>
+  <data name="announcements.severity.maintenance" xml:space="preserve"><value>Maintenance</value></data>
+  <data name="announcements.audience.everyone" xml:space="preserve"><value>Tout le monde</value></data>
+  <data name="announcements.audience.everyoneHint" xml:space="preserve"><value>Également sur la page de connexion.</value></data>
+  <data name="announcements.audience.signed_in" xml:space="preserve"><value>Utilisateurs connectés</value></data>
+  <data name="announcements.audience.signed_inHint" xml:space="preserve"><value>Uniquement dans le portail.</value></data>
+  <data name="announcements.window.now" xml:space="preserve"><value>Dès l'enregistrement</value></data>
+  <data name="announcements.window.open" xml:space="preserve"><value>Jusqu'à sa suppression</value></data>
+  <data name="announcements.window.until" xml:space="preserve"><value>jusqu'au {date}</value></data>
+  <data name="announcements.until" xml:space="preserve"><value>Jusqu'au {date}</value></data>
+  <data name="announcements.region" xml:space="preserve"><value>Annonces</value></data>
+  <data name="announcements.dismiss" xml:space="preserve"><value>Masquer cette annonce</value></data>
+  <data name="announcements.saved" xml:space="preserve"><value>Annonce enregistrée</value></data>
+  <data name="announcements.saveFailed" xml:space="preserve"><value>Impossible d'enregistrer l'annonce</value></data>
+  <data name="announcements.deleted" xml:space="preserve"><value>Annonce supprimée</value></data>
+  <data name="announcements.deleteTitle" xml:space="preserve"><value>Supprimer cette annonce ?</value></data>
+  <data name="announcements.deleteDescription" xml:space="preserve"><value>Elle disparaît immédiatement pour tout le monde.</value></data>
+  <data name="announcements.form.createTitle" xml:space="preserve"><value>Nouvelle annonce</value></data>
+  <data name="announcements.form.editTitle" xml:space="preserve"><value>Modifier l'annonce</value></data>
+  <data name="announcements.form.description" xml:space="preserve"><value>Chaque lecteur voit le texte dans sa langue, ou dans la langue par défaut si elle manque.</value></data>
+  <data name="announcements.form.severity" xml:space="preserve"><value>Type</value></data>
+  <data name="announcements.form.audience" xml:space="preserve"><value>Affichée pour</value></data>
+  <data name="announcements.form.startsAt" xml:space="preserve"><value>Début</value></data>
+  <data name="announcements.form.startsAtHint" xml:space="preserve"><value>Vide : dès l'enregistrement.</value></data>
+  <data name="announcements.form.endsAt" xml:space="preserve"><value>Fin</value></data>
+  <data name="announcements.form.endsAtHint" xml:space="preserve"><value>Vide : jusqu'à sa suppression.</value></data>
+  <data name="announcements.form.windowInvalid" xml:space="preserve"><value>La fin doit être postérieure au début.</value></data>
+  <data name="announcements.form.dismissible" xml:space="preserve"><value>Les lecteurs peuvent la masquer</value></data>
+  <data name="announcements.form.dismissibleHint" xml:space="preserve"><value>Masquée dans leur navigateur jusqu'à la modification de l'annonce.</value></data>
+  <data name="announcements.form.texts" xml:space="preserve"><value>Texte</value></data>
+  <data name="announcements.form.textsHint" xml:space="preserve"><value>Seules les langues ayant un titre sont enregistrées.</value></data>
+  <data name="announcements.form.titleField" xml:space="preserve"><value>Titre</value></data>
+  <data name="announcements.form.body" xml:space="preserve"><value>Message</value></data>
+  <data name="announcements.form.bodyHint" xml:space="preserve"><value>Facultatif, texte brut.</value></data>
+  <data name="announcements.form.textRequired" xml:space="preserve"><value>Indiquez un titre dans au moins une langue.</value></data>
+  <data name="nav.legal" xml:space="preserve"><value>Confidentialité et conditions</value></data>
+  <data name="audit.category.legal" xml:space="preserve"><value>Confidentialité et conditions</value></data>
+  <data name="audit.action.legal.document_published" xml:space="preserve"><value>Document juridique publié</value></data>
+  <data name="audit.action.account.legal_accepted" xml:space="preserve"><value>Politique de confidentialité ou conditions acceptées</value></data>
+  <data name="audit.action.account.data_exported" xml:space="preserve"><value>Données personnelles téléchargées</value></data>
+  <data name="audit.action.account.deletion_requested" xml:space="preserve"><value>Suppression du compte demandée</value></data>
+  <data name="audit.action.account.deletion_cancelled" xml:space="preserve"><value>Suppression du compte annulée</value></data>
+  <data name="audit.action.settings.privacy_updated" xml:space="preserve"><value>Paramètres de confidentialité modifiés</value></data>
+  <data name="audit.action.user.impersonation_started" xml:space="preserve"><value>Session d'assistance démarrée</value></data>
+  <data name="audit.action.user.impersonation_ended" xml:space="preserve"><value>Session d'assistance terminée</value></data>
+  <data name="audit.action.user.exported" xml:space="preserve"><value>Liste des utilisateurs exportée</value></data>
+  <data name="audit.action.user.import_completed" xml:space="preserve"><value>Utilisateurs importés</value></data>
+  <data name="audit.action.user.sessions_revoked" xml:space="preserve"><value>Sessions fermées</value></data>
+  <data name="audit.action.account.token_created" xml:space="preserve"><value>Jeton personnel créé</value></data>
+  <data name="audit.action.account.token_revoked" xml:space="preserve"><value>Jeton personnel révoqué</value></data>
+  <data name="audit.action.user.token_revoked" xml:space="preserve"><value>Jeton d'un utilisateur révoqué</value></data>
+  <data name="error.legal.not_found" xml:space="preserve"><value>Le document n'existe pas.</value></data>
+  <data name="error.legal.kind_invalid" xml:space="preserve"><value>Le type de document doit être confidentialité ou conditions.</value></data>
+  <data name="error.legal.not_draft" xml:space="preserve"><value>Seul un brouillon peut être modifié, publié ou supprimé.</value></data>
+  <data name="error.legal.draft_exists" xml:space="preserve"><value>Un brouillon de ce document existe déjà ; modifiez-le ou supprimez-le d'abord.</value></data>
+  <data name="error.legal.text_required" xml:space="preserve"><value>Un document doit avoir un titre et un texte dans au moins une langue.</value></data>
+  <data name="error.legal.language_invalid" xml:space="preserve"><value>Chaque texte doit avoir un code de langue valide et différent.</value></data>
+  <data name="error.legal.text_too_long" xml:space="preserve"><value>Le titre comporte au plus 200 caractères et le texte 100 000.</value></data>
+  <data name="error.legal.acceptance_required" xml:space="preserve"><value>La politique de confidentialité et les conditions d'utilisation en vigueur doivent être acceptées.</value></data>
+  <data name="legal.privacy.title" xml:space="preserve"><value>Politique de confidentialité</value></data>
+  <data name="legal.terms.title" xml:space="preserve"><value>Conditions d'utilisation</value></data>
+  <data name="legal.privacy.link" xml:space="preserve"><value>Confidentialité</value></data>
+  <data name="legal.terms.link" xml:space="preserve"><value>Conditions</value></data>
+  <data name="legal.privacy.missing" xml:space="preserve"><value>Aucune politique de confidentialité n'a été publiée</value></data>
+  <data name="legal.terms.missing" xml:space="preserve"><value>Aucune condition d'utilisation n'a été publiée</value></data>
+  <data name="legal.missingDescription" xml:space="preserve"><value>Si vous en avez besoin, adressez-vous aux administrateurs du portail.</value></data>
+  <data name="legal.versionOf" xml:space="preserve"><value>Version {version}, en vigueur depuis le {date}</value></data>
+  <data name="legal.consent.prefix" xml:space="preserve"><value>J'ai lu et j'accepte</value></data>
+  <data name="legal.consent.and" xml:space="preserve"><value>et</value></data>
+  <data name="legal.consent.required" xml:space="preserve"><value>Acceptez la politique de confidentialité et les conditions d'utilisation pour continuer.</value></data>
+  <data name="legal.accept.title" xml:space="preserve"><value>Avant de continuer</value></data>
+  <data name="legal.accept.description" xml:space="preserve"><value>Ces documents ont changé depuis votre dernière acceptation. Lisez-les et acceptez-les pour continuer à utiliser le portail.</value></data>
+  <data name="legal.accept.openFull" xml:space="preserve"><value>Ouvrir dans un nouvel onglet</value></data>
+  <data name="legal.accept.confirm" xml:space="preserve"><value>J'ai lu et j'accepte ces documents.</value></data>
+  <data name="legal.accept.submit" xml:space="preserve"><value>Accepter et continuer</value></data>
+  <data name="legal.accept.failed" xml:space="preserve"><value>Impossible d'enregistrer votre acceptation</value></data>
+  <data name="legal.accept.nothing" xml:space="preserve"><value>Il n'y a rien à accepter.</value></data>
+  <data name="legal.accept.continue" xml:space="preserve"><value>Continuer</value></data>
+  <data name="legalAdmin.title" xml:space="preserve"><value>Confidentialité et conditions</value></data>
+  <data name="legalAdmin.description" xml:space="preserve"><value>Rédigez chaque document en brouillon, puis publiez-le comme nouvelle version. Les versions publiées ne changent plus : chaque acceptation se rapporte exactement au texte accepté.</value></data>
+  <data name="legalAdmin.privacy.description" xml:space="preserve"><value>Comment le portail traite les données personnelles.</value></data>
+  <data name="legalAdmin.terms.description" xml:space="preserve"><value>Les règles d'utilisation du portail et de ses applications.</value></data>
+  <data name="legalAdmin.newVersion" xml:space="preserve"><value>Nouvelle version</value></data>
+  <data name="legalAdmin.empty.title" xml:space="preserve"><value>Pas encore rédigé</value></data>
+  <data name="legalAdmin.empty.description" xml:space="preserve"><value>Commencez la première version : elle reste un brouillon jusqu'à sa publication.</value></data>
+  <data name="legalAdmin.column.version" xml:space="preserve"><value>Version</value></data>
+  <data name="legalAdmin.column.status" xml:space="preserve"><value>Statut</value></data>
+  <data name="legalAdmin.column.published" xml:space="preserve"><value>Publiée</value></data>
+  <data name="legalAdmin.column.acceptances" xml:space="preserve"><value>Acceptations</value></data>
+  <data name="legalAdmin.status.draft" xml:space="preserve"><value>Brouillon</value></data>
+  <data name="legalAdmin.status.published" xml:space="preserve"><value>En vigueur</value></data>
+  <data name="legalAdmin.status.superseded" xml:space="preserve"><value>Remplacée</value></data>
+  <data name="legalAdmin.requiresAcceptance" xml:space="preserve"><value>à accepter</value></data>
+  <data name="legalAdmin.publish" xml:space="preserve"><value>Publier</value></data>
+  <data name="legalAdmin.view" xml:space="preserve"><value>Voir</value></data>
+  <data name="legalAdmin.published" xml:space="preserve"><value>Version publiée</value></data>
+  <data name="legalAdmin.publishTitle" xml:space="preserve"><value>Publier la version {version} ?</value></data>
+  <data name="legalAdmin.publishDescription" xml:space="preserve"><value>Elle remplace la version en vigueur et ne pourra plus être modifiée.</value></data>
+  <data name="legalAdmin.publishDescriptionAcceptance" xml:space="preserve"><value>Elle remplace la version en vigueur et ne pourra plus être modifiée. Chacun devra l'accepter à sa prochaine visite et avant de se connecter à une application.</value></data>
+  <data name="legalAdmin.deleteTitle" xml:space="preserve"><value>Supprimer ce brouillon ?</value></data>
+  <data name="legalAdmin.deleteDescription" xml:space="preserve"><value>La version en vigueur n'est pas modifiée.</value></data>
+  <data name="legalAdmin.draftDeleted" xml:space="preserve"><value>Brouillon supprimé</value></data>
+  <data name="legalAdmin.draftSaved" xml:space="preserve"><value>Brouillon enregistré</value></data>
+  <data name="legalAdmin.saveDraft" xml:space="preserve"><value>Enregistrer le brouillon</value></data>
+  <data name="legalAdmin.saveFailed" xml:space="preserve"><value>Impossible d'enregistrer le brouillon</value></data>
+  <data name="legalAdmin.form.description" xml:space="preserve"><value>Chaque lecteur voit le texte dans sa langue, ou dans la langue par défaut si elle manque. Le Markdown est pris en charge, pas le HTML.</value></data>
+  <data name="legalAdmin.form.requiresAcceptance" xml:space="preserve"><value>Doit être acceptée</value></data>
+  <data name="legalAdmin.form.requiresAcceptanceHint" xml:space="preserve"><value>Les nouveaux comptes l'acceptent à l'inscription ; les comptes existants à leur prochaine visite.</value></data>
+  <data name="legalAdmin.form.titleField" xml:space="preserve"><value>Titre</value></data>
+  <data name="legalAdmin.form.body" xml:space="preserve"><value>Texte</value></data>
+  <data name="legalAdmin.form.bodyHint" xml:space="preserve"><value>Markdown : # titres, **gras**, listes, liens.</value></data>
+  <data name="legalAdmin.form.preview" xml:space="preserve"><value>Aperçu</value></data>
+  <data name="legalAdmin.form.write" xml:space="preserve"><value>Rédiger</value></data>
+  <data name="legalAdmin.form.emptyPreview" xml:space="preserve"><value>Rien de rédigé pour l'instant.</value></data>
+  <data name="legalAdmin.form.textRequired" xml:space="preserve"><value>Indiquez un titre et un texte dans au moins une langue.</value></data>
+  <data name="error.identity.password_incorrect" xml:space="preserve"><value>Le mot de passe n'est pas correct.</value></data>
+  <data name="error.identity.self_deletion_disabled" xml:space="preserve"><value>Sur ce portail, les titulaires ne peuvent pas supprimer leur compte ; adressez-vous à un administrateur.</value></data>
+  <data name="error.identity.last_administrator" xml:space="preserve"><value>Le seul administrateur ne peut pas supprimer son compte ; nommez d'abord un autre administrateur.</value></data>
+  <data name="error.identity.deletion_not_scheduled" xml:space="preserve"><value>Aucune suppression n'est programmée pour ce compte.</value></data>
+  <data name="error.identity.grace_days_invalid" xml:space="preserve"><value>Le délai de grâce est compris entre 0 et 365 jours.</value></data>
+  <data name="error.identity.impersonation_refused" xml:space="preserve"><value>Impossible d'agir en tant que ce compte : c'est le vôtre, celui d'un administrateur ou il n'est pas actif.</value></data>
+  <data name="error.identity.not_impersonating" xml:space="preserve"><value>Cette session n'agit pas en tant qu'un autre utilisateur.</value></data>
+  <data name="error.identity.reason_required" xml:space="preserve"><value>Indiquez pourquoi vous devez agir en tant que ce compte (200 caractères au plus).</value></data>
+  <data name="validation.graceDays.range" xml:space="preserve"><value>Le délai de grâce doit être compris entre 0 et 365 jours.</value></data>
+  <data name="notification.user.deletion_requested.title" xml:space="preserve"><value>Demande de suppression de compte</value></data>
+  <data name="notification.user.deletion_requested.body" xml:space="preserve"><value>{user} ({email}) a demandé la suppression de son compte le {date}.</value></data>
+  <data name="notification.account.impersonated.title" xml:space="preserve"><value>Un administrateur a agi en votre nom</value></data>
+  <data name="notification.account.impersonated.body" xml:space="preserve"><value>{admin} a utilisé votre compte pour une assistance. Motif indiqué :</value></data>
+  <data name="email.deletion_scheduled.subject" xml:space="preserve"><value>Votre compte va être supprimé</value></data>
+  <data name="email.deletion_scheduled.greeting" xml:space="preserve"><value>Bonjour {name},</value></data>
+  <data name="email.deletion_scheduled.body" xml:space="preserve"><value>Comme demandé, votre compte et ses données seront supprimés le {expires}. Si vous changez d'avis, connectez-vous avant cette date et annulez la suppression.</value></data>
+  <data name="email.deletion_scheduled.action" xml:space="preserve"><value>Se connecter</value></data>
+  <data name="users.status.deletion" xml:space="preserve"><value>Suppression demandée</value></data>
+  <data name="users.deletionScheduled" xml:space="preserve"><value>Supprimé le {date}</value></data>
+  <data name="accessDenied.blockedTitle" xml:space="preserve"><value>Les applications ne sont pas disponibles</value></data>
+  <data name="accessDenied.impersonation" xml:space="preserve"><value>Tant que vous agissez en tant qu'un autre compte pour une assistance, vous ne pouvez pas vous connecter aux applications à sa place. Terminez d'abord la session d'assistance.</value></data>
+  <data name="accessDenied.deletion" xml:space="preserve"><value>Votre compte est en attente de suppression et ne peut pas se connecter aux applications. Annulez la suppression pour les utiliser de nouveau.</value></data>
+  <data name="account.passwordIncorrect" xml:space="preserve"><value>Le mot de passe n'est pas correct.</value></data>
+  <data name="account.tab.privacy" xml:space="preserve"><value>Confidentialité</value></data>
+  <data name="privacy.export.title" xml:space="preserve"><value>Vos données</value></data>
+  <data name="privacy.export.description" xml:space="preserve"><value>Téléchargez une copie de tout ce que le portail conserve sur vous : profil, accès, notifications et activité.</value></data>
+  <data name="privacy.export.action" xml:space="preserve"><value>Télécharger mes données</value></data>
+  <data name="privacy.export.confirm" xml:space="preserve"><value>Saisissez votre mot de passe pour télécharger un fichier ZIP avec vos données.</value></data>
+  <data name="privacy.export.done" xml:space="preserve"><value>Vos données ont été téléchargées</value></data>
+  <data name="privacy.export.failed" xml:space="preserve"><value>Impossible de préparer vos données</value></data>
+  <data name="privacy.delete.title" xml:space="preserve"><value>Supprimer mon compte</value></data>
+  <data name="privacy.delete.description" xml:space="preserve"><value>Votre compte et ses données sont supprimés après un délai de grâce. D'ici là, vous pouvez changer d'avis en vous reconnectant.</value></data>
+  <data name="privacy.delete.action" xml:space="preserve"><value>Supprimer le compte</value></data>
+  <data name="privacy.delete.confirmTitle" xml:space="preserve"><value>Supprimer votre compte ?</value></data>
+  <data name="privacy.delete.confirm" xml:space="preserve"><value>Saisissez votre mot de passe pour confirmer. Vous serez déconnecté partout, dans le portail et ses applications.</value></data>
+  <data name="privacy.delete.warningTitle" xml:space="preserve"><value>Ce qui se passe</value></data>
+  <data name="privacy.delete.warning" xml:space="preserve"><value>À la fin du délai de grâce, votre profil, vos accès et vos notifications sont effacés définitivement. Le journal de sécurité conserve ses entrées jusqu'à leur expiration.</value></data>
+  <data name="privacy.delete.failed" xml:space="preserve"><value>Impossible de programmer la suppression</value></data>
+  <data name="privacy.delete.scheduled" xml:space="preserve"><value>Votre compte sera supprimé le {date}. Connectez-vous avant pour annuler.</value></data>
+  <data name="privacy.pending.title" xml:space="preserve"><value>Votre compte est en attente de suppression</value></data>
+  <data name="privacy.pending.description" xml:space="preserve"><value>Il sera supprimé le {date}. Conservez-le si vous avez changé d'avis.</value></data>
+  <data name="privacy.pending.cancel" xml:space="preserve"><value>Conserver mon compte</value></data>
+  <data name="privacy.pending.cancelled" xml:space="preserve"><value>La suppression a été annulée</value></data>
+  <data name="settings.privacy.title" xml:space="preserve"><value>Confidentialité</value></data>
+  <data name="settings.privacy.description" xml:space="preserve"><value>Ce que les titulaires peuvent faire de leur compte. Chacun peut toujours télécharger une copie de ses données.</value></data>
+  <data name="settings.privacy.selfDeletion" xml:space="preserve"><value>Les titulaires peuvent supprimer leur compte</value></data>
+  <data name="settings.privacy.selfDeletionHint" xml:space="preserve"><value>Sinon, seul un administrateur peut supprimer des comptes.</value></data>
+  <data name="settings.privacy.graceDays" xml:space="preserve"><value>Délai de grâce (jours)</value></data>
+  <data name="settings.privacy.graceDaysHint" xml:space="preserve"><value>Entre la demande et la suppression ; en se connectant pendant ce délai, le titulaire peut annuler. 0 supprime dans l'heure.</value></data>
+  <data name="settings.privacy.graceDaysInvalid" xml:space="preserve"><value>Saisissez un nombre de jours entre 0 et 365.</value></data>
+  <data name="validation.reason.required" xml:space="preserve"><value>Indiquez pourquoi vous devez agir en tant que ce compte.</value></data>
+  <data name="audit.onBehalfOf" xml:space="preserve"><value>en tant que {name}</value></data>
+  <data name="audit.field.onBehalfOf" xml:space="preserve"><value>En tant que</value></data>
+  <data name="impersonation.open" xml:space="preserve"><value>Agir en tant que cet utilisateur (assistance)</value></data>
+  <data name="impersonation.title" xml:space="preserve"><value>Agir en tant que {user}</value></data>
+  <data name="impersonation.description" xml:space="preserve"><value>Vous verrez le portail comme cette personne le voit, jusqu'à la fin de la session ou son expiration.</value></data>
+  <data name="impersonation.notice" xml:space="preserve"><value>Tout ce que vous faites est enregistré à votre nom. La personne est prévenue, et son mot de passe, son second facteur, le téléchargement de ses données, la suppression et les applications restent inaccessibles.</value></data>
+  <data name="impersonation.reason" xml:space="preserve"><value>Motif</value></data>
+  <data name="impersonation.reasonHint" xml:space="preserve"><value>Un numéro de ticket ou une brève explication ; la personne le verra.</value></data>
+  <data name="impersonation.reasonRequired" xml:space="preserve"><value>Indiquez un motif de 200 caractères au plus.</value></data>
+  <data name="impersonation.start" xml:space="preserve"><value>Démarrer la session d'assistance</value></data>
+  <data name="impersonation.started" xml:space="preserve"><value>Vous agissez maintenant en tant que {user}</value></data>
+  <data name="impersonation.failed" xml:space="preserve"><value>Impossible de démarrer la session d'assistance</value></data>
+  <data name="impersonation.banner" xml:space="preserve"><value>Session d'assistance : vous agissez en tant que {user} (connecté comme {admin}). Elle se termine à {time}.</value></data>
+  <data name="impersonation.stop" xml:space="preserve"><value>Terminer la session d'assistance</value></data>
+  <data name="error.users.import_no_email_column" xml:space="preserve"><value>Le fichier doit avoir une ligne d'en-tête avec une colonne email.</value></data>
+  <data name="error.users.import_too_many_rows" xml:space="preserve"><value>Un fichier contient au plus 1 000 comptes.</value></data>
+  <data name="error.users.import_file_invalid" xml:space="preserve"><value>Envoyez un seul fichier CSV (UTF-8, 1 Mo au plus).</value></data>
+  <data name="error.users.import_email_invalid" xml:space="preserve"><value>L'adresse n'est pas valide.</value></data>
+  <data name="error.users.import_duplicate" xml:space="preserve"><value>L'adresse figure déjà plus haut dans le fichier.</value></data>
+  <data name="error.users.import_group_unknown" xml:space="preserve"><value>Un groupe de la ligne n'existe pas.</value></data>
+  <data name="error.users.import_organization_unknown" xml:space="preserve"><value>Une organisation de la ligne n'existe pas.</value></data>
+  <data name="error.users.bulk_action_invalid" xml:space="preserve"><value>L'action doit être approve, add_to_group, remove_from_group, sign_out ou delete.</value></data>
+  <data name="error.users.bulk_group_required" xml:space="preserve"><value>Choisissez le groupe auquel ajouter les comptes ou duquel les retirer.</value></data>
+  <data name="error.tokens.not_found" xml:space="preserve"><value>Le jeton n'existe pas.</value></data>
+  <data name="error.tokens.disabled" xml:space="preserve"><value>Les jetons personnels ne sont pas activés sur ce portail.</value></data>
+  <data name="error.tokens.name_invalid" xml:space="preserve"><value>Un jeton doit avoir un nom de 80 caractères au plus.</value></data>
+  <data name="error.tokens.scopes_invalid" xml:space="preserve"><value>La portée d'un jeton est lecture ou écriture.</value></data>
+  <data name="error.tokens.lifetime_invalid" xml:space="preserve"><value>Un jeton dure entre 1 et 365 jours.</value></data>
+  <data name="error.tokens.too_many" xml:space="preserve"><value>Un compte détient au plus 20 jetons actifs ; révoquez-en un d'abord.</value></data>
+  <data name="error.auth.token_scope_insufficient" xml:space="preserve"><value>Ce jeton personnel ne peut que lire ; créez-en un avec la portée écriture pour modifier.</value></data>
+  <data name="validation.selection.max" xml:space="preserve"><value>Choisissez entre 1 et 100 comptes.</value></data>
+  <data name="validation.tokenLifetime.range" xml:space="preserve"><value>Un jeton dure entre 1 et 365 jours.</value></data>
+  <data name="validation.required" xml:space="preserve"><value>Ce champ est obligatoire.</value></data>
+  <data name="account.tab.tokens" xml:space="preserve"><value>Jetons</value></data>
+  <data name="common.apply" xml:space="preserve"><value>Appliquer</value></data>
+  <data name="common.confirm" xml:space="preserve"><value>Confirmer</value></data>
+  <data name="settings.tokens" xml:space="preserve"><value>Jetons personnels</value></data>
+  <data name="settings.tokensDescription" xml:space="preserve"><value>Les titulaires peuvent créer des jetons pour appeler l'API du portail depuis des scripts et des outils en ligne de commande. Le désactiver arrête immédiatement tous les jetons existants.</value></data>
+  <data name="tokens.title" xml:space="preserve"><value>Jetons personnels</value></data>
+  <data name="tokens.description" xml:space="preserve"><value>Ils permettent à des scripts et outils en ligne de commande d'appeler l'API du portail en votre nom. Gardez-les secrets, ne leur donnez que la portée nécessaire et révoquez ceux que vous n'utilisez plus.</value></data>
+  <data name="tokens.create" xml:space="preserve"><value>Nouveau jeton</value></data>
+  <data name="tokens.createDescription" xml:space="preserve"><value>Un jeton n'ouvre jamais l'accès à votre mot de passe, second facteur, jetons, téléchargement de données ou suppression du compte.</value></data>
+  <data name="tokens.createFailed" xml:space="preserve"><value>Impossible de créer le jeton</value></data>
+  <data name="tokens.nameHint" xml:space="preserve"><value>Ce qui l'utilise, par ex. « Synchronisation nocturne ».</value></data>
+  <data name="tokens.nameRequired" xml:space="preserve"><value>Donnez au jeton un nom de 80 caractères au plus.</value></data>
+  <data name="tokens.lifetime" xml:space="preserve"><value>Expire après</value></data>
+  <data name="tokens.days_one" xml:space="preserve"><value>{count} jour</value></data>
+  <data name="tokens.days_other" xml:space="preserve"><value>{count} jours</value></data>
+  <data name="tokens.scope.read" xml:space="preserve"><value>Lecture</value></data>
+  <data name="tokens.scope.readHint" xml:space="preserve"><value>Requêtes GET uniquement.</value></data>
+  <data name="tokens.scope.write" xml:space="preserve"><value>Lecture et écriture</value></data>
+  <data name="tokens.scope.writeHint" xml:space="preserve"><value>Tout ce que vous pouvez faire via l'API.</value></data>
+  <data name="tokens.status.active" xml:space="preserve"><value>Actif</value></data>
+  <data name="tokens.status.expired" xml:space="preserve"><value>Expiré</value></data>
+  <data name="tokens.status.revoked" xml:space="preserve"><value>Révoqué</value></data>
+  <data name="tokens.column.name" xml:space="preserve"><value>Nom</value></data>
+  <data name="tokens.column.scope" xml:space="preserve"><value>Portée</value></data>
+  <data name="tokens.column.expires" xml:space="preserve"><value>Expire</value></data>
+  <data name="tokens.column.lastUsed" xml:space="preserve"><value>Dernière utilisation</value></data>
+  <data name="tokens.empty.title" xml:space="preserve"><value>Aucun jeton</value></data>
+  <data name="tokens.empty.description" xml:space="preserve"><value>Créez-en un lorsqu'un script doit appeler l'API.</value></data>
+  <data name="tokens.createdDescription" xml:space="preserve"><value>Envoyez-le comme Authorization: Bearer &lt;token&gt;.</value></data>
+  <data name="tokens.onceTitle" xml:space="preserve"><value>Copiez-le maintenant</value></data>
+  <data name="tokens.onceDescription" xml:space="preserve"><value>Il n'est affiché qu'une fois ; le portail n'en garde qu'une empreinte.</value></data>
+  <data name="tokens.value" xml:space="preserve"><value>Jeton</value></data>
+  <data name="tokens.copy" xml:space="preserve"><value>Copier le jeton</value></data>
+  <data name="tokens.copied" xml:space="preserve"><value>Jeton copié</value></data>
+  <data name="tokens.copyFailed" xml:space="preserve"><value>Copie impossible ; sélectionnez le jeton et copiez-le à la main</value></data>
+  <data name="tokens.example" xml:space="preserve"><value>Essayez</value></data>
+  <data name="tokens.revoke" xml:space="preserve"><value>Révoquer</value></data>
+  <data name="tokens.revokeTitle" xml:space="preserve"><value>Révoquer {name} ?</value></data>
+  <data name="tokens.revokeDescription" xml:space="preserve"><value>Ce qui l'utilise cesse immédiatement de fonctionner.</value></data>
+  <data name="tokens.revoked" xml:space="preserve"><value>Jeton révoqué</value></data>
+  <data name="tokens.open" xml:space="preserve"><value>Jetons personnels</value></data>
+  <data name="tokens.userTitle" xml:space="preserve"><value>Jetons de {name}</value></data>
+  <data name="tokens.userDescription" xml:space="preserve"><value>Révoquez un jeton divulgué ou devenu inutile. Les valeurs ne sont jamais affichées.</value></data>
+  <data name="tokens.userEmpty" xml:space="preserve"><value>Ce compte n'a aucun jeton personnel.</value></data>
+  <data name="users.export" xml:space="preserve"><value>Exporter en CSV</value></data>
+  <data name="users.bulk.selected_one" xml:space="preserve"><value>{count} sélectionné</value></data>
+  <data name="users.bulk.selected_other" xml:space="preserve"><value>{count} sélectionnés</value></data>
+  <data name="users.bulk.selectPage" xml:space="preserve"><value>Sélectionner tous les comptes de la page</value></data>
+  <data name="users.bulk.selectOne" xml:space="preserve"><value>Sélectionner {name}</value></data>
+  <data name="users.bulk.addToGroup" xml:space="preserve"><value>Ajouter au groupe</value></data>
+  <data name="users.bulk.removeFromGroup" xml:space="preserve"><value>Retirer du groupe</value></data>
+  <data name="users.bulk.signOut" xml:space="preserve"><value>Déconnecter partout</value></data>
+  <data name="users.bulk.clear" xml:space="preserve"><value>Effacer la sélection</value></data>
+  <data name="users.bulk.confirm.approve" xml:space="preserve"><value>Approuver {count} comptes ?</value></data>
+  <data name="users.bulk.confirm.add_to_group" xml:space="preserve"><value>Ajouter {count} comptes à {group} ?</value></data>
+  <data name="users.bulk.confirm.remove_from_group" xml:space="preserve"><value>Retirer {count} comptes de {group} ?</value></data>
+  <data name="users.bulk.confirm.sign_out" xml:space="preserve"><value>Fermer toutes les sessions et jetons de {count} comptes ?</value></data>
+  <data name="users.bulk.confirm.delete" xml:space="preserve"><value>Supprimer {count} comptes ?</value></data>
+  <data name="users.bulk.confirmDescription" xml:space="preserve"><value>Chaque compte est traité séparément : ceux que vous ne pouvez pas modifier restent inchangés.</value></data>
+  <data name="users.bulk.done_one" xml:space="preserve"><value>Fait pour {count} compte</value></data>
+  <data name="users.bulk.done_other" xml:space="preserve"><value>Fait pour {count} comptes</value></data>
+  <data name="users.bulk.partial" xml:space="preserve"><value>Fait pour {done}, refusé pour {failed}</value></data>
+  <data name="users.import.open" xml:space="preserve"><value>Importer un CSV</value></data>
+  <data name="users.import.title" xml:space="preserve"><value>Importer des utilisateurs</value></data>
+  <data name="users.import.description" xml:space="preserve"><value>Les nouvelles adresses reçoivent une invitation (avec nom, groupes et organisations) ; les comptes existants ne sont mis à jour que si vous le demandez. Vérifiez d'abord le fichier : rien n'est écrit avant l'import.</value></data>
+  <data name="users.import.file" xml:space="preserve"><value>Fichier CSV</value></data>
+  <data name="users.import.fileHint" xml:space="preserve"><value>UTF-8, virgule ou point-virgule, 1 000 lignes au plus. Groupes et organisations séparés par |.</value></data>
+  <data name="users.import.template" xml:space="preserve"><value>Télécharger un modèle</value></data>
+  <data name="users.import.updateExisting" xml:space="preserve"><value>Mettre à jour les comptes existants</value></data>
+  <data name="users.import.updateExistingHint" xml:space="preserve"><value>Les cellules remplies remplacent les données ; les vides les conservent. Sinon, les adresses connues sont ignorées.</value></data>
+  <data name="users.import.check" xml:space="preserve"><value>Vérifier le fichier</value></data>
+  <data name="users.import.run" xml:space="preserve"><value>Importer</value></data>
+  <data name="users.import.dryRunNote" xml:space="preserve"><value>Aperçu : rien n'a encore été écrit.</value></data>
+  <data name="users.import.row" xml:space="preserve"><value>Ligne</value></data>
+  <data name="users.import.outcome.invited" xml:space="preserve"><value>Invité</value></data>
+  <data name="users.import.outcome.updated" xml:space="preserve"><value>Mis à jour</value></data>
+  <data name="users.import.outcome.skipped" xml:space="preserve"><value>Ignoré</value></data>
+  <data name="users.import.outcome.error" xml:space="preserve"><value>Refusé</value></data>
+  <data name="users.import.done" xml:space="preserve"><value>Import : {invited} invités, {updated} mis à jour, {failed} refusés</value></data>
+  <data name="users.import.failed" xml:space="preserve"><value>Impossible d'importer le fichier</value></data>
 </root>

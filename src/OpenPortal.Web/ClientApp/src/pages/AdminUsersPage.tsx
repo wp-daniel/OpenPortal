@@ -1,13 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { History, KeyRound, Loader2, Pencil, Plus, ShieldCheck, ShieldOff, Smartphone, Trash2, UserCheck } from 'lucide-react'
+import { Download, Headset, History, KeyRound, KeySquare, Upload, Loader2, Pencil, Plus, ShieldCheck, ShieldOff, Smartphone, Trash2, UserCheck } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
 import type { PasswordPolicy, UserSummary } from '@/api/types'
+import { invitationKeys } from '@/api/registration'
 import { userAdminApi } from '@/api/users'
 import { UserAccessSheet } from '@/components/access/UserAccessSheet'
 import { AvatarUpload } from '@/components/AvatarUpload'
 import { FormField } from '@/components/FormField'
+import { ImpersonateDialog, canImpersonate } from '@/components/ImpersonateDialog'
+import { UserBulkBar } from '@/components/users/UserBulkBar'
+import { UserImportDialog } from '@/components/users/UserImportDialog'
+import { UserTokensDialog } from '@/components/users/UserTokensDialog'
 import { PageHeader } from '@/components/PageHeader'
 import { Section } from '@/components/Section'
 import { ErrorPanel, LoadingState } from '@/components/StatePanels'
@@ -16,6 +21,7 @@ import { UserAvatar } from '@/components/UserAvatar'
 import { UserDetailsFields } from '@/components/UserDetailsFields'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,7 +66,7 @@ import {
   type UserDetailsForm,
 } from '@/lib/userDetails'
 
-const STATUSES = ['active', 'pending', 'locked', 'unconfirmed', 'inactive'] as const
+const STATUSES = ['active', 'pending', 'locked', 'unconfirmed', 'inactive', 'deletion'] as const
 
 /**
  * Account management, for administrators and holders of the users page. Whether an account is an
@@ -81,6 +87,10 @@ export function AdminUsersPage() {
   const [editing, setEditing] = useState<UserSummary | null>(null)
   const [deleting, setDeleting] = useState<UserSummary | null>(null)
   const [resettingTwoFactor, setResettingTwoFactor] = useState<UserSummary | null>(null)
+  const [impersonating, setImpersonating] = useState<UserSummary | null>(null)
+  const [tokensOf, setTokensOf] = useState<UserSummary | null>(null)
+  const [importing, setImporting] = useState(false)
+  const [selected, setSelected] = useState<readonly string[]>([])
   const queryClient = useQueryClient()
   const refreshAccess = useAccessRefresh()
   // Only an administrator may grant the administrator role or change an administrator (the server enforces it).
@@ -134,7 +144,13 @@ export function AdminUsersPage() {
   function changeFilter(apply: () => void) {
     apply()
     setPage(1)
+    setSelected([])
   }
+
+  const pageIds = users.data?.items.map((user) => user.id) ?? []
+  const selectedOnPage = pageIds.filter((id) => selected.includes(id))
+  const toggle = (id: string, checked: boolean) =>
+    setSelected((current) => (checked ? [...current, id] : current.filter((entry) => entry !== id)))
 
   return (
     <div className="space-y-6">
@@ -142,19 +158,49 @@ export function AdminUsersPage() {
         title={t('users.title')}
         description={t('users.description')}
         actions={
-          <Button
-            onClick={() => {
-              setEditing(null)
-              setFormOpen(true)
-            }}
-          >
-            <Plus />
-            {t('users.create.open')}
-          </Button>
+          <>
+            <Button variant="outline" asChild>
+              <a
+                href={userAdminApi.exportUrl({
+                  search: appliedSearch,
+                  administrator: kind === '' ? undefined : kind === 'administrators',
+                  status,
+                })}
+                download
+              >
+                <Download />
+                {t('users.export')}
+              </a>
+            </Button>
+            <Button variant="outline" onClick={() => setImporting(true)}>
+              <Upload />
+              {t('users.import.open')}
+            </Button>
+            <Button
+              onClick={() => {
+                setEditing(null)
+                setFormOpen(true)
+              }}
+            >
+              <Plus />
+              {t('users.create.open')}
+            </Button>
+          </>
         }
       />
 
       <Section title={t('users.accounts')}>
+        {selected.length > 0 && (
+          <UserBulkBar
+            selected={selected}
+            canManageGroups={canOpen('groups')}
+            onClear={() => setSelected([])}
+            onDone={async () => {
+              setSelected([])
+              await Promise.all([refresh(), refreshAccess()])
+            }}
+          />
+        )}
         <TableToolbar
           search={search}
           onSearchChange={(value) => changeFilter(() => setSearch(value))}
@@ -208,6 +254,21 @@ export function AdminUsersPage() {
               </TableCaption>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      aria-label={t('users.bulk.selectPage')}
+                      checked={
+                        selectedOnPage.length === 0 ? false : selectedOnPage.length === pageIds.length ? true : 'indeterminate'
+                      }
+                      onCheckedChange={(checked) =>
+                        setSelected((current) =>
+                          checked === true
+                            ? [...new Set([...current, ...pageIds])]
+                            : current.filter((id) => !pageIds.includes(id)),
+                        )
+                      }
+                    />
+                  </TableHead>
                   <TableHead>{t('common.displayName')}</TableHead>
                   <TableHead>{t('common.phone')}</TableHead>
                   <TableHead>{t('common.company')}</TableHead>
@@ -223,7 +284,14 @@ export function AdminUsersPage() {
                   const self = user.id === session.user?.id
 
                   return (
-                    <TableRow key={user.id}>
+                    <TableRow key={user.id} data-state={selected.includes(user.id) ? 'selected' : undefined}>
+                      <TableCell>
+                        <Checkbox
+                          aria-label={t('users.bulk.selectOne', { name: user.displayName })}
+                          checked={selected.includes(user.id)}
+                          onCheckedChange={(checked) => toggle(user.id, checked === true)}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <UserAvatar user={user} />
@@ -264,6 +332,11 @@ export function AdminUsersPage() {
                             <Badge variant="success">{t('users.active')}</Badge>
                           ) : (
                             <Badge variant="warning">{t('users.unconfirmed')}</Badge>
+                          )}
+                          {user.deletionScheduledAtUtc && (
+                            <Badge variant="destructive" title={formatDate(user.deletionScheduledAtUtc, { dateStyle: 'long' })}>
+                              {t('users.deletionScheduled', { date: formatDate(user.deletionScheduledAtUtc, { dateStyle: 'medium' }) })}
+                            </Badge>
                           )}
                           {user.origin !== 'created' && (
                             <Badge variant="outline" className="font-normal">
@@ -319,6 +392,29 @@ export function AdminUsersPage() {
                               >
                                 <History />
                               </Link>
+                            </Button>
+                          )}
+                          {session.features.personalAccessTokens && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              aria-label={t('tokens.open')}
+                              title={t('tokens.open')}
+                              disabled={locked}
+                              onClick={() => setTokensOf(user)}
+                            >
+                              <KeySquare />
+                            </Button>
+                          )}
+                          {isAdministrator && canImpersonate(user, session.user?.id) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              aria-label={t('impersonation.open')}
+                              title={t('impersonation.open')}
+                              onClick={() => setImpersonating(user)}
+                            >
+                              <Headset />
                             </Button>
                           )}
                           {user.twoFactorEnabled && (
@@ -379,6 +475,17 @@ export function AdminUsersPage() {
       />
 
       <UserAccessSheet user={accessUser} onClose={() => setAccessUser(null)} />
+
+      <ImpersonateDialog user={impersonating} onClose={() => setImpersonating(null)} />
+      <UserTokensDialog user={tokensOf} onClose={() => setTokensOf(null)} />
+      <UserImportDialog
+        open={importing}
+        onClose={() => setImporting(false)}
+        onImported={async () => {
+          await refresh()
+          await queryClient.invalidateQueries({ queryKey: invitationKeys.all })
+        }}
+      />
 
       <AlertDialog open={resettingTwoFactor !== null} onOpenChange={(open) => !open && setResettingTwoFactor(null)}>
         <AlertDialogContent>

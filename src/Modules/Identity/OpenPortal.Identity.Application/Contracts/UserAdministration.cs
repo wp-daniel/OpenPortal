@@ -26,7 +26,8 @@ public sealed record UserSummaryDto(
     DateTimeOffset? LastSignInAtUtc,
     bool TwoFactorEnabled,
     bool PendingApproval,
-    string Origin);
+    string Origin,
+    DateTimeOffset? DeletionScheduledAtUtc);
 
 /// <summary>Values of <see cref="UserSummaryDto.Origin"/>.</summary>
 public static class AccountOrigins
@@ -38,7 +39,7 @@ public static class AccountOrigins
 }
 
 /// <summary>Filter and paging parameters for the administration user list.</summary>
-public sealed class UserListQuery
+public sealed class UserListQuery : UserListFilter
 {
     public const int MaxPageSize = 100;
 
@@ -47,7 +48,11 @@ public sealed class UserListQuery
 
     [Range(1, MaxPageSize, ErrorMessage = "validation.pageSize.range")]
     public int PageSize { get; init; } = 20;
+}
 
+/// <summary>Filters shared by the user list and its export.</summary>
+public class UserListFilter
+{
     /// <summary>Free-text filter matched against email, name, phone and company.</summary>
     [StringLength(256, ErrorMessage = "validation.search.max")]
     public string? Search { get; init; }
@@ -58,6 +63,20 @@ public sealed class UserListQuery
     /// <summary>One of <see cref="UserStatusFilter"/>; anything else is ignored.</summary>
     [StringLength(32, ErrorMessage = "validation.search.max")]
     public string? Status { get; init; }
+
+    /// <summary>Only these accounts (a selection in the list); all matching accounts when absent.</summary>
+    [MaxLength(UserBulkLimits.MaxUsers, ErrorMessage = "validation.selection.max")]
+    public Guid[]? Ids { get; init; }
+}
+
+/// <summary>Limits of the operations on many accounts at once.</summary>
+public static class UserBulkLimits
+{
+    /// <summary>The most accounts one bulk action (or one selection) names.</summary>
+    public const int MaxUsers = 100;
+
+    /// <summary>The most rows one export carries.</summary>
+    public const int MaxExportRows = 10_000;
 }
 
 /// <summary>Account states offered as a filter in the user list.</summary>
@@ -72,6 +91,9 @@ public static class UserStatusFilter
 
     /// <summary>Never signed in, or not for <see cref="InactiveAfterDays"/> days.</summary>
     public const string Inactive = "inactive";
+
+    /// <summary>Their owner asked for them to be deleted; they go when the grace period ends.</summary>
+    public const string Deletion = "deletion";
 
     public const int InactiveAfterDays = 90;
 }

@@ -8,12 +8,14 @@ public sealed record AuditSubjectDto(string Type, string Id, string? Label);
 /// <summary>One line of the audit log.</summary>
 /// <param name="Outcome"><c>success</c> or <c>failure</c>.</param>
 /// <param name="Actor">Who acted; null for an anonymous caller or a background job.</param>
+/// <param name="OnBehalfOf">The account the actor was impersonating, if any.</param>
 public sealed record AuditEntryDto(
     Guid Id,
     DateTimeOffset OccurredAtUtc,
     string Action,
     string Outcome,
     AuditSubjectDto? Actor,
+    AuditSubjectDto? OnBehalfOf,
     AuditSubjectDto? Target,
     IReadOnlyDictionary<string, string?> Details,
     string? IpAddress,
@@ -45,7 +47,7 @@ public class AuditLogFilter
     [StringLength(16, ErrorMessage = "validation.search.max")]
     public string? Outcome { get; init; }
 
-    /// <summary>Only entries where this id is the actor or the target (a user's whole history).</summary>
+    /// <summary>Only entries where this id is the actor, the impersonated account or the target (a user's whole history).</summary>
     [StringLength(128, ErrorMessage = "validation.search.max")]
     public string? Subject { get; init; }
 

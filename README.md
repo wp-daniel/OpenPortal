@@ -48,6 +48,21 @@ OpenIddict, on SQLite by default, organised as a modular monolith whose boundari
   domains, with address confirmation by email
 - Invitations by email: a single-use link (emailed over SMTP, or shown to the administrator) that creates the
   account already in the chosen groups and organizations
+- User list as CSV: export the filter (or a selection), import a file that invites new addresses (with names,
+  groups and organizations) and optionally updates existing accounts, with a dry run first
+- Bulk actions on the selected users: approve, add to or remove from a group, sign out everywhere, delete
+- Support sessions: an administrator acts as an ordinary account for up to an hour, with a banner, every change
+  audited as the administrator "on behalf of" the user, the user notified, and no access to the account's secrets
+  or to the applications
+- Personal access tokens for scripts and command-line tools (`Authorization: Bearer opp_…`): read or write
+  scope, expiry, last use, revocation by the owner or an administrator; switched on in the portal settings
+
+**Privacy (GDPR)**
+- Privacy notice and terms of use written in the portal (Markdown, per language) and published as versions;
+  a new version is accepted at registration, at the next visit, and before signing in to any application
+- Every account holder downloads a ZIP of everything the portal holds about them (password confirmed)
+- Account deletion on request, after a grace period the owner can cancel by signing in again; then a background
+  job erases the account and what every module holds about it
 
 **Single sign-on**
 - OpenID Connect provider (authorization code + PKCE + refresh tokens)
@@ -64,6 +79,8 @@ OpenIddict, on SQLite by default, organised as a modular monolith whose boundari
   choose one at sign-in, and leaving an organization ends the session at the next refresh
 
 **Notifications and overview**
+- Announcements: banners for news, warnings or planned maintenance, per language, with a time window, shown in
+  the portal and (if meant for everyone) on the sign-in page
 - In-app notification center: a bell with the unread count, a page with every notification, and notices for
   access requests and decisions, new grants, group and organization memberships, registrations to approve,
   accepted invitations and account security changes
@@ -290,6 +307,7 @@ contact a third party. See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md#addre
   architecture, testing, publishing, contributing
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — the long form, with the reasoning behind each decision
 - [`docs/apps-api.md`](docs/apps-api.md) — the application API (client credentials) and the `/scalar` reference
+- [`docs/personal-access-tokens.md`](docs/personal-access-tokens.md) — calling the portal's own API from scripts
 - [`docs/brand`](docs/brand) — the logo and how it is used
 
 ## License

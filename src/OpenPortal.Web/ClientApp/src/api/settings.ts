@@ -1,5 +1,6 @@
 import { api } from './client'
 import type {
+  PrivacySettings,
   RegistrationSettings,
   SecuritySettings,
   UpdateRegistrationSettingsRequest,
@@ -14,4 +15,7 @@ export const settingsApi = {
   registration: (signal?: AbortSignal) => api.get<RegistrationSettings>('/api/admin/settings/registration', signal),
   updateRegistration: (body: UpdateRegistrationSettingsRequest) =>
     api.put<RegistrationSettings>('/api/admin/settings/registration', body),
+  privacy: (signal?: AbortSignal) => api.get<PrivacySettings>('/api/admin/settings/privacy', signal),
+  updatePrivacy: (body: { selfDeletionEnabled: boolean; deletionGraceDays: number }) =>
+    api.put<PrivacySettings>('/api/admin/settings/privacy', body),
 }

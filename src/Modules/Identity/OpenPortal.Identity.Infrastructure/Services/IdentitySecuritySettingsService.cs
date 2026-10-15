@@ -85,7 +85,7 @@ internal sealed class IdentitySecuritySettingsService : ISecuritySettingsService
         var isNew = settings is null;
         settings ??= SecuritySettings.Defaults();
 
-        var changed = settings.Update(request.TwoFactorEnabled, request.TwoFactorIssuer, _clock.UtcNow);
+        var changed = settings.Update(request.TwoFactorEnabled, request.TwoFactorIssuer, _clock.UtcNow, request.PersonalAccessTokensEnabled);
         if (changed.IsFailure)
         {
             return Result<SecuritySettingsDto>.Failure(changed.Error);
@@ -107,6 +107,7 @@ internal sealed class IdentitySecuritySettingsService : ISecuritySettingsService
                         {
                             ["twoFactor"] = settings.TwoFactorEnabled ? "on" : "off",
                             ["issuer"] = settings.TwoFactorIssuer,
+                            ["personalAccessTokens"] = settings.PersonalAccessTokensEnabled ? "on" : "off",
                         }),
                     cancellationToken)
                 .ConfigureAwait(false);
@@ -116,5 +117,5 @@ internal sealed class IdentitySecuritySettingsService : ISecuritySettingsService
     }
 
     private static SecuritySettingsDto ToDto(SecuritySettings settings) =>
-        new(settings.TwoFactorEnabled, settings.TwoFactorIssuer, settings.UpdatedAtUtc);
+        new(settings.TwoFactorEnabled, settings.TwoFactorIssuer, settings.PersonalAccessTokensEnabled, settings.UpdatedAtUtc);
 }

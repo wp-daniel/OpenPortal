@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using OpenPortal.Identity.Domain.Invitations;
+using OpenPortal.Identity.Domain.Legal;
 using OpenPortal.Identity.Domain.Settings;
+using OpenPortal.Identity.Domain.Tokens;
 using OpenPortal.Identity.Domain.Users;
 
 namespace OpenPortal.Identity.Infrastructure.Persistence;
@@ -31,7 +33,15 @@ public sealed class IdentityDbContext : IdentityDbContext<ApplicationUser, Ident
 
     public DbSet<RegistrationSettings> RegistrationSettings => Set<RegistrationSettings>();
 
+    public DbSet<PrivacySettings> PrivacySettings => Set<PrivacySettings>();
+
     public DbSet<UserInvitation> Invitations => Set<UserInvitation>();
+
+    public DbSet<LegalDocument> LegalDocuments => Set<LegalDocument>();
+
+    public DbSet<LegalAcceptance> LegalAcceptances => Set<LegalAcceptance>();
+
+    public DbSet<PersonalAccessToken> PersonalAccessTokens => Set<PersonalAccessToken>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -42,8 +52,12 @@ public sealed class IdentityDbContext : IdentityDbContext<ApplicationUser, Ident
         builder.ApplyConfiguration(new ApplicationUserConfiguration());
         builder.ApplyConfiguration(new UserAvatarConfiguration());
         builder.ApplyConfiguration(new SecuritySettingsConfiguration());
+        builder.ApplyConfiguration(new PrivacySettingsConfiguration());
         builder.ApplyConfiguration(new RegistrationSettingsConfiguration());
         builder.ApplyConfiguration(new UserInvitationConfiguration());
+        builder.ApplyConfiguration(new LegalDocumentConfiguration());
+        builder.ApplyConfiguration(new LegalAcceptanceConfiguration());
+        builder.ApplyConfiguration(new PersonalAccessTokenConfiguration());
 
         builder.Entity<IdentityRole<Guid>>().ToTable("Roles");
         builder.Entity<IdentityUserRole<Guid>>().ToTable("UserRoles");

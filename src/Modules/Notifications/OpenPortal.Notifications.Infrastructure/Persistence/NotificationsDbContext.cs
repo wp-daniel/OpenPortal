@@ -5,7 +5,7 @@ using OpenPortal.Notifications.Domain;
 namespace OpenPortal.Notifications.Infrastructure.Persistence;
 
 /// <summary>
-/// Persistence boundary for the Notifications module: one table. No provider is referenced here; the host
+/// Persistence boundary for the Notifications module: the notifications and the announcements. No provider is referenced here; the host
 /// chooses it through <c>AddNotificationsModule</c>.
 /// </summary>
 public sealed class NotificationsDbContext : DbContext
@@ -16,6 +16,8 @@ public sealed class NotificationsDbContext : DbContext
     }
 
     public DbSet<Notification> Notifications => Set<Notification>();
+
+    public DbSet<Announcement> Announcements => Set<Announcement>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -55,5 +57,33 @@ internal sealed class NotificationConfiguration : IEntityTypeConfiguration<Notif
         // The retention sweep deletes by age.
         builder.HasIndex(notification => notification.CreatedAtUtc)
             .HasDatabaseName("IX_Notifications_CreatedAtUtc");
+    }
+}
+
+
+internal sealed class AnnouncementConfiguration : IEntityTypeConfiguration<Announcement>
+{
+    public void Configure(EntityTypeBuilder<Announcement> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("Announcements");
+
+        builder.HasKey(announcement => announcement.Id);
+
+        builder.Property(announcement => announcement.Severity).IsRequired().HasConversion<string>().HasMaxLength(16);
+        builder.Property(announcement => announcement.Audience).IsRequired().HasConversion<string>().HasMaxLength(16);
+
+        builder.OwnsMany(announcement => announcement.Texts, texts =>
+        {
+            texts.ToTable("AnnouncementTexts");
+            texts.WithOwner().HasForeignKey("AnnouncementId");
+            texts.HasKey("AnnouncementId", nameof(AnnouncementText.Language));
+            texts.Property(text => text.Language).HasMaxLength(AnnouncementText.LanguageMaxLength);
+            texts.Property(text => text.Title).IsRequired().HasMaxLength(AnnouncementText.TitleMaxLength);
+            texts.Property(text => text.Body).HasMaxLength(AnnouncementText.BodyMaxLength);
+        });
+
+        builder.Navigation(announcement => announcement.Texts).HasField("_texts").UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }

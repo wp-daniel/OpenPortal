@@ -57,53 +57,30 @@ public sealed class AdminAuditController : ControllerBase
         }
 
         var csv = new StringBuilder();
-        csv.AppendLine("occurredAtUtc,action,outcome,actorType,actorId,actor,targetType,targetId,target,details,ipAddress,userAgent,correlationId");
+        csv.AppendLine("occurredAtUtc,action,outcome,actorType,actorId,actor,onBehalfOfId,onBehalfOf,targetType,targetId,target,details,ipAddress,userAgent,correlationId");
 
         foreach (var entry in entries.Value)
         {
-            csv.AppendJoin(
-                    ',',
-                    Cell(entry.OccurredAtUtc.UtcDateTime.ToString("O", CultureInfo.InvariantCulture)),
-                    Cell(entry.Action),
-                    Cell(entry.Outcome),
-                    Cell(entry.Actor?.Type),
-                    Cell(entry.Actor?.Id),
-                    Cell(entry.Actor?.Label),
-                    Cell(entry.Target?.Type),
-                    Cell(entry.Target?.Id),
-                    Cell(entry.Target?.Label),
-                    Cell(entry.Details.Count == 0 ? null : JsonSerializer.Serialize(entry.Details)),
-                    Cell(entry.IpAddress),
-                    Cell(entry.UserAgent),
-                    Cell(entry.CorrelationId))
-                .AppendLine();
+            csv.AppendRow(
+                entry.OccurredAtUtc.UtcDateTime.ToString("O", CultureInfo.InvariantCulture),
+                entry.Action,
+                entry.Outcome,
+                entry.Actor?.Type,
+                entry.Actor?.Id,
+                entry.Actor?.Label,
+                entry.OnBehalfOf?.Id,
+                entry.OnBehalfOf?.Label,
+                entry.Target?.Type,
+                entry.Target?.Id,
+                entry.Target?.Label,
+                entry.Details.Count == 0 ? null : JsonSerializer.Serialize(entry.Details),
+                entry.IpAddress,
+                entry.UserAgent,
+                entry.CorrelationId);
         }
 
-        // The byte-order mark makes spreadsheet applications read the file as UTF-8 rather than ANSI.
-        var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(csv.ToString())).ToArray();
         var fileName = $"openportal-audit-{DateTime.UtcNow.ToString("yyyyMMdd-HHmm", CultureInfo.InvariantCulture)}.csv";
 
-        return File(bytes, "text/csv; charset=utf-8", fileName);
-    }
-
-    /// <summary>
-    /// One CSV field: quoted when it holds a separator, a quote or a line break, and defused when it starts
-    /// like a formula, because labels and user agents come from users and a spreadsheet would run them.
-    /// </summary>
-    private static string Cell(string? value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return string.Empty;
-        }
-
-        if (value[0] is '=' or '+' or '-' or '@' or '\t' or '\r')
-        {
-            value = "'" + value;
-        }
-
-        return value.IndexOfAny([',', '"', '\n', '\r']) >= 0
-            ? $"\"{value.Replace("\"", "\"\"", StringComparison.Ordinal)}\""
-            : value;
+        return File(Csv.ToBytes(csv), Csv.ContentType, fileName);
     }
 }

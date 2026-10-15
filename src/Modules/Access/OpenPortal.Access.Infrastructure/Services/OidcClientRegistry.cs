@@ -141,6 +141,15 @@ internal sealed class OidcClientRegistry
         }
     }
 
+    /// <summary>Revokes every authorization and token issued to the user, in every application.</summary>
+    public async Task RevokeUserAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var subject = userId.ToString();
+
+        await _authorizations.RevokeAsync(subject, client: null, status: null, type: null, cancellationToken).ConfigureAwait(false);
+        await _tokens.RevokeAsync(subject, client: null, status: null, type: null, cancellationToken).ConfigureAwait(false);
+    }
+
     private static void Describe(OpenIddictApplicationDescriptor descriptor, PortalApplication application)
     {
         descriptor.DisplayName = application.DisplayName;

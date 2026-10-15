@@ -74,6 +74,12 @@ public sealed class RegisterRequest
     [Required(AllowEmptyStrings = false, ErrorMessage = "validation.lastName.required")]
     [StringLength(ApplicationUser.NameMaxLength, ErrorMessage = "validation.name.max")]
     public string LastName { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The versions of the privacy notice and the terms of use the person accepted (their ids, from
+    /// <c>GET /api/legal/{kind}</c>). Every version in force that requires acceptance must be among them.
+    /// </summary>
+    public IReadOnlyList<Guid> AcceptedLegalDocumentIds { get; init; } = [];
 }
 
 /// <summary>Values of <see cref="RegistrationResultDto.Outcome"/>.</summary>
@@ -228,6 +234,12 @@ public sealed class AcceptInvitationRequest
     [Required(AllowEmptyStrings = false, ErrorMessage = "validation.lastName.required")]
     [StringLength(ApplicationUser.NameMaxLength, ErrorMessage = "validation.name.max")]
     public string LastName { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The versions of the privacy notice and the terms of use the person accepted (their ids, from
+    /// <c>GET /api/legal/{kind}</c>). Every version in force that requires acceptance must be among them.
+    /// </summary>
+    public IReadOnlyList<Guid> AcceptedLegalDocumentIds { get; init; } = [];
 }
 
 /// <summary>The account an invitation became, and what the host still has to apply.</summary>

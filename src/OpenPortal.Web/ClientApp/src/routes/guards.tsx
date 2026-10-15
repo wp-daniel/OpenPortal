@@ -72,6 +72,29 @@ export function PageRoute() {
   return allowed ? <Outlet /> : <Navigate to="/" replace />
 }
 
+/**
+ * Nested inside {@link ProtectedRoute}, around the portal's own pages: what the account must settle first. An
+ * account waiting to be deleted can only keep itself or sign out; a new version of the privacy notice or the terms
+ * of use is accepted before anything else.
+ */
+export function AccountGate() {
+  const { user } = useSession()
+  const location = useLocation()
+
+  if (user?.deletionScheduledAtUtc) {
+    return <Navigate to="/account/deletion" replace />
+  }
+
+  // A support session browses as the account but never accepts documents on its owner's behalf.
+  if (user && !user.impersonator && user.pendingLegalDocuments.length > 0) {
+    const state: RedirectState = { from: `${location.pathname}${location.search}` }
+
+    return <Navigate to="/legal/accept" state={state} replace />
+  }
+
+  return <Outlet />
+}
+
 /** The sign-in page is for anonymous visitors only; a signed-in user is sent where they were going. */
 export function PublicOnlyRoute() {
   const { session, isPending } = useSession()

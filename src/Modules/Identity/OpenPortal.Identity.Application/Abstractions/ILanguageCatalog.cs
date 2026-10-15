@@ -11,4 +11,7 @@ public interface ILanguageCatalog
 
     /// <summary>The canonical spelling of <paramref name="code"/> as configured, e.g. <c>pt-BR</c>.</summary>
     string Canonicalize(string code);
+
+    /// <summary>The language used when a reader's own is not offered.</summary>
+    string DefaultLanguage { get; }
 }

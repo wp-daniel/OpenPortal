@@ -141,6 +141,29 @@ export interface RequestOptions {
   readonly method?: Method
   readonly body?: unknown
   readonly signal?: AbortSignal
+  /** 'file' reads the body as a {@link DownloadedFile} (an export) instead of JSON. */
+  readonly responseType?: 'json' | 'file'
+}
+
+/** A file the server sent back, with the name it suggested (Content-Disposition). */
+export interface DownloadedFile {
+  readonly blob: Blob
+  readonly fileName: string
+}
+
+/** The file name from a Content-Disposition header (RFC 6266 `filename*` first), or a fallback. */
+function fileNameOf(response: Response, fallback: string): string {
+  const header = response.headers.get('Content-Disposition') ?? ''
+  const encoded = /filename*=UTF-8''([^;]+)/i.exec(header)?.[1]
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded)
+    } catch {
+      // Fall through to the plain name.
+    }
+  }
+
+  return /filename="?([^";]+)"?/i.exec(header)?.[1] ?? fallback
 }
 
 /**
@@ -160,7 +183,7 @@ async function readProblem(response: Response): Promise<ValidationProblemDetails
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const method = options.method ?? 'GET'
   const headers: Record<string, string> = {
-    Accept: 'application/json',
+    Accept: options.responseType === 'file' ? '*/*' : 'application/json',
     // The server localizes its own messages (errors, validation) from this header.
     'Accept-Language': currentLanguage(),
   }
@@ -201,6 +224,10 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     return undefined as T
   }
 
+  if (options.responseType === 'file') {
+    return { blob: await response.blob(), fileName: fileNameOf(response, 'download') } as T
+  }
+
   return (await response.json()) as T
 }
 
@@ -209,6 +236,8 @@ export const api = {
   post: <T>(path: string, body?: unknown) => request<T>(path, { method: 'POST', body }),
   put: <T>(path: string, body?: unknown) => request<T>(path, { method: 'PUT', body }),
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
+  /** A POST whose answer is a file (with the antiforgery header, unlike a plain download link). */
+  postForFile: (path: string, body?: unknown) => request<DownloadedFile>(path, { method: 'POST', body, responseType: 'file' }),
 }
 
 /** Builds a query string, dropping empty values so the server sees an absent filter rather than a blank one. */

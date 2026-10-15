@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using OpenPortal.Web.Authentication;
 
 namespace OpenPortal.Web.Middleware;
 
@@ -13,7 +14,8 @@ namespace OpenPortal.Web.Middleware;
 /// <c>[ValidateAntiForgeryToken]</c> away from that.
 /// </para>
 /// <para>
-/// Safe methods are exempt, as are controllers marked <c>[IgnoreAntiforgeryToken]</c>.
+/// Safe methods are exempt, as are controllers marked <c>[IgnoreAntiforgeryToken]</c> and requests authenticated by
+/// a personal access token.
 /// </para>
 /// </summary>
 public sealed class ValidateAntiforgeryTokenFilter : IAsyncAuthorizationFilter, IOrderedFilter
@@ -48,6 +50,14 @@ public sealed class ValidateAntiforgeryTokenFilter : IAsyncAuthorizationFilter, 
         // application announcement endpoint are called by other servers or reached by cross-site redirect,
         // and authenticate each request through their own protocol instead of the session cookie.
         if (context.Filters.OfType<IgnoreAntiforgeryTokenAttribute>().Any())
+        {
+            return;
+        }
+
+        // A personal access token travels in the Authorization header, which a cross-site form or script cannot
+        // set, and while one is presented the session cookie is not even read: there is no ambient credential to
+        // forge a request with.
+        if (PersonalAccessTokenAuthentication.IsToken(context.HttpContext.User))
         {
             return;
         }
