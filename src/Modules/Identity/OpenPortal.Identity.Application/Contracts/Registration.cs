@@ -46,7 +46,9 @@ public sealed class UpdateRegistrationSettingsRequest
 /// <summary>What the sign-in page needs to know about registration. Public, like the password policy.</summary>
 /// <param name="Enabled">Whether the "create an account" link is offered.</param>
 /// <param name="RequiresApproval">Whether a new account waits for an administrator.</param>
-public sealed record RegistrationInfoDto(bool Enabled, bool RequiresApproval)
+/// <param name="PasswordReset">Whether the sign-in page offers "forgot your password?" (it needs email delivery).</param>
+/// <param name="Passkeys">Whether the sign-in page offers "sign in with a passkey".</param>
+public sealed record RegistrationInfoDto(bool Enabled, bool RequiresApproval, bool PasswordReset = false, bool Passkeys = false)
 {
     public static RegistrationInfoDto Closed { get; } = new(false, false);
 }
@@ -268,3 +270,31 @@ public sealed record UserStatisticsDto(
     int SignedInInPeriod,
     int NeverSignedIn,
     int PendingInvitations);
+
+// ---------------------------------------------------------------------------
+// Password recovery.
+// ---------------------------------------------------------------------------
+
+/// <summary>Someone who forgot their password asks for a reset link.</summary>
+public sealed class ForgotPasswordRequest
+{
+    [Required(AllowEmptyStrings = false, ErrorMessage = "validation.email.required")]
+    [EmailAddress(ErrorMessage = "validation.email.invalid")]
+    [StringLength(256, ErrorMessage = "validation.email.max")]
+    public string Email { get; init; } = string.Empty;
+}
+
+/// <summary>The reset link's values and the new password.</summary>
+public sealed class CompletePasswordResetRequest
+{
+    [Required(ErrorMessage = "validation.token.required")]
+    public Guid UserId { get; init; }
+
+    [Required(AllowEmptyStrings = false, ErrorMessage = "validation.token.required")]
+    [StringLength(2048, ErrorMessage = "validation.token.required")]
+    public string Token { get; init; } = string.Empty;
+
+    [Required(AllowEmptyStrings = false, ErrorMessage = "validation.newPassword.required")]
+    [StringLength(256, ErrorMessage = "validation.newPassword.max")]
+    public string NewPassword { get; init; } = string.Empty;
+}

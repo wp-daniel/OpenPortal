@@ -65,6 +65,7 @@ public sealed class IdentityDbContext : IdentityDbContext<ApplicationUser, Ident
         builder.Entity<IdentityUserLogin<Guid>>().ToTable("UserLogins");
         builder.Entity<IdentityRoleClaim<Guid>>().ToTable("RoleClaims");
         builder.Entity<IdentityUserToken<Guid>>().ToTable("UserTokens");
+        builder.Entity<IdentityUserPasskey<Guid>>().ToTable("UserPasskeys");
 
         SqliteDateTimeOffsetCompatibility.ApplyIfSqlite(builder, Database.ProviderName);
     }

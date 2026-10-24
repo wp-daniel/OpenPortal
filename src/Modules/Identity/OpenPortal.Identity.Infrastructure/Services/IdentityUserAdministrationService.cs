@@ -85,8 +85,20 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         var userIds = users.Select(user => user.Id).ToArray();
         var rolesByUser = await LoadRolesAsync(userIds, cancellationToken).ConfigureAwait(false);
 
+        // One query for the page: how many passkeys each account has (an administrator can remove them).
+        var passkeys = await _dbContext.Set<IdentityUserPasskey<Guid>>()
+            .AsNoTracking()
+            .Where(passkey => userIds.Contains(passkey.UserId))
+            .GroupBy(passkey => passkey.UserId)
+            .Select(group => new { UserId = group.Key, Count = group.Count() })
+            .ToDictionaryAsync(entry => entry.UserId, entry => entry.Count, cancellationToken)
+            .ConfigureAwait(false);
+
         var items = users
-            .Select(user => ToSummary(user, rolesByUser.GetValueOrDefault(user.Id) ?? [], now))
+            .Select(user => ToSummary(user, rolesByUser.GetValueOrDefault(user.Id) ?? [], now) with
+            {
+                PasskeyCount = passkeys.GetValueOrDefault(user.Id),
+            })
             .ToArray();
 
         return Result<PagedResult<UserSummaryDto>>.Success(

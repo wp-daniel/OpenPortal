@@ -1,4 +1,5 @@
 using System.Security.Cryptography.X509Certificates;
+using OpenIddict.Server;
 using OpenPortal.Access.Application.Contracts;
 using OpenPortal.Access.Domain.Applications;
 using static OpenIddict.Abstractions.OpenIddictConstants;
@@ -74,7 +75,16 @@ public static class OidcServerSetup
                 server.SetAuthorizationEndpointUris("connect/authorize")
                     .SetTokenEndpointUris("connect/token")
                     .SetUserInfoEndpointUris("connect/userinfo")
-                    .SetEndSessionEndpointUris("connect/endsession");
+                    .SetEndSessionEndpointUris("connect/endsession")
+
+                    // An application revokes its refresh token when its user signs out (RFC 7009), and a confidential
+                    // one may ask what a token means (RFC 7662). Both are handled by OpenIddict itself.
+                    .SetRevocationEndpointUris("connect/revoke")
+                    .SetIntrospectionEndpointUris("connect/introspect");
+
+                // Access tokens are signed JWTs, not encrypted ones: an application's own API validates them with
+                // the keys the discovery document publishes (jwks_uri), without calling the portal.
+                server.DisableAccessTokenEncryption();
 
                 // Client credentials is the application's own token for the application API; each client may
                 // use it only once an administrator gives the application API scopes (OidcClientRegistry).
@@ -102,7 +112,20 @@ public static class OidcServerSetup
                     Claims.PreferredUsername,
                     Claims.Email,
                     Claims.Role,
-                    ConnectController.GroupsClaim);
+                    ConnectController.GroupsClaim,
+                    Claims.AuthenticationMethodReference);
+
+                // Tells applications that the portal posts logout tokens to the back-channel logout URI registered
+                // for them (OpenID Connect Back-Channel Logout 1.0). The tokens name the user (sub), not a session.
+                server.AddEventHandler<OpenIddictServerEvents.HandleConfigurationRequestContext>(handler =>
+                    handler.UseInlineHandler(context =>
+                    {
+                        context.Metadata["backchannel_logout_supported"] = true;
+                        context.Metadata["backchannel_logout_session_supported"] = false;
+                        context.Metadata["acr_values_supported"] = System.Text.Json.JsonSerializer.SerializeToElement(new[] { ConnectController.MultiFactorAcr });
+
+                        return default;
+                    }));
 
                 server.SetAccessTokenLifetime(TimeSpan.FromMinutes(options.AccessTokenLifetimeMinutes))
                     .SetRefreshTokenLifetime(TimeSpan.FromDays(options.RefreshTokenLifetimeDays));

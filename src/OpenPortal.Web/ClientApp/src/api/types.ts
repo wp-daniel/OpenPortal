@@ -44,6 +44,10 @@ export interface SessionUser {
   readonly deletionScheduledAtUtc: string | null
   /** The administrator acting as this account, in a support session. */
   readonly impersonator: SessionImpersonator | null
+  /** The portal requires a second factor of this account and it has none yet: only the setup is offered. */
+  readonly twoFactorSetupRequired: boolean
+  /** How this session was established (RFC 8176: `pwd`, `mfa`, `hwk`…). */
+  readonly authenticationMethods: readonly string[]
 }
 
 export interface SessionImpersonator {
@@ -78,6 +82,10 @@ export interface PasswordPolicy {
 export interface RegistrationInfo {
   readonly enabled: boolean
   readonly requiresApproval: boolean
+  /** Whether the sign-in page offers "forgot your password?" (it needs email delivery). */
+  readonly passwordReset: boolean
+  /** Whether the sign-in page offers "sign in with a passkey". */
+  readonly passkeys: boolean
 }
 
 export interface Session {
@@ -152,6 +160,8 @@ export interface UserSummary extends UserDetails {
   readonly origin: AccountOrigin
   /** When the account will be deleted at its owner's request; null when no deletion is scheduled. */
   readonly deletionScheduledAtUtc: string | null
+  /** How many passkeys the account has (counted in lists only). */
+  readonly passkeyCount: number
 }
 
 export type AccountOrigin = 'created' | 'registered' | 'invited' | 'provisioned'
@@ -302,7 +312,18 @@ export interface ApplicationSummary {
   readonly allowAccessRequests: boolean
   /** Whether tokens name the organization the user signs in for. */
   readonly organizations: OrganizationMode
+  /** `confidential` (server application with a secret) or `public` (SPA or mobile app, PKCE only). */
+  readonly clientType: ApplicationClientType
+  /** Where the portal posts logout tokens when a user signs out; null for none. */
+  readonly backChannelLogoutUri: string | null
+  readonly announcedBackChannelLogoutUri: string | null
+  /** Where the portal posts the events the application subscribed to; null for none. */
+  readonly webhookUrl: string | null
+  readonly webhookEvents: readonly string[] | null
+  readonly hasWebhookSecret: boolean
 }
+
+export type ApplicationClientType = 'confidential' | 'public'
 
 export type GroupClaimMode = 'none' | 'granted' | 'all'
 
@@ -320,7 +341,8 @@ export interface ApplicationRole {
 /** Returned when a client secret is issued. The secret cannot be read again afterwards. */
 export interface ApplicationSecret {
   readonly application: ApplicationSummary
-  readonly clientSecret: string
+  /** Null for a public client, which has none. */
+  readonly clientSecret: string | null
 }
 
 export interface UpdateApplicationRequest {
@@ -336,10 +358,14 @@ export interface UpdateApplicationRequest {
   readonly apiScopes: readonly ApplicationApiScope[]
   readonly allowAccessRequests: boolean
   readonly organizations: OrganizationMode
+  readonly backChannelLogoutUri: string | null
+  readonly webhookUrl: string | null
+  readonly webhookEvents: readonly string[]
 }
 
 export interface CreateApplicationRequest extends UpdateApplicationRequest {
   readonly clientId: string
+  readonly clientType: ApplicationClientType
 }
 
 export interface UserReference {
@@ -380,6 +406,12 @@ export interface GroupDetail {
   /** Keys of the portal pages granted to the group. */
   readonly pages: readonly string[]
   readonly createdAtUtc: string
+  /** Groups inside this one: their members get what this group is given. */
+  readonly subgroups: readonly GroupReference[] | null
+  /** Groups this one is inside. */
+  readonly parentGroups: readonly GroupReference[] | null
+  /** When temporary memberships end, by user id. */
+  readonly memberExpiries: Readonly<Record<string, string>> | null
 }
 
 export interface SaveGroupRequest {
@@ -528,17 +560,33 @@ export interface TwoFactorLoginRequest {
   readonly rememberBrowser: boolean
 }
 
+export type TwoFactorRequirement = 'none' | 'administrators' | 'everyone'
+
 export interface SecuritySettings {
   readonly twoFactorEnabled: boolean
   readonly twoFactorIssuer: string
   readonly updatedAtUtc: string | null
   readonly personalAccessTokensEnabled: boolean
+  readonly passkeysEnabled: boolean
+  readonly twoFactorRequirement: TwoFactorRequirement
 }
 
 export interface UpdateSecuritySettingsRequest {
   readonly twoFactorEnabled: boolean
   readonly twoFactorIssuer: string
   readonly personalAccessTokensEnabled: boolean
+  readonly passkeysEnabled: boolean
+  readonly twoFactorRequirement: TwoFactorRequirement
+}
+
+/** One passkey of the signed-in account. */
+export interface Passkey {
+  /** The credential id, base64url. */
+  readonly id: string
+  readonly name: string
+  readonly createdAtUtc: string
+  /** Synced by a password manager or the device's keychain. */
+  readonly backedUp: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -989,4 +1037,63 @@ export interface CreatedPersonalAccessToken {
   readonly token: PersonalAccessToken
   /** The token itself: shown once. */
   readonly value: string
+}
+
+export type MailSecurity = 'auto' | 'starttls' | 'ssl' | 'none'
+
+/** The SMTP server the portal sends email with. The password is never returned, only whether one is stored. */
+export interface MailSettings {
+  readonly host: string | null
+  readonly port: number
+  readonly security: MailSecurity
+  readonly username: string | null
+  readonly hasPassword: boolean
+  readonly fromAddress: string | null
+  readonly fromName: string | null
+  /** `portal`: these settings are in use; `configuration`: the configuration file's server is; `none`: email is off. */
+  readonly source: 'portal' | 'configuration' | 'none'
+  readonly updatedAtUtc: string | null
+}
+
+export interface MailServerRequest {
+  readonly host: string
+  readonly port: number
+  readonly security: MailSecurity
+  readonly username: string
+  /** Empty keeps the stored password. */
+  readonly password: string
+  readonly clearPassword: boolean
+  readonly fromAddress: string
+  readonly fromName: string
+}
+
+export interface MailTestResult {
+  readonly delivered: boolean
+  readonly error: string | null
+}
+
+export type OutboxStatus = 'pending' | 'delivered' | 'failed'
+
+export interface OutboxMessage {
+  readonly id: string
+  readonly type: string
+  readonly description: string | null
+  readonly status: OutboxStatus
+  readonly attempts: number
+  readonly createdAtUtc: string
+  readonly availableAtUtc: string
+  readonly lastAttemptAtUtc: string | null
+  readonly deliveredAtUtc: string | null
+  readonly lastError: string | null
+}
+
+export interface OutboxPage {
+  readonly summary: {
+    readonly pending: number
+    readonly failed: number
+    readonly deliveredLastDay: number
+    readonly oldestPendingAtUtc: string | null
+  }
+  readonly items: readonly OutboxMessage[]
+  readonly total: number
 }

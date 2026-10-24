@@ -6,8 +6,9 @@ namespace OpenPortal.Access.Domain.Groups;
 /// <summary>
 /// A named set of users. Granting a group access to an application grants it to every member.
 /// <para>
-/// Groups are flat on purpose: a user may belong to several groups, but a group never contains another,
-/// so "who can open this application" is always one join away and needs no cycle checks.
+/// A group may contain other groups (<see cref="GroupNesting"/>): the members of a subgroup are members of every
+/// group above it, so "Sales Italy" inside "Sales" gets what Sales is given. The services refuse a nesting that
+/// would make a cycle.
 /// </para>
 /// </summary>
 public sealed class Group
@@ -87,17 +88,22 @@ public sealed class Group
         return Result.Success();
     }
 
-    /// <summary>Adds a member. Adding someone who is already a member changes nothing and returns false.</summary>
-    public bool AddMember(Guid userId, DateTimeOffset now)
+    /// <summary>
+    /// Adds a member, until <paramref name="expiresAtUtc"/> when given. Adding someone who is already a member only
+    /// updates the end of the membership; the result says whether anything changed.
+    /// </summary>
+    public bool AddMember(Guid userId, DateTimeOffset now, DateTimeOffset? expiresAtUtc = null)
     {
         ArgumentOutOfRangeException.ThrowIfEqual(Guid.Empty, userId);
 
-        if (_members.Any(member => member.UserId == userId))
+        if (_members.FirstOrDefault(member => member.UserId == userId) is { } existing)
         {
-            return false;
+            return existing.SetExpiry(expiresAtUtc);
         }
 
-        _members.Add(new GroupMember(Id, userId, now));
+        var member = new GroupMember(Id, userId, now);
+        member.SetExpiry(expiresAtUtc);
+        _members.Add(member);
 
         return true;
     }
@@ -152,6 +158,50 @@ public sealed class GroupMember
     public Guid GroupId { get; private set; }
 
     public Guid UserId { get; private set; }
+
+    public DateTimeOffset AddedAtUtc { get; private set; }
+
+    /// <summary>When the membership ends by itself; null: until it is removed.</summary>
+    public DateTimeOffset? ExpiresAtUtc { get; private set; }
+
+    public bool IsActiveAt(DateTimeOffset now) => ExpiresAtUtc is null || ExpiresAtUtc > now;
+
+    public bool SetExpiry(DateTimeOffset? expiresAtUtc)
+    {
+        if (ExpiresAtUtc == expiresAtUtc)
+        {
+            return false;
+        }
+
+        ExpiresAtUtc = expiresAtUtc;
+        return true;
+    }
+}
+
+/// <summary>
+/// A group inside another: every member of <see cref="ChildGroupId"/> is a member of <see cref="ParentGroupId"/> too,
+/// and of every group above it.
+/// </summary>
+public sealed class GroupNesting
+{
+    // Required by EF Core.
+    private GroupNesting()
+    {
+    }
+
+    public GroupNesting(Guid parentGroupId, Guid childGroupId, DateTimeOffset now)
+    {
+        ArgumentOutOfRangeException.ThrowIfEqual(Guid.Empty, parentGroupId);
+        ArgumentOutOfRangeException.ThrowIfEqual(Guid.Empty, childGroupId);
+
+        ParentGroupId = parentGroupId;
+        ChildGroupId = childGroupId;
+        AddedAtUtc = now;
+    }
+
+    public Guid ParentGroupId { get; private set; }
+
+    public Guid ChildGroupId { get; private set; }
 
     public DateTimeOffset AddedAtUtc { get; private set; }
 }

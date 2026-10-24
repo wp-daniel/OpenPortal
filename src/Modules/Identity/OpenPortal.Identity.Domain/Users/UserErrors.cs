@@ -47,6 +47,45 @@ public static class UserErrors
             Prefix + "email_delivery_unavailable",
             "Email confirmation needs email delivery, which is not configured (Email:Smtp:Host).");
 
+    public static Error TwoFactorRequirementInvalid { get; } =
+        Error.Validation(Prefix + "two_factor_requirement_invalid", "The second-factor requirement must be none, administrators or everyone.");
+
+    public static Error TwoFactorRequirementUnsatisfiable { get; } =
+        Error.Validation(Prefix + "two_factor_requirement_unsatisfiable", "Requiring a second factor needs authenticator apps or passkeys to be on.");
+
+    public static Error TwoFactorRequirementSelf { get; } =
+        Error.Conflict(Prefix + "two_factor_requirement_self", "Set up an authenticator app or a passkey on your own account before requiring one.");
+
+    public static Error TwoFactorSetupRequired { get; } =
+        Error.Forbidden(Prefix + "two_factor_setup_required", "This account must set up an authenticator app or a passkey before anything else.");
+
+    public static Error TwoFactorLastFactor { get; } =
+        Error.Conflict(Prefix + "two_factor_last_factor", "This is the account's last second factor, which the portal requires: add another one first.");
+
+    public static Error PasskeyRequired { get; } =
+        Error.Unauthorized(Prefix + "passkey_required", "This account signs in with a passkey: the password alone is not enough.");
+
+    public static Error PasskeysDisabled { get; } =
+        Error.Forbidden(Prefix + "passkeys_disabled", "Passkeys are turned off for this portal.");
+
+    public static Error PasskeyInvalid { get; } =
+        Error.Validation(Prefix + "passkey_invalid", "The passkey could not be verified.");
+
+    public static Error PasskeyNotFound { get; } =
+        Error.NotFound(Prefix + "passkey_not_found", "The passkey does not exist.");
+
+    public static Error PasskeyNameInvalid { get; } =
+        Error.Validation(Prefix + "passkey_name_invalid", "A passkey name is 1 to 64 characters.");
+
+    public static Error PasskeySignInFailed { get; } =
+        Error.Unauthorized(Prefix + "passkey_sign_in_failed", "This passkey does not belong to an account that can sign in.");
+
+    public static Error PasswordResetInvalid { get; } =
+        Error.Validation(Prefix + "password_reset_invalid", "The reset link is not valid, was used already or has expired.");
+
+    public static Error PasswordRecoveryUnavailable { get; } =
+        Error.Conflict(Prefix + "password_recovery_unavailable", "Password recovery needs email delivery, which is not configured.");
+
     public static Error EmailConfirmationInvalid { get; } =
         Error.Validation(Prefix + "email_confirmation_invalid", "The confirmation link is not valid or has expired.");
 

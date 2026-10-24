@@ -71,7 +71,7 @@ internal sealed class IdentityRegistrationSettingsService : IRegistrationSetting
             return Result<RegistrationSettingsDto>.Failure(UserErrors.Forbidden);
         }
 
-        return Result<RegistrationSettingsDto>.Success(ToDto(await _store.ReadAsync(cancellationToken).ConfigureAwait(false)));
+        return Result<RegistrationSettingsDto>.Success(ToDto(await _store.ReadAsync(cancellationToken).ConfigureAwait(false), await _messaging.CanSendEmailAsync(cancellationToken).ConfigureAwait(false)));
     }
 
     public async Task<Result<RegistrationSettingsDto>> UpdateAsync(
@@ -91,7 +91,7 @@ internal sealed class IdentityRegistrationSettingsService : IRegistrationSetting
         }
 
         // Open registration that waits for a confirmation nobody can send would strand every new account.
-        if (mode != RegistrationMode.Disabled && request.RequireEmailConfirmation && !_messaging.CanSendEmail)
+        if (mode != RegistrationMode.Disabled && request.RequireEmailConfirmation && !await _messaging.CanSendEmailAsync(cancellationToken).ConfigureAwait(false))
         {
             return Result<RegistrationSettingsDto>.Failure(UserErrors.EmailDeliveryUnavailable);
         }
@@ -138,15 +138,15 @@ internal sealed class IdentityRegistrationSettingsService : IRegistrationSetting
                 .ConfigureAwait(false);
         }
 
-        return Result<RegistrationSettingsDto>.Success(ToDto(settings));
+        return Result<RegistrationSettingsDto>.Success(ToDto(settings, await _messaging.CanSendEmailAsync(cancellationToken).ConfigureAwait(false)));
     }
 
-    private RegistrationSettingsDto ToDto(RegistrationSettings settings) => new(
+    private static RegistrationSettingsDto ToDto(RegistrationSettings settings, bool canSendEmail) => new(
         RegistrationMapping.ToContract(settings.Mode),
         settings.AllowedDomains,
         settings.RequireEmailConfirmation,
         settings.InvitationLifetimeDays,
-        _messaging.CanSendEmail,
+        canSendEmail,
         settings.UpdatedAtUtc);
 }
 

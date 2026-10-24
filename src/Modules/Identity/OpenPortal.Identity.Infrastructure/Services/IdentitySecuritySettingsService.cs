@@ -41,14 +41,20 @@ internal sealed class IdentitySecuritySettingsService : ISecuritySettingsService
     private readonly AdministrationGuard _guard;
     private readonly IClock _clock;
     private readonly IAuditTrail _audit;
+    private readonly UserLookup _userLookup;
+    private readonly IdentityTwoFactorPolicy _policy;
 
     public IdentitySecuritySettingsService(
         IdentityDbContext dbContext,
         SecuritySettingsStore store,
         AdministrationGuard guard,
         IClock clock,
-        IAuditTrail audit)
+        IAuditTrail audit,
+        UserLookup userLookup,
+        IdentityTwoFactorPolicy policy)
     {
+        _userLookup = userLookup;
+        _policy = policy;
         _dbContext = dbContext;
         _store = store;
         _guard = guard;
@@ -85,10 +91,26 @@ internal sealed class IdentitySecuritySettingsService : ISecuritySettingsService
         var isNew = settings is null;
         settings ??= SecuritySettings.Defaults();
 
-        var changed = settings.Update(request.TwoFactorEnabled, request.TwoFactorIssuer, _clock.UtcNow, request.PersonalAccessTokensEnabled);
+        var changed = settings.Update(
+            request.TwoFactorEnabled,
+            request.TwoFactorIssuer,
+            _clock.UtcNow,
+            request.PersonalAccessTokensEnabled,
+            request.PasskeysEnabled,
+            TwoFactorRequirements.FromContract(request.TwoFactorRequirement));
         if (changed.IsFailure)
         {
             return Result<SecuritySettingsDto>.Failure(changed.Error);
+        }
+
+        // An administrator who demands a second factor they do not have would lock themselves out of the portal
+        // (and of this setting) the moment they save.
+        if (changed.Value
+            && settings.TwoFactorRequirement != TwoFactorRequirement.None
+            && await _userLookup.FindCurrentAsync(cancellationToken).ConfigureAwait(false) is { IsSuccess: true } caller
+            && await _policy.WouldLackFactorAsync(caller.Value, settings).ConfigureAwait(false))
+        {
+            return Result<SecuritySettingsDto>.Failure(UserErrors.TwoFactorRequirementSelf);
         }
 
         if (changed.Value)
@@ -108,6 +130,8 @@ internal sealed class IdentitySecuritySettingsService : ISecuritySettingsService
                             ["twoFactor"] = settings.TwoFactorEnabled ? "on" : "off",
                             ["issuer"] = settings.TwoFactorIssuer,
                             ["personalAccessTokens"] = settings.PersonalAccessTokensEnabled ? "on" : "off",
+                            ["passkeys"] = settings.PasskeysEnabled ? "on" : "off",
+                            ["requirement"] = TwoFactorRequirements.ToContract(settings.TwoFactorRequirement),
                         }),
                     cancellationToken)
                 .ConfigureAwait(false);
@@ -117,5 +141,11 @@ internal sealed class IdentitySecuritySettingsService : ISecuritySettingsService
     }
 
     private static SecuritySettingsDto ToDto(SecuritySettings settings) =>
-        new(settings.TwoFactorEnabled, settings.TwoFactorIssuer, settings.PersonalAccessTokensEnabled, settings.UpdatedAtUtc);
+        new(
+            settings.TwoFactorEnabled,
+            settings.TwoFactorIssuer,
+            settings.PersonalAccessTokensEnabled,
+            settings.UpdatedAtUtc,
+            settings.PasskeysEnabled,
+            TwoFactorRequirements.ToContract(settings.TwoFactorRequirement));
 }

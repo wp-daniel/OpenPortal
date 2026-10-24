@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Download, Headset, History, KeyRound, KeySquare, Upload, Loader2, Pencil, Plus, ShieldCheck, ShieldOff, Smartphone, Trash2, UserCheck } from 'lucide-react'
+import { Download, Fingerprint, Headset, History, KeyRound, KeySquare, Upload, Loader2, MoreHorizontal, Pencil, Plus, ShieldCheck, ShieldOff, Smartphone, Trash2, UserCheck } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
@@ -32,6 +32,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -87,6 +94,7 @@ export function AdminUsersPage() {
   const [editing, setEditing] = useState<UserSummary | null>(null)
   const [deleting, setDeleting] = useState<UserSummary | null>(null)
   const [resettingTwoFactor, setResettingTwoFactor] = useState<UserSummary | null>(null)
+  const [resettingPasskeys, setResettingPasskeys] = useState<UserSummary | null>(null)
   const [impersonating, setImpersonating] = useState<UserSummary | null>(null)
   const [tokensOf, setTokensOf] = useState<UserSummary | null>(null)
   const [importing, setImporting] = useState(false)
@@ -135,6 +143,15 @@ export function AdminUsersPage() {
     onSuccess: async (_result, user) => {
       setResettingTwoFactor(null)
       notify.success(t('users.twoFactorReset.done'), user.email)
+      await refresh()
+    },
+  })
+
+  const resetPasskeys = useMutation({
+    mutationFn: (user: UserSummary) => userAdminApi.resetPasskeys(user.id),
+    onSuccess: async (_result, user) => {
+      setResettingPasskeys(null)
+      notify.success(t('users.passkeysReset.done'), user.email)
       await refresh()
     },
   })
@@ -270,11 +287,11 @@ export function AdminUsersPage() {
                     />
                   </TableHead>
                   <TableHead>{t('common.displayName')}</TableHead>
-                  <TableHead>{t('common.phone')}</TableHead>
-                  <TableHead>{t('common.company')}</TableHead>
-                  <TableHead>{t('users.administrator')}</TableHead>
+                  <TableHead className="hidden 2xl:table-cell">{t('common.phone')}</TableHead>
+                  <TableHead className="hidden xl:table-cell">{t('common.company')}</TableHead>
+                  <TableHead className="hidden lg:table-cell">{t('users.administrator')}</TableHead>
                   <TableHead>{t('common.status')}</TableHead>
-                  <TableHead>{t('users.lastSignIn')}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t('users.lastSignIn')}</TableHead>
                   <TableHead className="text-right">{t('common.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -295,14 +312,16 @@ export function AdminUsersPage() {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <UserAvatar user={user} />
-                          <div className="min-w-0">
-                            <div className="font-medium">{user.displayName}</div>
-                            <div className="text-muted-foreground font-mono text-xs">{user.email}</div>
+                          <div className="min-w-0 max-w-64">
+                            <div className="truncate font-medium">{user.displayName}</div>
+                            <div className="text-muted-foreground truncate font-mono text-xs" title={user.email}>
+                              {user.email}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>{user.phoneNumber ?? <span className="text-muted-foreground">—</span>}</TableCell>
-                      <TableCell>
+                      <TableCell className="hidden 2xl:table-cell">{user.phoneNumber ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                      <TableCell className="hidden xl:table-cell">
                         {user.company || user.jobTitle ? (
                           <>
                             <div>{user.company}</div>
@@ -312,7 +331,7 @@ export function AdminUsersPage() {
                           <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden lg:table-cell">
                         {user.isAdministrator ? (
                           <Badge variant="secondary">
                             <ShieldCheck />
@@ -351,7 +370,7 @@ export function AdminUsersPage() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap">
+                      <TableCell className="hidden whitespace-nowrap md:table-cell">
                         {user.lastSignInAtUtc ? (
                           formatDate(user.lastSignInAtUtc, { dateStyle: 'medium', timeStyle: 'short' })
                         ) : (
@@ -369,6 +388,7 @@ export function AdminUsersPage() {
                           <Button
                             variant="ghost"
                             size="sm"
+                            aria-label={t('common.edit')}
                             disabled={locked}
                             title={locked ? t('users.administratorOnly') : undefined}
                             onClick={() => {
@@ -377,68 +397,64 @@ export function AdminUsersPage() {
                             }}
                           >
                             <Pencil />
-                            {t('common.edit')}
+                            <span className="hidden sm:inline">{t('common.edit')}</span>
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setAccessUser(user)}>
-                            <KeyRound />
-                            {t('users.access')}
-                          </Button>
-                          {canAudit && (
-                            <Button variant="ghost" size="sm" asChild>
-                              <Link
-                                to={`/admin/audit?subject=${encodeURIComponent(user.id)}&label=${encodeURIComponent(user.email)}`}
-                                aria-label={t('users.activity')}
-                                title={t('users.activity')}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" aria-label={t('common.actions')} title={t('common.actions')}>
+                                <MoreHorizontal />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onSelect={() => setAccessUser(user)}>
+                                <KeyRound />
+                                {t('users.access')}
+                              </DropdownMenuItem>
+                              {canAudit && (
+                                <DropdownMenuItem asChild>
+                                  <Link to={`/admin/audit?subject=${encodeURIComponent(user.id)}&label=${encodeURIComponent(user.email)}`}>
+                                    <History />
+                                    {t('users.activity')}
+                                  </Link>
+                                </DropdownMenuItem>
+                              )}
+                              {session.features.personalAccessTokens && (
+                                <DropdownMenuItem disabled={locked} onSelect={() => setTokensOf(user)}>
+                                  <KeySquare />
+                                  {t('tokens.open')}
+                                </DropdownMenuItem>
+                              )}
+                              {isAdministrator && canImpersonate(user, session.user?.id) && (
+                                <DropdownMenuItem onSelect={() => setImpersonating(user)}>
+                                  <Headset />
+                                  {t('impersonation.open')}
+                                </DropdownMenuItem>
+                              )}
+                              {(user.twoFactorEnabled || user.passkeyCount > 0) && <DropdownMenuSeparator />}
+                              {user.twoFactorEnabled && (
+                                <DropdownMenuItem disabled={locked} onSelect={() => setResettingTwoFactor(user)}>
+                                  <ShieldOff />
+                                  {t('users.twoFactorReset.open')}
+                                </DropdownMenuItem>
+                              )}
+                              {user.passkeyCount > 0 && (
+                                <DropdownMenuItem disabled={locked} onSelect={() => setResettingPasskeys(user)}>
+                                  <Fingerprint />
+                                  {t('users.passkeysReset.open')}
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                variant="destructive"
+                                disabled={locked || self}
+                                title={self ? t('users.cannotDeleteSelf') : locked ? t('users.administratorOnly') : undefined}
+                                onSelect={() => setDeleting(user)}
                               >
-                                <History />
-                              </Link>
-                            </Button>
-                          )}
-                          {session.features.personalAccessTokens && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              aria-label={t('tokens.open')}
-                              title={t('tokens.open')}
-                              disabled={locked}
-                              onClick={() => setTokensOf(user)}
-                            >
-                              <KeySquare />
-                            </Button>
-                          )}
-                          {isAdministrator && canImpersonate(user, session.user?.id) && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              aria-label={t('impersonation.open')}
-                              title={t('impersonation.open')}
-                              onClick={() => setImpersonating(user)}
-                            >
-                              <Headset />
-                            </Button>
-                          )}
-                          {user.twoFactorEnabled && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              aria-label={t('users.twoFactorReset.open')}
-                              disabled={locked}
-                              title={locked ? t('users.administratorOnly') : t('users.twoFactorReset.open')}
-                              onClick={() => setResettingTwoFactor(user)}
-                            >
-                              <ShieldOff />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            aria-label={t('common.delete')}
-                            disabled={locked || self}
-                            title={self ? t('users.cannotDeleteSelf') : locked ? t('users.administratorOnly') : undefined}
-                            onClick={() => setDeleting(user)}
-                          >
-                            <Trash2 />
-                          </Button>
+                                <Trash2 />
+                                {t('common.delete')}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -508,6 +524,32 @@ export function AdminUsersPage() {
               }}
             >
               {t('users.twoFactorReset.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={resettingPasskeys !== null} onOpenChange={(open) => !open && setResettingPasskeys(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('users.passkeysReset.title', { name: resettingPasskeys?.displayName ?? '' })}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('users.passkeysReset.description', { count: resettingPasskeys?.passkeyCount ?? 0 })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={resetPasskeys.isPending}
+              onClick={(event) => {
+                event.preventDefault()
+                if (resettingPasskeys) {
+                  resetPasskeys.mutate(resettingPasskeys)
+                }
+              }}
+            >
+              {t('users.passkeysReset.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

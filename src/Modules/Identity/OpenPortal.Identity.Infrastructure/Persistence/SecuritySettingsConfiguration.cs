@@ -27,6 +27,11 @@ internal sealed class SecuritySettingsConfiguration : IEntityTypeConfiguration<S
         builder.Property(settings => settings.TwoFactorIssuer)
             .HasMaxLength(SecuritySettings.IssuerMaxLength)
             .IsRequired();
+
+        builder.Property(settings => settings.TwoFactorRequirement)
+            .HasConversion<string>()
+            .HasMaxLength(32)
+            .IsRequired();
     }
 }
 

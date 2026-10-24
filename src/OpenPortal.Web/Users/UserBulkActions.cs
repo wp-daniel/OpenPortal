@@ -53,13 +53,16 @@ public sealed class UserBulkActions
     private readonly IGroupService _groups;
     private readonly IAccessUserMaintenance _access;
     private readonly AccountEraser _eraser;
+    private readonly OpenPortal.Web.Oidc.BackChannelLogoutNotifier _logout;
 
     public UserBulkActions(
         IUserAdministrationService users,
         IGroupService groups,
         IAccessUserMaintenance access,
-        AccountEraser eraser)
+        AccountEraser eraser,
+        OpenPortal.Web.Oidc.BackChannelLogoutNotifier logout)
     {
+        _logout = logout;
         _users = users;
         _groups = groups;
         _access = access;
@@ -105,6 +108,8 @@ public sealed class UserBulkActions
             var revoked = await _users.RevokeSessionsAsync(userId, cancellationToken).ConfigureAwait(false);
             if (revoked.IsSuccess)
             {
+                // The applications are told before the authorizations that name them are revoked.
+                await _logout.NotifyAsync(userId, cancellationToken).ConfigureAwait(false);
                 await _access.RevokeTokensAsync(userId, cancellationToken).ConfigureAwait(false);
             }
 

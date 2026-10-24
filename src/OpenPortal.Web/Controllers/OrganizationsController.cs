@@ -135,4 +135,44 @@ public sealed class MyOrganizationsController : ControllerBase
 
         return mine.IsSuccess ? Ok(mine.Value) : ProblemResults.FromResult(HttpContext, mine);
     }
+
+    // Delegated management: an organization's own administrators manage its members from their account, without
+    // any portal page. The service checks that the caller administers that organization.
+
+    [HttpGet("{organizationId:guid}")]
+    [ProducesResponseType<OrganizationDetailDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<OrganizationDetailDto>> GetAsync(Guid organizationId, CancellationToken cancellationToken) =>
+        Respond(await _organizations.GetAsync(organizationId, cancellationToken).ConfigureAwait(false));
+
+    [HttpPost("{organizationId:guid}/members")]
+    [ProducesResponseType<OrganizationDetailDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<OrganizationDetailDto>> AddMemberAsync(
+        Guid organizationId,
+        [FromBody] AddOrganizationMemberRequest request,
+        CancellationToken cancellationToken) =>
+        Respond(await _organizations.AddMemberByEmailAsync(organizationId, request, cancellationToken).ConfigureAwait(false));
+
+    [HttpPut("{organizationId:guid}/members/{userId:guid}")]
+    [ProducesResponseType<OrganizationDetailDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<OrganizationDetailDto>> SetMemberAsync(
+        Guid organizationId,
+        Guid userId,
+        [FromBody] SetOrganizationMemberRequest request,
+        CancellationToken cancellationToken) =>
+        Respond(await _organizations.SetMemberAsync(organizationId, userId, request, cancellationToken).ConfigureAwait(false));
+
+    [HttpDelete("{organizationId:guid}/members/{userId:guid}")]
+    [ProducesResponseType<OrganizationDetailDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<OrganizationDetailDto>> RemoveMemberAsync(Guid organizationId, Guid userId, CancellationToken cancellationToken) =>
+        Respond(await _organizations.RemoveMemberAsync(organizationId, userId, cancellationToken).ConfigureAwait(false));
+
+    private ActionResult<T> Respond<T>(Result<T> result) =>
+        result.IsSuccess ? Ok(result.Value) : ProblemResults.FromResult(HttpContext, result);
 }

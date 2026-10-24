@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Access.Domain.Applications;
 using OpenPortal.Access.Infrastructure.DependencyInjection;
@@ -25,6 +26,9 @@ using OpenPortal.Web.Infrastructure;
 using OpenPortal.Web.Localization;
 using OpenPortal.Web.Middleware;
 using OpenPortal.Web.Notifications;
+using OpenPortal.Web.Observability;
+using OpenPortal.Web.Scale;
+using OpenPortal.Web.Webhooks;
 using OpenPortal.Web.Oidc;
 using OpenPortal.Web.Persistence;
 using OpenPortal.Web.Privacy;
@@ -33,6 +37,9 @@ using OpenPortal.Web.Users;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Traces, metrics and logs over OTLP, when an endpoint is configured (Observability:OtlpEndpoint).
+builder.AddOpenPortalObservability();
 
 // ---------------------------------------------------------------------------
 // Database provider selection.
@@ -101,7 +108,9 @@ builder.Services.AddScoped<IUserPageSource, PortalUserPageSource>();
 // Account email (invitations, address confirmation, approvals): delivery is the host's (SMTP or a pickup folder),
 // the texts come from the resource files.
 builder.Services.AddOpenPortalEmail(builder.Configuration);
-builder.Services.AddScoped<IAccountMessaging, HostAccountMessaging>();
+builder.Services.AddScoped<HostAccountMessaging>();
+builder.Services.AddScoped<IAccountMessaging>(provider => provider.GetRequiredService<HostAccountMessaging>());
+builder.Services.AddScoped<MailTester>();
 
 builder.Services.AddIdentityModule(
     builder.Configuration,
@@ -132,10 +141,33 @@ builder.Services.AddAuditModule(
     builder.Configuration,
     options => DatabaseProviderSelector.Configure(options, database.Provider, database.ConnectionString));
 
+// Webhooks: what the modules record is also posted to the applications that subscribed to it (signed, through the
+// outbox). The trail every module records with is wrapped, so no module knows about webhooks.
+builder.Services.AddScoped<WebhookPublisher>();
+builder.Services.AddScoped<OpenPortal.SharedKernel.Messaging.IOutboxHandler, WebhookHandler>();
+builder.Services.AddHttpClient(WebhookHandler.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(10));
+{
+    var audit = builder.Services.Last(descriptor => descriptor.ServiceType == typeof(OpenPortal.SharedKernel.Auditing.IAuditTrail));
+    builder.Services.Remove(audit);
+    builder.Services.Add(ServiceDescriptor.Describe(
+        typeof(OpenPortal.SharedKernel.Auditing.IAuditTrail),
+        provider => ActivatorUtilities.CreateInstance<WebhookAuditTrail>(
+            provider,
+            audit.ImplementationFactory?.Invoke(provider)
+                ?? ActivatorUtilities.CreateInstance(provider, audit.ImplementationType!)),
+        audit.Lifetime));
+}
+
 // Notifications: the notifier every module tells people with (INotifier) and each user's notification center. The
 // host says who is calling and which people each kind of work (a notice's roles) names.
 builder.Services.AddScoped<INotificationContext, HostNotificationContext>();
+
+// Real-time notification signals (the bell's event stream): in memory, or across instances through Redis.
+builder.Services.AddSingleton<NotificationHub>();
+builder.Services.AddSingleton<INotificationPublisher>(provider => provider.GetRequiredService<NotificationHub>());
+builder.Services.AddHostedService<NotificationHubStarter>();
 builder.Services.AddScoped<IAnnouncementAuthorization, AnnouncementAuthorization>();
+builder.Services.AddScoped<IDeliveryAdministrationAuthorization, DeliveryAdministrationAuthorization>();
 
 builder.Services.AddNotificationsModule(
     builder.Configuration,
@@ -148,11 +180,15 @@ builder.Services.AddNotificationsModule(
 // Kept in memory or in a per-machine default location, a restart (or a second instance) would sign every
 // user out; persisted to one folder, sessions survive both. Several instances must share the folder.
 // ---------------------------------------------------------------------------
-builder.Services.AddDataProtection()
+var dataProtection = builder.Services.AddDataProtection()
     .SetApplicationName("OpenPortal")
     .PersistKeysToFileSystem(new DirectoryInfo(
         builder.Configuration["DataProtection:KeysPath"]
         ?? Path.Combine(builder.Environment.ContentRootPath, "App_Data", "keys")));
+
+// Several instances: Redis (Redis:ConnectionString) shares the rate limits, the cache, the notification signals and,
+// with Redis:DataProtectionKeys, the key ring above. Without it everything stays in this process.
+builder.Services.AddOpenPortalRedis(builder.Configuration, dataProtection);
 
 // ---------------------------------------------------------------------------
 // Web stack.
@@ -170,6 +206,7 @@ builder.Services
     {
         options.Filters.Add<ValidateAntiforgeryTokenFilter>();
         options.Filters.Add<PersonalAccessTokenScopeFilter>();
+        options.Filters.Add<TwoFactorSetupFilter>();
 
         // Keep "Async" in action names so CreatedAtAction(nameof(GetAsync), ...) resolves. With MVC's default
         // the suffix is trimmed, the lookup finds no route, and a create that already succeeded answers 500.
@@ -238,6 +275,13 @@ builder.Services.AddAntiforgery(options =>
 // OpenID Connect provider for other applications. Transport security follows the cookie setting, because the
 // development server and the tests run over plain http.
 builder.Services.AddOpenPortalOidcServer(builder.Configuration, builder.Environment, requireSecureCookies);
+
+// Single logout: applications that registered a back-channel logout URI get a logout token when their user's portal
+// session ends, delivered through the outbox.
+builder.Services.TryAddSingleton(TimeProvider.System);
+builder.Services.AddScoped<BackChannelLogoutNotifier>();
+builder.Services.AddScoped<OpenPortal.SharedKernel.Messaging.IOutboxHandler, BackChannelLogoutHandler>();
+builder.Services.AddHttpClient(BackChannelLogoutHandler.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(10));
 
 // Address suggestions (postal code -> places, city search) proxied from free public providers.
 builder.Services.AddOpenPortalGeo(builder.Configuration);

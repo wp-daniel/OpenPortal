@@ -15,6 +15,7 @@ namespace OpenPortal.Web.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/legal")]
+[AllowDuringTwoFactorSetup]
 [Produces("application/json")]
 public sealed class LegalController : ControllerBase
 {

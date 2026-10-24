@@ -6,4 +6,8 @@ public static class NotificationAuditActions
     public const string AnnouncementCreated = "announcement.created";
     public const string AnnouncementUpdated = "announcement.updated";
     public const string AnnouncementDeleted = "announcement.deleted";
+    public const string MailSettingsUpdated = "mail.settings_updated";
+    public const string MailTestSent = "mail.test_sent";
+    public const string OutboxRetried = "outbox.retried";
+    public const string OutboxDeleted = "outbox.deleted";
 }

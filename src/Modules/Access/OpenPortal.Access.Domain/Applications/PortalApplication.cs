@@ -31,6 +31,19 @@ public enum OrganizationMode
     Required = 2,
 }
 
+/// <summary>Whether the application can keep a secret.</summary>
+public enum ApplicationClientType
+{
+    /// <summary>A server-side application with a client secret (the default).</summary>
+    Confidential = 0,
+
+    /// <summary>
+    /// A single-page, mobile or desktop application that cannot keep a secret: it proves itself with PKCE alone and
+    /// gets no application API scopes.
+    /// </summary>
+    Public = 1,
+}
+
 /// <summary>How the application came to be known to the portal.</summary>
 public enum ApplicationSource
 {
@@ -94,6 +107,35 @@ public sealed class PortalApplication
 
     public IReadOnlyList<string> PostLogoutRedirectUris { get; private set; } = [];
 
+    /// <summary>
+    /// Where the portal posts a logout token (OpenID Connect Back-Channel Logout) when a user signs out of the
+    /// portal, so the application ends its own session too. Null: the application is not told.
+    /// </summary>
+    public string? BackChannelLogoutUri { get; private set; }
+
+    /// <summary>The back-channel logout URI the application last proposed. Applied only by an administrator.</summary>
+    public string? AnnouncedBackChannelLogoutUri { get; private set; }
+
+    /// <summary>Confidential (with a secret) or public (PKCE only). Chosen at registration, never changed.</summary>
+    public ApplicationClientType ClientType { get; private set; }
+
+    public bool IsPublic => ClientType == ApplicationClientType.Public;
+
+    /// <summary>Where the portal posts the events the application subscribed to; null: no webhook.</summary>
+    public string? WebhookUrl { get; private set; }
+
+    /// <summary>The events posted to <see cref="WebhookUrl"/> (<see cref="WebhookEventTypes"/>).</summary>
+    public IReadOnlyList<string> WebhookEvents { get; private set; } = [];
+
+    /// <summary>The webhook signing secret as encrypted by the infrastructure; null until one is generated.</summary>
+    public string? ProtectedWebhookSecret { get; private set; }
+
+    /// <summary>Whether the application receives <paramref name="eventType"/>: a URL, a secret and the subscription.</summary>
+    public bool ReceivesWebhook(string eventType) =>
+        WebhookUrl is not null
+        && ProtectedWebhookSecret is not null
+        && (eventType == WebhookEventTypes.Test || WebhookEvents.Contains(eventType, StringComparer.Ordinal));
+
     public ApplicationStatus Status { get; private set; }
 
     public ApplicationSource Source { get; private set; }
@@ -141,18 +183,26 @@ public sealed class PortalApplication
     /// </summary>
     public bool HasManifestChanges =>
         Status != ApplicationStatus.Pending
-        && (AnnouncedRedirectUris.Count > 0 || AnnouncedPostLogoutRedirectUris.Count > 0)
-        && (!AnnouncedRedirectUris.SequenceEqual(RedirectUris, StringComparer.Ordinal)
-            || !AnnouncedPostLogoutRedirectUris.SequenceEqual(PostLogoutRedirectUris, StringComparer.Ordinal));
+        && (((AnnouncedRedirectUris.Count > 0 || AnnouncedPostLogoutRedirectUris.Count > 0)
+                && (!AnnouncedRedirectUris.SequenceEqual(RedirectUris, StringComparer.Ordinal)
+                    || !AnnouncedPostLogoutRedirectUris.SequenceEqual(PostLogoutRedirectUris, StringComparer.Ordinal)))
+            || (AnnouncedBackChannelLogoutUri is not null
+                && !string.Equals(AnnouncedBackChannelLogoutUri, BackChannelLogoutUri, StringComparison.Ordinal)));
 
     /// <summary>Registers an application on an administrator's behalf. It is active immediately.</summary>
     public static Result<PortalApplication> CreateManual(
         Guid id,
         string? clientId,
         ApplicationDetails details,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        ApplicationClientType clientType = ApplicationClientType.Confidential)
     {
         ArgumentNullException.ThrowIfNull(details);
+
+        if (!Enum.IsDefined(clientType))
+        {
+            return Result<PortalApplication>.Failure(AccessErrors.ClientTypeInvalid);
+        }
 
         var validatedClientId = ValidateClientId(clientId);
         if (validatedClientId.IsFailure)
@@ -166,7 +216,10 @@ public sealed class PortalApplication
             return Result<PortalApplication>.Failure(validated.Error);
         }
 
-        var application = new PortalApplication(id, validatedClientId.Value, ApplicationSource.Manual, ApplicationStatus.Active, now);
+        var application = new PortalApplication(id, validatedClientId.Value, ApplicationSource.Manual, ApplicationStatus.Active, now)
+        {
+            ClientType = clientType,
+        };
         application.Apply(validated.Value);
 
         return Result<PortalApplication>.Success(application);
@@ -206,6 +259,7 @@ public sealed class PortalApplication
             LastSeenAtUtc = now,
             AnnouncedRedirectUris = validated.Value.RedirectUris,
             AnnouncedPostLogoutRedirectUris = validated.Value.PostLogoutRedirectUris,
+            AnnouncedBackChannelLogoutUri = validated.Value.BackChannelLogoutUri,
         };
         application.Apply(validated.Value);
 
@@ -261,6 +315,7 @@ public sealed class PortalApplication
 
         AnnouncedRedirectUris = validated.Value.RedirectUris;
         AnnouncedPostLogoutRedirectUris = validated.Value.PostLogoutRedirectUris;
+        AnnouncedBackChannelLogoutUri = validated.Value.BackChannelLogoutUri;
         Version = validatedVersion.Value;
         LastSeenAtUtc = now;
 
@@ -363,6 +418,12 @@ public sealed class PortalApplication
             wanted.Add(normalised);
         }
 
+        // A public client has no secret to prove itself with, so it can never hold a token of its own.
+        if (wanted.Count > 0 && IsPublic)
+        {
+            return Result.Failure(AccessErrors.ApiScopesNeedConfidentialClient);
+        }
+
         if (wanted.Contains(ApplicationApiScopes.UsersCreate) && !wanted.Contains(ApplicationApiScopes.AccessManage))
         {
             return Result.Failure(AccessErrors.ApiScopeRequiresAccessManage);
@@ -376,6 +437,64 @@ public sealed class PortalApplication
         }
 
         return Result.Success();
+    }
+
+    /// <summary>
+    /// Sets where the application's webhook is and which events it receives. An empty URL turns it off (the secret is
+    /// kept, so turning it back on needs no new one).
+    /// </summary>
+    public Result SetWebhook(string? url, IEnumerable<string>? events, DateTimeOffset now)
+    {
+        var trimmed = TextRules.Normalise(url);
+        string? validated = null;
+
+        if (trimmed is not null)
+        {
+            var checkedUrl = ValidateRedirectUris([trimmed]);
+            if (checkedUrl.IsFailure)
+            {
+                return Result.Failure(AccessErrors.WebhookUrlInvalid);
+            }
+
+            validated = checkedUrl.Value[0];
+        }
+
+        var wanted = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var type in events ?? [])
+        {
+            var normalised = TextRules.Normalise(type)?.ToLowerInvariant();
+            if (normalised is null)
+            {
+                continue;
+            }
+
+            if (!WebhookEventTypes.IsKnown(normalised))
+            {
+                return Result.Failure(AccessErrors.WebhookEventInvalid);
+            }
+
+            wanted.Add(normalised);
+        }
+
+        var ordered = WebhookEventTypes.All.Where(wanted.Contains).ToList();
+
+        if (!string.Equals(WebhookUrl, validated, StringComparison.Ordinal) || !ordered.SequenceEqual(WebhookEvents, StringComparer.Ordinal))
+        {
+            WebhookUrl = validated;
+            WebhookEvents = ordered;
+            UpdatedAtUtc = now;
+        }
+
+        return Result.Success();
+    }
+
+    /// <summary>Stores a new webhook secret (already encrypted by the infrastructure).</summary>
+    public void SetWebhookSecret(string protectedSecret, DateTimeOffset now)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(protectedSecret);
+
+        ProtectedWebhookSecret = protectedSecret;
+        UpdatedAtUtc = now;
     }
 
     /// <summary>Chooses whether the application works per organization.</summary>
@@ -472,8 +591,13 @@ public sealed class PortalApplication
             return Result.Failure(AccessErrors.NoManifestChanges);
         }
 
-        RedirectUris = AnnouncedRedirectUris;
-        PostLogoutRedirectUris = AnnouncedPostLogoutRedirectUris;
+        if (AnnouncedRedirectUris.Count > 0 || AnnouncedPostLogoutRedirectUris.Count > 0)
+        {
+            RedirectUris = AnnouncedRedirectUris;
+            PostLogoutRedirectUris = AnnouncedPostLogoutRedirectUris;
+        }
+
+        BackChannelLogoutUri = AnnouncedBackChannelLogoutUri ?? BackChannelLogoutUri;
         UpdatedAtUtc = now;
 
         return Result.Success();
@@ -526,6 +650,7 @@ public sealed class PortalApplication
         BaseUrl = details.BaseUrl!;
         RedirectUris = details.RedirectUris;
         PostLogoutRedirectUris = details.PostLogoutRedirectUris;
+        BackChannelLogoutUri = details.BackChannelLogoutUri;
     }
 
     /// <summary>Validates and normalises a client id without needing an instance.</summary>
@@ -594,12 +719,19 @@ public sealed class PortalApplication
             return Result<ApplicationDetails>.Failure(postLogoutRedirectUris.Error);
         }
 
+        var backChannel = ValidateRedirectUris(details.BackChannelLogoutUri is null ? [] : [details.BackChannelLogoutUri]);
+        if (backChannel.IsFailure)
+        {
+            return Result<ApplicationDetails>.Failure(AccessErrors.BackChannelLogoutUriInvalid);
+        }
+
         return Result<ApplicationDetails>.Success(new ApplicationDetails(
             displayName,
             description,
             baseUrl,
             redirectUris.Value,
-            postLogoutRedirectUris.Value));
+            postLogoutRedirectUris.Value,
+            backChannel.Value.Count > 0 ? backChannel.Value[0] : null));
     }
 
     /// <summary>
@@ -653,9 +785,11 @@ public sealed class PortalApplication
 /// <param name="BaseUrl">Where users open the application.</param>
 /// <param name="RedirectUris">Sign-in callback URIs. At least one is required.</param>
 /// <param name="PostLogoutRedirectUris">Where the portal may send users after signing out.</param>
+/// <param name="BackChannelLogoutUri">Where the portal posts logout tokens; null when the application wants none.</param>
 public sealed record ApplicationDetails(
     string? DisplayName,
     string? Description,
     string? BaseUrl,
     IReadOnlyList<string> RedirectUris,
-    IReadOnlyList<string> PostLogoutRedirectUris);
+    IReadOnlyList<string> PostLogoutRedirectUris,
+    string? BackChannelLogoutUri = null);

@@ -19,6 +19,7 @@ internal sealed class HostNotificationContext : INotificationContext
     {
         [AccessNotificationRoles.RequestReviewers] = [PortalPages.AccessRequests],
         [AccessNotificationRoles.ApplicationReviewers] = [PortalPages.Applications],
+        [AccessNotificationRoles.AccessReviewers] = [PortalPages.AccessReviews],
         [IdentityNotificationRoles.UserReviewers] = [PortalPages.Users],
     };
 

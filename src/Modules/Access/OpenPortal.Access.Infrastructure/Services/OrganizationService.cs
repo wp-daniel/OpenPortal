@@ -84,17 +84,73 @@ internal sealed class OrganizationService : IOrganizationService
 
     public async Task<Result<OrganizationDetailDto>> GetAsync(Guid organizationId, CancellationToken cancellationToken)
     {
-        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageOrganizations, cancellationToken).ConfigureAwait(false);
+        var organization = await FindAsync(organizationId, cancellationToken).ConfigureAwait(false);
+
+        var guard = await EnsureCanManageMembersAsync(organization, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<OrganizationDetailDto>.Failure(guard.Error);
         }
 
-        var organization = await FindAsync(organizationId, cancellationToken).ConfigureAwait(false);
+        return Result<OrganizationDetailDto>.Success(await ToDetailAsync(organization!, cancellationToken).ConfigureAwait(false));
+    }
 
-        return organization is null
-            ? Result<OrganizationDetailDto>.Failure(AccessErrors.OrganizationNotFound)
-            : Result<OrganizationDetailDto>.Success(await ToDetailAsync(organization, cancellationToken).ConfigureAwait(false));
+    public async Task<Result<OrganizationDetailDto>> AddMemberByEmailAsync(
+        Guid organizationId,
+        AddOrganizationMemberRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var organization = await FindAsync(organizationId, cancellationToken).ConfigureAwait(false);
+        var guard = await EnsureCanManageMembersAsync(organization, cancellationToken).ConfigureAwait(false);
+        if (guard.IsFailure)
+        {
+            return Result<OrganizationDetailDto>.Failure(guard.Error);
+        }
+
+        var user = string.IsNullOrWhiteSpace(request.Email)
+            ? null
+            : await _directory.FindByEmailAsync(request.Email.Trim(), cancellationToken).ConfigureAwait(false);
+
+        return user is null
+            ? Result<OrganizationDetailDto>.Failure(AccessErrors.UserNotFound)
+            : await SetMemberAsync(organizationId, user.Id, new SetOrganizationMemberRequest(request.Role), cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Members are managed by the portal's administrators (and holders of the organizations page) and by the
+    /// organization's own administrators: delegated management, so a tenant looks after its own people.
+    /// </summary>
+    private async Task<Result> EnsureCanManageMembersAsync(Organization? organization, CancellationToken cancellationToken)
+    {
+        var portal = await _authorization.EnsureCanAsync(AccessOperation.ManageOrganizations, cancellationToken).ConfigureAwait(false);
+
+        if (organization is null)
+        {
+            // Only someone who could manage organizations at all learns that it does not exist.
+            return portal.IsSuccess ? Result.Failure(AccessErrors.OrganizationNotFound) : Result.Failure(AccessErrors.OrganizationManageForbidden);
+        }
+
+        return portal.IsSuccess || IsOwnAdministrator(organization)
+            ? Result.Success()
+            : Result.Failure(AccessErrors.OrganizationManageForbidden);
+    }
+
+    private bool IsOwnAdministrator(Organization organization) =>
+        _caller.UserId is Guid me && organization.Members.Any(member => member.UserId == me && member.Role == OrganizationRole.Admin);
+
+    /// <summary>A delegated administrator cannot leave the organization without one (portal administrators can).</summary>
+    private async Task<bool> WouldLoseLastAdminAsync(Organization organization, Guid userId, OrganizationRole? newRole, CancellationToken cancellationToken)
+    {
+        if ((await _authorization.EnsureCanAsync(AccessOperation.ManageOrganizations, cancellationToken).ConfigureAwait(false)).IsSuccess)
+        {
+            return false;
+        }
+
+        var admins = organization.Members.Where(member => member.Role == OrganizationRole.Admin).Select(member => member.UserId).ToList();
+
+        return admins.Count == 1 && admins[0] == userId && newRole != OrganizationRole.Admin;
     }
 
     public async Task<Result<OrganizationDetailDto>> CreateAsync(CreateOrganizationRequest request, CancellationToken cancellationToken)
@@ -204,7 +260,8 @@ internal sealed class OrganizationService : IOrganizationService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageOrganizations, cancellationToken).ConfigureAwait(false);
+        var organization = await FindAsync(organizationId, cancellationToken).ConfigureAwait(false);
+        var guard = await EnsureCanManageMembersAsync(organization, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<OrganizationDetailDto>.Failure(guard.Error);
@@ -215,10 +272,9 @@ internal sealed class OrganizationService : IOrganizationService
             return Result<OrganizationDetailDto>.Failure(AccessErrors.OrganizationRoleInvalid);
         }
 
-        var organization = await FindAsync(organizationId, cancellationToken).ConfigureAwait(false);
-        if (organization is null)
+        if (await WouldLoseLastAdminAsync(organization!, userId, role, cancellationToken).ConfigureAwait(false))
         {
-            return Result<OrganizationDetailDto>.Failure(AccessErrors.OrganizationNotFound);
+            return Result<OrganizationDetailDto>.Failure(AccessErrors.OrganizationLastAdmin);
         }
 
         var users = await _directory.FindAsync([userId], cancellationToken).ConfigureAwait(false);
@@ -227,7 +283,7 @@ internal sealed class OrganizationService : IOrganizationService
             return Result<OrganizationDetailDto>.Failure(AccessErrors.UserNotFound);
         }
 
-        var change = organization.SetMember(userId, role, _clock.UtcNow);
+        var change = organization!.SetMember(userId, role, _clock.UtcNow);
         if (change != MembershipChange.None)
         {
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -272,19 +328,19 @@ internal sealed class OrganizationService : IOrganizationService
         Guid userId,
         CancellationToken cancellationToken)
     {
-        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageOrganizations, cancellationToken).ConfigureAwait(false);
+        var organization = await FindAsync(organizationId, cancellationToken).ConfigureAwait(false);
+        var guard = await EnsureCanManageMembersAsync(organization, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
             return Result<OrganizationDetailDto>.Failure(guard.Error);
         }
 
-        var organization = await FindAsync(organizationId, cancellationToken).ConfigureAwait(false);
-        if (organization is null)
+        if (await WouldLoseLastAdminAsync(organization!, userId, newRole: null, cancellationToken).ConfigureAwait(false))
         {
-            return Result<OrganizationDetailDto>.Failure(AccessErrors.OrganizationNotFound);
+            return Result<OrganizationDetailDto>.Failure(AccessErrors.OrganizationLastAdmin);
         }
 
-        if (organization.RemoveMember(userId))
+        if (organization!.RemoveMember(userId))
         {
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

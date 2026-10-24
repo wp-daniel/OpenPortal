@@ -21,11 +21,13 @@ export function AccessDeniedPage() {
   const organization = reason === 'organization'
   // A support session or an account waiting to be deleted never signs in to an application, whatever its grants.
   const blocked = reason === 'impersonation' || reason === 'deletion'
+  // The application asked for a sign-in with two factors and this session had one.
+  const needsMfa = reason === 'mfa'
 
   const catalog = useQuery({
     queryKey: requestKeys.catalog,
     queryFn: ({ signal }) => myAccessRequestsApi.catalog(signal),
-    enabled: clientId !== null && !organization && !blocked,
+    enabled: clientId !== null && !organization && !blocked && !needsMfa,
   })
 
   const requestable = clientId ? catalog.data?.find((item) => item.clientId === clientId) : undefined
@@ -40,7 +42,7 @@ export function AccessDeniedPage() {
             <ShieldX className="text-muted-foreground size-10" />
           )}
           <h1 className="text-xl font-semibold tracking-tight">
-            {blocked ? t('accessDenied.blockedTitle') : t('accessDenied.title', { application })}
+            {blocked ? t('accessDenied.blockedTitle') : needsMfa ? t('accessDenied.mfaTitle') : t('accessDenied.title', { application })}
           </h1>
           <p className="text-muted-foreground text-sm">
             {reason === 'impersonation'
@@ -49,8 +51,16 @@ export function AccessDeniedPage() {
                 ? t('accessDenied.deletion')
                 : organization
                   ? t('accessDenied.organization')
-                  : t('accessDenied.description')}
+                  : needsMfa
+                    ? t('accessDenied.mfa')
+                    : t('accessDenied.description')}
           </p>
+
+          {needsMfa && (
+            <Button asChild>
+              <Link to="/account?tab=security">{t('accessDenied.mfaAction')}</Link>
+            </Button>
+          )}
 
           {requestable && (
             <div className="bg-muted/40 grid w-full justify-items-center gap-2 rounded-lg border p-4">

@@ -30,6 +30,18 @@ export const organizationsApi = {
 /** The organizations the signed-in user belongs to. */
 export const myOrganizationsApi = {
   list: (signal?: AbortSignal) => api.get<OrganizationMembership[]>('/api/account/organizations', signal),
+
+  /** For the organization's own administrators: its members, managed from their account. */
+  get: (id: string, signal?: AbortSignal) => api.get<OrganizationDetail>(`/api/account/organizations/${id}`, signal),
+
+  /** Adds an existing account by its address. */
+  addMember: (id: string, email: string, role: OrganizationRole) =>
+    api.post<OrganizationDetail>(`/api/account/organizations/${id}/members`, { email, role }),
+
+  setMember: (id: string, userId: string, role: OrganizationRole) =>
+    api.put<OrganizationDetail>(`/api/account/organizations/${id}/members/${userId}`, { role }),
+
+  removeMember: (id: string, userId: string) => api.delete<OrganizationDetail>(`/api/account/organizations/${id}/members/${userId}`),
 }
 
 export const organizationKeys = {

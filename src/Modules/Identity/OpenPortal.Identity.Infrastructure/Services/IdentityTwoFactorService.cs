@@ -20,14 +20,17 @@ internal sealed class IdentityTwoFactorService : ITwoFactorService
     private readonly UserLookup _userLookup;
     private readonly SecuritySettingsStore _settings;
     private readonly IAuditTrail _audit;
+    private readonly IdentityTwoFactorPolicy _policy;
 
     public IdentityTwoFactorService(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         UserLookup userLookup,
         SecuritySettingsStore settings,
-        IAuditTrail audit)
+        IAuditTrail audit,
+        IdentityTwoFactorPolicy policy)
     {
+        _policy = policy;
         _userManager = userManager;
         _signInManager = signInManager;
         _userLookup = userLookup;
@@ -139,6 +142,12 @@ internal sealed class IdentityTwoFactorService : ITwoFactorService
         }
 
         var user = lookup.Value;
+
+        // The portal requires a second factor of this account and the app is its only one.
+        if (await _policy.IsLastFactorAsync(user, removingAuthenticator: true, removingPasskeys: 0, cancellationToken).ConfigureAwait(false))
+        {
+            return Result.Failure(UserErrors.TwoFactorLastFactor);
+        }
 
         var cleared = await TwoFactorEnrolment.ClearAsync(_userManager, user).ConfigureAwait(false);
         if (cleared.IsFailure)

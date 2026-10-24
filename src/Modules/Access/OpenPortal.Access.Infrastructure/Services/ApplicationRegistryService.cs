@@ -19,14 +19,17 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
     private readonly IAccessAdminAuthorization _authorization;
     private readonly IClock _clock;
     private readonly IAuditTrail _audit;
+    private readonly WebhookSecretProtector _webhookSecrets;
 
     public ApplicationRegistryService(
         AccessDbContext db,
         OidcClientRegistry clients,
         IAccessAdminAuthorization authorization,
         IClock clock,
-        IAuditTrail audit)
+        IAuditTrail audit,
+        WebhookSecretProtector webhookSecrets)
     {
+        _webhookSecrets = webhookSecrets;
         _db = db;
         _clients = clients;
         _authorization = authorization;
@@ -95,6 +98,13 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
             return Result<ApplicationSecretDto>.Failure(guard.Error);
         }
 
+        var clientType = request.ClientType?.Trim().ToLowerInvariant() switch
+        {
+            null or "" or ApplicationClientTypes.Confidential => ApplicationClientType.Confidential,
+            ApplicationClientTypes.Public => ApplicationClientType.Public,
+            _ => (ApplicationClientType)(-1),
+        };
+
         var now = _clock.UtcNow;
         var created = PortalApplication.CreateManual(
             Guid.NewGuid(),
@@ -104,8 +114,10 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
                 request.Description,
                 request.BaseUrl,
                 request.RedirectUris ?? [],
-                request.PostLogoutRedirectUris ?? []),
-            now);
+                request.PostLogoutRedirectUris ?? [],
+                string.IsNullOrWhiteSpace(request.BackChannelLogoutUri) ? null : request.BackChannelLogoutUri),
+            now,
+            clientType);
 
         if (created.IsFailure)
         {
@@ -127,13 +139,19 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
             return Result<ApplicationSecretDto>.Failure(configured.Error);
         }
 
+        var webhook = application.SetWebhook(request.WebhookUrl, request.WebhookEvents, now);
+        if (webhook.IsFailure)
+        {
+            return Result<ApplicationSecretDto>.Failure(webhook.Error);
+        }
+
         if (await ClientIdInUseAsync(application.ClientId, cancellationToken).ConfigureAwait(false))
         {
             return Result<ApplicationSecretDto>.Failure(AccessErrors.ClientIdInUse);
         }
 
         // The application row and the OpenIddict client commit together or not at all.
-        string secret;
+        string? secret;
         await using (var transaction = await _db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false))
         {
             _db.Applications.Add(application);
@@ -178,7 +196,8 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
                 request.Description,
                 request.BaseUrl,
                 request.RedirectUris ?? [],
-                request.PostLogoutRedirectUris ?? []),
+                request.PostLogoutRedirectUris ?? [],
+                string.IsNullOrWhiteSpace(request.BackChannelLogoutUri) ? null : request.BackChannelLogoutUri),
             now);
 
         if (updated.IsFailure)
@@ -199,6 +218,19 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
         if (configured.IsFailure)
         {
             return Result<ApplicationDto>.Failure(configured.Error);
+        }
+
+        // Absent leaves the webhook as it is; an empty URL turns it off.
+        if (request.WebhookUrl is not null || request.WebhookEvents is not null)
+        {
+            var webhook = application.SetWebhook(
+                request.WebhookUrl ?? application.WebhookUrl,
+                request.WebhookEvents ?? application.WebhookEvents,
+                now);
+            if (webhook.IsFailure)
+            {
+                return Result<ApplicationDto>.Failure(webhook.Error);
+            }
         }
 
         await using (var transaction = await _db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false))
@@ -264,7 +296,7 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
             return Result<ApplicationSecretDto>.Failure(approved.Error);
         }
 
-        string secret;
+        string? secret;
         await using (var transaction = await _db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false))
         {
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -301,6 +333,11 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
             return Result<ApplicationSecretDto>.Failure(AccessErrors.ApplicationNotActive);
         }
 
+        if (application.IsPublic)
+        {
+            return Result<ApplicationSecretDto>.Failure(AccessErrors.PublicClientHasNoSecret);
+        }
+
         var secret = await _clients.IssueSecretAsync(application, cancellationToken).ConfigureAwait(false);
 
         await _audit.RecordAsync(
@@ -310,6 +347,32 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
 
         return Result<ApplicationSecretDto>.Success(
             new ApplicationSecretDto(await ToDtoAsync(application, cancellationToken).ConfigureAwait(false), secret));
+    }
+
+    public async Task<Result<WebhookSecretDto>> GenerateWebhookSecretAsync(Guid applicationId, CancellationToken cancellationToken)
+    {
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageApplications, cancellationToken).ConfigureAwait(false);
+        if (guard.IsFailure)
+        {
+            return Result<WebhookSecretDto>.Failure(guard.Error);
+        }
+
+        var application = await FindAsync(applicationId, cancellationToken).ConfigureAwait(false);
+        if (application is null)
+        {
+            return Result<WebhookSecretDto>.Failure(AccessErrors.ApplicationNotFound);
+        }
+
+        var (secret, protectedSecret) = _webhookSecrets.Generate();
+        application.SetWebhookSecret(protectedSecret, _clock.UtcNow);
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        await _audit.RecordAsync(
+                AuditEvent.Succeeded(AccessAuditActions.ApplicationWebhookSecretGenerated, application.ToAuditSubject()),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return Result<WebhookSecretDto>.Success(new WebhookSecretDto(secret));
     }
 
     public Task<Result<ApplicationDto>> ApplyManifestAsync(Guid applicationId, CancellationToken cancellationToken) =>

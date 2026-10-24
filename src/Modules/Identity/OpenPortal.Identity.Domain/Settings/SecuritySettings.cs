@@ -3,6 +3,19 @@ using OpenPortal.SharedKernel.Results;
 
 namespace OpenPortal.Identity.Domain.Settings;
 
+/// <summary>Who must protect their account with a second factor (an authenticator app or a passkey).</summary>
+public enum TwoFactorRequirement
+{
+    /// <summary>Nobody: a second factor is offered, not demanded.</summary>
+    None = 0,
+
+    /// <summary>Administrators, whose accounts can change everyone else's.</summary>
+    Administrators = 1,
+
+    /// <summary>Every account.</summary>
+    Everyone = 2,
+}
+
 /// <summary>
 /// Portal-wide sign-in security settings, edited by administrators from the portal itself. A single row; until
 /// an administrator saves it for the first time the defaults below apply.
@@ -38,15 +51,41 @@ public sealed class SecuritySettings
     /// </summary>
     public bool PersonalAccessTokensEnabled { get; private set; }
 
+    /// <summary>
+    /// Whether accounts may sign in with a passkey (WebAuthn: a fingerprint, face or PIN on their device, or a
+    /// security key). A passkey is phishing-resistant and counts as a second factor on its own.
+    /// </summary>
+    public bool PasskeysEnabled { get; private set; } = true;
+
+    /// <summary>
+    /// Who must have a second factor. Someone without one signs in, then can do nothing but set one up; while they
+    /// have only passkeys, the password alone no longer signs them in.
+    /// </summary>
+    public TwoFactorRequirement TwoFactorRequirement { get; private set; }
+
     public DateTimeOffset? UpdatedAtUtc { get; private set; }
 
     public static SecuritySettings Defaults() => new();
+
+    /// <summary>Whether the requirement covers an account with these roles.</summary>
+    public bool RequiresSecondFactor(IEnumerable<string> roles) => TwoFactorRequirement switch
+    {
+        TwoFactorRequirement.Everyone => true,
+        TwoFactorRequirement.Administrators => roles.Contains(Roles.Administrator, StringComparer.Ordinal),
+        _ => false,
+    };
 
     /// <summary>
     /// Applies new values; the result says whether anything changed. A colon is refused because it separates
     /// the issuer from the account in the authenticator label.
     /// </summary>
-    public Result<bool> Update(bool twoFactorEnabled, string? twoFactorIssuer, DateTimeOffset now, bool personalAccessTokensEnabled = false)
+    public Result<bool> Update(
+        bool twoFactorEnabled,
+        string? twoFactorIssuer,
+        DateTimeOffset now,
+        bool personalAccessTokensEnabled = false,
+        bool passkeysEnabled = true,
+        TwoFactorRequirement requirement = TwoFactorRequirement.None)
     {
         var issuer = twoFactorIssuer?.Trim();
 
@@ -55,9 +94,22 @@ public sealed class SecuritySettings
             return Result<bool>.Failure(UserErrors.TwoFactorIssuerInvalid);
         }
 
+        if (!Enum.IsDefined(requirement))
+        {
+            return Result<bool>.Failure(UserErrors.TwoFactorRequirementInvalid);
+        }
+
+        // Demanding a second factor nobody can set up would lock everyone out of the portal.
+        if (requirement != TwoFactorRequirement.None && !twoFactorEnabled && !passkeysEnabled)
+        {
+            return Result<bool>.Failure(UserErrors.TwoFactorRequirementUnsatisfiable);
+        }
+
         if (TwoFactorEnabled == twoFactorEnabled
             && string.Equals(TwoFactorIssuer, issuer, StringComparison.Ordinal)
-            && PersonalAccessTokensEnabled == personalAccessTokensEnabled)
+            && PersonalAccessTokensEnabled == personalAccessTokensEnabled
+            && PasskeysEnabled == passkeysEnabled
+            && TwoFactorRequirement == requirement)
         {
             return Result<bool>.Success(false);
         }
@@ -65,6 +117,8 @@ public sealed class SecuritySettings
         TwoFactorEnabled = twoFactorEnabled;
         TwoFactorIssuer = issuer;
         PersonalAccessTokensEnabled = personalAccessTokensEnabled;
+        PasskeysEnabled = passkeysEnabled;
+        TwoFactorRequirement = requirement;
         UpdatedAtUtc = now;
 
         return Result<bool>.Success(true);

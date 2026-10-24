@@ -35,7 +35,8 @@ public static class HealthSetup
             .AddCheck<DatabaseHealthCheck<ContentDbContext>>("database-content", tags: [ReadyTag])
             .AddCheck<DatabaseHealthCheck<AccessDbContext>>("database-access", tags: [ReadyTag])
             .AddCheck<DatabaseHealthCheck<AuditDbContext>>("database-audit", tags: [ReadyTag])
-            .AddCheck<DatabaseHealthCheck<NotificationsDbContext>>("database-notifications", tags: [ReadyTag]);
+            .AddCheck<DatabaseHealthCheck<NotificationsDbContext>>("database-notifications", tags: [ReadyTag])
+            .AddCheck<OutboxHealthCheck>("delivery-queue", tags: [ReadyTag]);
 
         return services;
     }

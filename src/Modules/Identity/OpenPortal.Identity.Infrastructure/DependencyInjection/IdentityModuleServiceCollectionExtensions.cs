@@ -82,6 +82,8 @@ public static class IdentityModuleServiceCollectionExtensions
         services.AddScoped<RegistrationSettingsStore>();
         services.AddScoped<IRegistrationSettingsService, IdentityRegistrationSettingsService>();
         services.AddScoped<IRegistrationService, IdentityRegistrationService>();
+        services.AddScoped<IPasswordRecoveryService, IdentityPasswordRecoveryService>();
+        services.AddOptions<PasswordResetTokenProviderOptions>();
         services.AddScoped<IInvitationService, IdentityInvitationService>();
         services.AddScoped<IUserStatisticsService, UserStatisticsService>();
         services.AddScoped<IdentityDataSeeder>();
@@ -96,11 +98,39 @@ public static class IdentityModuleServiceCollectionExtensions
             .AddSignInManager<PortalSignInManager>()
 
             // Includes the authenticator (TOTP) provider: keys live in the user store, nothing external.
-            .AddDefaultTokenProviders();
+            .AddDefaultTokenProviders()
+
+            // Reset links last an hour, not the day the default provider gives every token.
+            .AddTokenProvider<PasswordResetTokenProvider>(PasswordResetTokenProviderOptions.ProviderName);
 
         // Registered after AddIdentityCore so these values take precedence over its defaults.
         services.AddOptions<IdentityOptions>()
             .Configure<IOptions<IdentityModuleOptions>>((identity, module) => ApplyIdentityOptions(identity, module.Value));
+
+        // Passkeys must be discoverable (no user name to type) and verify the person (PIN or biometrics), which is
+        // what lets a passkey count as two factors on its own.
+        services.AddOptions<IdentityPasskeyOptions>()
+            .Configure<IOptions<IdentityModuleOptions>>((passkeys, module) =>
+            {
+                var policy = module.Value.Passkeys;
+                passkeys.ResidentKeyRequirement = "required";
+                passkeys.UserVerificationRequirement = "required";
+                passkeys.ServerDomain = string.IsNullOrWhiteSpace(policy.ServerDomain) ? null : policy.ServerDomain.Trim();
+
+                var allowed = policy.AllowedOrigins
+                    .Where(origin => !string.IsNullOrWhiteSpace(origin))
+                    .Select(origin => origin.Trim().TrimEnd('/'))
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                if (allowed.Count > 0)
+                {
+                    passkeys.ValidateOrigin = context => ValueTask.FromResult(!context.CrossOrigin && allowed.Contains(context.Origin));
+                }
+            });
+
+        services.AddScoped<IPasskeyService, IdentityPasskeyService>();
+        services.AddScoped<IdentityTwoFactorPolicy>();
+        services.AddScoped<ITwoFactorPolicy>(provider => provider.GetRequiredService<IdentityTwoFactorPolicy>());
 
         services.AddAuthentication(IdentityConstants.ApplicationScheme)
             .AddIdentityCookies();
@@ -113,12 +143,18 @@ public static class IdentityModuleServiceCollectionExtensions
         // A support session keeps who is behind it when the security stamp is re-validated: the refreshed principal
         // is rebuilt from the impersonated account alone, and losing the marker would leave the administrator
         // inside that account as if it were their own.
+        services.AddOptions<SecurityStampValidatorOptions>()
+            .Configure<IOptions<IdentityModuleOptions>>((options, module) =>
+                options.ValidationInterval = TimeSpan.FromSeconds(Math.Max(0, module.Value.SignIn.SessionValidationSeconds)));
+
         services.Configure<SecurityStampValidatorOptions>(options =>
             options.OnRefreshingPrincipal = context =>
             {
                 if (context.CurrentPrincipal?.Identity is not null && context.NewPrincipal?.Identity is ClaimsIdentity identity)
                 {
-                    foreach (var claim in context.CurrentPrincipal.Claims.Where(claim => ImpersonationClaims.Contains(claim.Type)))
+                    // How the session was established (amr) is kept too: the rebuilt principal would otherwise lose it,
+                    // and a two-factor sign-in would look like a password one to the applications after a minute.
+                    foreach (var claim in context.CurrentPrincipal.Claims.Where(claim => PreservedClaims.Contains(claim.Type)))
                     {
                         identity.AddClaim(new Claim(claim.Type, claim.Value));
                     }
@@ -130,11 +166,13 @@ public static class IdentityModuleServiceCollectionExtensions
         return services;
     }
 
-    private static readonly HashSet<string> ImpersonationClaims =
+    private static readonly HashSet<string> PreservedClaims =
     [
         PortalClaimTypes.ImpersonatorId,
         PortalClaimTypes.ImpersonatorEmail,
         PortalClaimTypes.ImpersonationStarted,
+        AuthenticationMethods.ClaimType,
+        ClaimTypes.AuthenticationMethod,
     ];
 
     private static void ApplyIdentityOptions(IdentityOptions identity, IdentityModuleOptions module)
@@ -161,6 +199,11 @@ public static class IdentityModuleServiceCollectionExtensions
         identity.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(module.Lockout.DefaultLockoutMinutes);
 
         identity.SignIn.RequireConfirmedAccount = module.SignIn.RequireConfirmedAccount;
+
+        identity.Tokens.PasswordResetTokenProvider = PasswordResetTokenProviderOptions.ProviderName;
+
+        // Version 3 adds the passkeys table (WebAuthn credentials) to the Identity schema.
+        identity.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
     }
 
     private static void ApplyCookieOptions(CookieAuthenticationOptions cookie, IdentityModuleOptions module)

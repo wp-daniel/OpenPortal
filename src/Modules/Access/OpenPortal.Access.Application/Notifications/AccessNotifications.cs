@@ -26,6 +26,9 @@ public static class AccessNotificationTypes
 
     /// <summary>To the user: they were added to an organization (<c>organization</c>, <c>role</c>).</summary>
     public const string OrganizationJoined = "organization.joined";
+
+    /// <summary>To the access reviewers: a review was started (<c>review</c>, <c>application</c>, <c>count</c>).</summary>
+    public const string ReviewStarted = "access.review_started";
 }
 
 /// <summary>The kinds of work Access notices are addressed to; the host maps each to the people who may do it.</summary>
@@ -36,4 +39,7 @@ public static class AccessNotificationRoles
 
     /// <summary>Whoever may approve applications.</summary>
     public const string ApplicationReviewers = "access.application_reviewers";
+
+    /// <summary>Whoever reviews who can open the applications (access recertification).</summary>
+    public const string AccessReviewers = "access.access_reviewers";
 }

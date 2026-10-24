@@ -20,14 +20,20 @@ internal sealed class ApplicationApiService : IApplicationApiService
     private readonly IUserDirectory _directory;
     private readonly IApplicationApiCaller _caller;
     private readonly UserGrantOperations _grants;
+    private readonly GroupGraph _graph;
+    private readonly OpenPortal.SharedKernel.Time.IClock _clock;
 
     public ApplicationApiService(
         AccessDbContext db,
         AccessQueries access,
         IUserDirectory directory,
         IApplicationApiCaller caller,
-        UserGrantOperations grants)
+        UserGrantOperations grants,
+        GroupGraph graph,
+        OpenPortal.SharedKernel.Time.IClock clock)
     {
+        _graph = graph;
+        _clock = clock;
         _db = db;
         _access = access;
         _directory = directory;
@@ -190,20 +196,38 @@ internal sealed class ApplicationApiService : IApplicationApiService
         Guid? userId,
         CancellationToken cancellationToken)
     {
-        var direct = await _db.UserGrants
-            .AsNoTracking()
-            .Where(grant => grant.ApplicationId == application.Id && (userId == null || grant.UserId == userId))
-            .Select(grant => new { grant.UserId, grant.Roles })
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+        var now = _clock.UtcNow;
 
-        var viaGroups = await _db.GroupGrants
-            .AsNoTracking()
-            .Where(grant => grant.ApplicationId == application.Id)
-            .Join(_db.GroupMembers, grant => grant.GroupId, member => member.GroupId, (grant, member) => new { member.UserId, grant.GroupId, grant.Roles })
-            .Where(row => userId == null || row.UserId == userId)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+        var direct = (await _db.UserGrants
+                .AsNoTracking()
+                .Where(grant => grant.ApplicationId == application.Id && (userId == null || grant.UserId == userId))
+                .Select(grant => new { grant.UserId, grant.Roles, grant.ExpiresAtUtc })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false))
+            .Where(grant => grant.ExpiresAtUtc is null || grant.ExpiresAtUtc > now)
+            .ToList();
+
+        var groupGrants = (await _db.GroupGrants
+                .AsNoTracking()
+                .Where(grant => grant.ApplicationId == application.Id)
+                .Select(grant => new { grant.GroupId, grant.Roles, grant.ExpiresAtUtc })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false))
+            .Where(grant => grant.ExpiresAtUtc is null || grant.ExpiresAtUtc > now)
+            .ToList();
+
+        // Members of a granted group include the members of its subgroups.
+        var viaGroups = new List<(Guid UserId, Guid GroupId, IReadOnlyList<string> Roles)>();
+        foreach (var grant in groupGrants)
+        {
+            foreach (var member in await _graph.MembersOfGroupAsync(grant.GroupId, cancellationToken).ConfigureAwait(false))
+            {
+                if (userId == null || member == userId)
+                {
+                    viaGroups.Add((member, grant.GroupId, grant.Roles));
+                }
+            }
+        }
 
         var access = new Dictionary<Guid, UserAccess>();
 
@@ -238,12 +262,22 @@ internal sealed class ApplicationApiService : IApplicationApiService
             return new Dictionary<Guid, IReadOnlyList<string>>();
         }
 
-        var memberships = await _db.GroupMembers
+        var groupsOf = new Dictionary<Guid, HashSet<Guid>>();
+        foreach (var id in userIds)
+        {
+            groupsOf[id] = await _graph.GroupsOfUserAsync(id, cancellationToken).ConfigureAwait(false);
+        }
+
+        var allGroups = groupsOf.Values.SelectMany(groups => groups).ToHashSet();
+        var names = await _db.Groups
             .AsNoTracking()
-            .Where(member => userIds.Contains(member.UserId))
-            .Join(_db.Groups, member => member.GroupId, group => group.Id, (member, group) => new { member.UserId, group.Id, group.Name })
-            .ToListAsync(cancellationToken)
+            .Where(group => allGroups.Contains(group.Id))
+            .ToDictionaryAsync(group => group.Id, group => group.Name, cancellationToken)
             .ConfigureAwait(false);
+
+        var memberships = groupsOf
+            .SelectMany(entry => entry.Value.Where(names.ContainsKey).Select(group => new { UserId = entry.Key, Id = group, Name = names[group] }))
+            .ToList();
 
         return memberships
             .Where(row => application.GroupClaims == GroupClaimMode.All

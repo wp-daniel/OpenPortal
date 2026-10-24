@@ -46,6 +46,9 @@ public static class OpenPortalClientExtensions
                 cookie.Cookie.HttpOnly = true;
                 cookie.Cookie.SameSite = SameSiteMode.Lax;
                 cookie.SlidingExpiration = true;
+
+                // Ends a session here once the portal said the user signed out there (back-channel logout).
+                cookie.Events.OnValidatePrincipal = OpenPortalSingleLogout.ValidatePrincipalAsync;
             })
             .AddOpenIdConnect(oidc =>
             {
@@ -95,7 +98,16 @@ public static class OpenPortalClientExtensions
                 oidc.SaveTokens = true;
                 oidc.TokenValidationParameters.NameClaimType = "name";
                 oidc.TokenValidationParameters.RoleClaimType = "role";
+
+                if (options.RevokeTokensOnSignOut)
+                {
+                    oidc.Events.OnRedirectToIdentityProviderForSignOut = OpenPortalSingleLogout.RevokeRefreshTokenAsync;
+                }
             });
+
+        // Where back-channel logouts are remembered: in memory unless the application registered a shared cache.
+        services.AddDistributedMemoryCache();
+        services.AddSingleton<OpenPortalLogoutRegistry>();
 
         services.AddHttpClient(OpenPortalAnnouncementService.HttpClientName);
         services.AddHostedService<OpenPortalAnnouncementService>();

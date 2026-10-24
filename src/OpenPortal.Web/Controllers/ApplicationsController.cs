@@ -7,6 +7,8 @@ using OpenPortal.Access.Application.Contracts;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Web.Infrastructure;
 
+using OpenPortal.Web.Authorization;
+
 namespace OpenPortal.Web.Controllers;
 
 /// <summary>The signed-in user's launchpad: the applications they can open.</summary>
@@ -47,6 +49,7 @@ public sealed class LaunchpadController : ControllerBase
 [Route("api/apps")]
 [AllowAnonymous]
 [IgnoreAntiforgeryToken]
+[AllowDuringTwoFactorSetup]
 [Produces("application/json")]
 public sealed class ApplicationAnnouncementsController : ControllerBase
 {

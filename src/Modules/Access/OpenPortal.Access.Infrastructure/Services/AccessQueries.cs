@@ -3,65 +3,67 @@ using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Access.Application.Contracts;
 using OpenPortal.Access.Domain.Applications;
 using OpenPortal.Access.Infrastructure.Persistence;
+using OpenPortal.SharedKernel.Time;
 
 namespace OpenPortal.Access.Infrastructure.Services;
 
 /// <summary>
-/// The access rule, written once: a user may open an application when it is active and the user holds a
-/// direct grant or belongs to a group that holds one. Every reader and every revocation goes through here,
+/// The access rule, written once: a user may open an application when it is active and the user holds an unexpired
+/// direct grant or belongs (directly or through a subgroup) to a group that holds one. Every reader and every revocation goes through here,
 /// so the sign-in check and the administration screens cannot disagree.
 /// </summary>
 internal sealed class AccessQueries
 {
     private readonly AccessDbContext _db;
     private readonly OidcClientRegistry _clients;
+    private readonly GroupGraph _graph;
+    private readonly IClock _clock;
 
-    public AccessQueries(AccessDbContext db, OidcClientRegistry clients)
+    public AccessQueries(AccessDbContext db, OidcClientRegistry clients, GroupGraph graph, IClock clock)
     {
         _db = db;
         _clients = clients;
+        _graph = graph;
+        _clock = clock;
     }
 
-    /// <summary>Whether the user holds a grant on the application, ignoring the application's status.</summary>
-    public async Task<bool> HasGrantAsync(Guid applicationId, Guid userId, CancellationToken cancellationToken)
-    {
-        var direct = await _db.UserGrants
-            .AnyAsync(grant => grant.ApplicationId == applicationId && grant.UserId == userId, cancellationToken)
-            .ConfigureAwait(false);
+    /// <summary>
+    /// Whether the user holds a grant on the application that has not expired, ignoring the application's status:
+    /// their own, or one of a group they belong to (directly or through a subgroup).
+    /// </summary>
+    public async Task<bool> HasGrantAsync(Guid applicationId, Guid userId, CancellationToken cancellationToken) =>
+        (await GrantedApplicationIdsAsync(userId, cancellationToken).ConfigureAwait(false)).Contains(applicationId);
 
-        if (direct)
-        {
-            return true;
-        }
-
-        return await _db.GroupGrants
-            .Where(grant => grant.ApplicationId == applicationId)
-            .Join(_db.GroupMembers, grant => grant.GroupId, member => member.GroupId, (_, member) => member)
-            .AnyAsync(member => member.UserId == userId, cancellationToken)
-            .ConfigureAwait(false);
-    }
-
-    /// <summary>Ids of the applications the user holds a grant on, directly or through a group.</summary>
+    /// <summary>Ids of the applications the user holds an unexpired grant on, directly or through a group.</summary>
     public async Task<HashSet<Guid>> GrantedApplicationIdsAsync(Guid userId, CancellationToken cancellationToken)
     {
+        var now = _clock.UtcNow;
+
         var direct = await _db.UserGrants
+            .AsNoTracking()
             .Where(grant => grant.UserId == userId)
+            .Select(grant => new { grant.ApplicationId, grant.ExpiresAtUtc })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var groups = await _graph.GroupsOfUserAsync(userId, cancellationToken).ConfigureAwait(false);
+
+        var viaGroups = await _db.GroupGrants
+            .AsNoTracking()
+            .Where(grant => groups.Contains(grant.GroupId))
+            .Select(grant => new { grant.ApplicationId, grant.ExpiresAtUtc })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return direct.Concat(viaGroups)
+            .Where(grant => grant.ExpiresAtUtc is null || grant.ExpiresAtUtc > now)
             .Select(grant => grant.ApplicationId)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        var viaGroups = await _db.GroupMembers
-            .Where(member => member.UserId == userId)
-            .Join(_db.GroupGrants, member => member.GroupId, grant => grant.GroupId, (_, grant) => grant.ApplicationId)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        return [.. direct, .. viaGroups];
+            .ToHashSet();
     }
 
     /// <summary>
     /// The user's roles in the application: those on their own grant and on the grants of every group they
-    /// belong to, limited to the roles the application still defines.
+    /// belong to (subgroups included), limited to unexpired grants and to the roles the application still defines.
     /// </summary>
     public async Task<IReadOnlyList<string>> RolesAsync(PortalApplication application, Guid userId, CancellationToken cancellationToken)
     {
@@ -70,24 +72,27 @@ internal sealed class AccessQueries
             return [];
         }
 
+        var now = _clock.UtcNow;
+
         var direct = await _db.UserGrants
             .AsNoTracking()
             .Where(grant => grant.ApplicationId == application.Id && grant.UserId == userId)
-            .Select(grant => grant.Roles)
+            .Select(grant => new { grant.Roles, grant.ExpiresAtUtc })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        var groups = await _graph.GroupsOfUserAsync(userId, cancellationToken).ConfigureAwait(false);
+
         var viaGroups = await _db.GroupGrants
             .AsNoTracking()
-            .Where(grant => grant.ApplicationId == application.Id)
-            .Join(_db.GroupMembers, grant => grant.GroupId, member => member.GroupId, (grant, member) => new { grant.Roles, member.UserId })
-            .Where(row => row.UserId == userId)
-            .Select(row => row.Roles)
+            .Where(grant => grant.ApplicationId == application.Id && groups.Contains(grant.GroupId))
+            .Select(grant => new { grant.Roles, grant.ExpiresAtUtc })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         return direct.Concat(viaGroups)
-            .SelectMany(roles => roles)
+            .Where(grant => grant.ExpiresAtUtc is null || grant.ExpiresAtUtc > now)
+            .SelectMany(grant => grant.Roles)
             .Where(application.HasRole)
             .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal)
@@ -102,16 +107,27 @@ internal sealed class AccessQueries
             return [];
         }
 
-        var groups = _db.GroupMembers
-            .Where(member => member.UserId == userId)
-            .Join(_db.Groups, member => member.GroupId, group => group.Id, (_, group) => group);
+        var groups = await _graph.GroupsOfUserAsync(userId, cancellationToken).ConfigureAwait(false);
 
         if (application.GroupClaims == GroupClaimMode.Granted)
         {
-            groups = groups.Where(group => _db.GroupGrants.Any(grant => grant.ApplicationId == application.Id && grant.GroupId == group.Id));
+            var now = _clock.UtcNow;
+            var granted = await _db.GroupGrants
+                .AsNoTracking()
+                .Where(grant => grant.ApplicationId == application.Id && groups.Contains(grant.GroupId))
+                .Select(grant => new { grant.GroupId, grant.ExpiresAtUtc })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            groups = granted.Where(grant => grant.ExpiresAtUtc is null || grant.ExpiresAtUtc > now).Select(grant => grant.GroupId).ToHashSet();
         }
 
-        var names = await groups.Select(group => group.Name).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var names = await _db.Groups
+            .AsNoTracking()
+            .Where(group => groups.Contains(group.Id))
+            .Select(group => group.Name)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
 
         return names.Order(StringComparer.Ordinal).ToList();
     }
@@ -225,7 +241,13 @@ internal static class AccessMapping
         application.GroupClaims.ToContract(),
         application.ApiScopes,
         application.AllowAccessRequests,
-        application.Organizations.ToContract());
+        application.Organizations.ToContract(),
+        application.IsPublic ? ApplicationClientTypes.Public : ApplicationClientTypes.Confidential,
+        application.BackChannelLogoutUri,
+        application.AnnouncedBackChannelLogoutUri,
+        application.WebhookUrl,
+        application.WebhookEvents,
+        application.ProtectedWebhookSecret is not null);
 
     public static string ToContract(this OrganizationMode mode) => mode switch
     {

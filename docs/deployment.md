@@ -94,7 +94,7 @@ Both are anonymous, exempt from rate limiting, and report only check names and s
 Defaults per minute: 10 password checks (sign-in, change of password, account deletion) per address, 120 token and
 announcement requests per address, 600 API requests per signed-in user or anonymous address; and 5 personal data
 downloads per account per hour (`RateLimiting:Export`). Calls with a personal access token count as their owner. Over a limit the answer is 429
-with `Retry-After`. Counters live in each instance's memory. Tune them under `RateLimiting`; set
+with `Retry-After`. Counters live in each instance's memory, or in Redis when it is configured. Tune them under `RateLimiting`; set
 `RateLimiting:Enabled=false` only when a gateway in front already limits.
 
 ## Audit log
@@ -124,11 +124,55 @@ administrator to pass on, and self-registration cannot require a confirmed addre
 }
 ```
 
-Keep `Email:Smtp:Password` in user secrets or the environment (`Email__Smtp__Password`). Set `PublicUrl`: links in
+The SMTP server, login, password and sender can instead be set from the portal (**Security → Portal settings →
+Email**, administrators only): those settings win over the configuration, the password is stored encrypted with the
+Data Protection keys, and "Send a test" checks them before saving. Keep `Email:Smtp:Password` in user secrets or the environment (`Email__Smtp__Password`). Set `PublicUrl`: links in
 emails otherwise use the address of the request that caused them, which behind a proxy (or with a forged `Host`
 header) is not the portal's. For development, `Email:PickupDirectory` writes each message as an `.eml` file
 instead of sending it. Registration itself (off, open or with approval, allowed domains, confirmation, invitation
 lifetime) is set by administrators under **Security → Portal settings**.
+
+### Delivery queue
+
+Emails, webhooks and back-channel logout messages are written to a durable queue (the Notifications schema's
+`OutboxMessages`) and delivered by a background worker in every instance; several instances share the queue
+safely (each message is leased). A failed delivery is retried with growing delays up to `Outbox:MaxAttempts`
+(10), then kept as failed. **Security → Portal settings → Email** lists the queue, retries or deletes messages, and
+`/health/ready` reports the `delivery-queue` check as degraded while failed messages wait.
+
+```json
+"Outbox": { "PollSeconds": 10, "BatchSize": 20, "MaxAttempts": 10, "LeaseSeconds": 120, "DeliveredRetentionDays": 7, "FailedRetentionDays": 30 }
+```
+
+Audit entries and in-app notifications are still written right after the change they describe, not through the
+queue: an instance that crashes in between can lose one.
+
+## Sign-in security
+
+- **Password recovery** works once email is configured (`/forgot-password`; links last one hour, and other
+  sessions end within `Identity:SignIn:SessionValidationSeconds`, 60 by default).
+- **Passkeys** (WebAuthn) are on by default (**Security → Portal settings**). They are bound to the host name:
+  set `Identity:Passkeys:ServerDomain` (e.g. `portal.example.com`) before users register any, since changing it
+  later invalidates them, and list `Identity:Passkeys:AllowedOrigins` if the portal is reached under several
+  names.
+- **Second factor requirement**: none, administrators or everyone. Accounts concerned are sent to set up an
+  authenticator app or a passkey before anything else, and applications receive them only afterwards.
+
+## Several instances (Redis)
+
+Without Redis each instance keeps its own rate-limit counters, cache and notification push. With
+`Redis:ConnectionString` set, the instances share a distributed cache, rate-limit partitions and the
+notification stream (pub/sub), and `/health/ready` checks Redis too. `Redis:DataProtectionKeys=true` also keeps
+the Data Protection keys there (otherwise share `DataProtection:KeysPath` between instances). Sticky sessions are
+not needed.
+
+## Observability
+
+Traces, metrics and logs are exported over OTLP when `Observability:OtlpEndpoint` is set (e.g.
+`http://otel-collector:4317`; `Protocol` `grpc` or `http`, `ServiceName`, `ExportLogs`). They cover
+ASP.NET Core, HttpClient, EF Core/Npgsql and the runtime, plus the portal's own meters: `OpenPortal.Identity`
+(sign-ins by method and outcome), `OpenPortal.Oidc` (tokens and authorizations) and `OpenPortal.Outbox`
+(deliveries, failures, queue age). The standard `OTEL_*` environment variables work as well.
 
 ## Privacy
 
@@ -152,7 +196,7 @@ lifetime) is set by administrators under **Security → Portal settings**.
 ## Notifications
 
 Notifications are stored per recipient and shown in the bell and on `/notifications`; the client polls the unread
-count every 30 seconds while the tab is visible. Read ones are deleted after `Notifications:ReadRetentionDays`
+count through a server-sent event stream (`/api/notifications/stream`), falling back to polling every 30 seconds. Read ones are deleted after `Notifications:ReadRetentionDays`
 (30), all after `Notifications:RetentionDays` (180).
 
 ## Adding a migration

@@ -141,6 +141,24 @@ public sealed class AdminUsersController : ControllerBase
             : ProblemResults.FromResult(HttpContext, reset);
     }
 
+    /// <summary>Removes every passkey of an account that lost its devices, ending its sessions.</summary>
+    [RequirePortalPage(PortalPages.Users)]
+    [HttpDelete("{userId:guid}/passkeys")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ResetPasskeysAsync(
+        Guid userId,
+        [FromServices] IPasskeyService passkeys,
+        CancellationToken cancellationToken)
+    {
+        var reset = await passkeys.ResetForUserAsync(userId, cancellationToken).ConfigureAwait(false);
+
+        return reset.IsSuccess
+            ? NoContent()
+            : ProblemResults.FromResult(HttpContext, reset);
+    }
+
     /// <summary>Turns two-factor authentication off for an account that lost its authenticator, ending its sessions.</summary>
     [RequirePortalPage(PortalPages.Users)]
     [HttpDelete("{userId:guid}/two-factor")]

@@ -68,6 +68,26 @@ internal sealed class PortalApplicationConfiguration : IEntityTypeConfiguration<
             .HasConversion<string>()
             .HasMaxLength(16);
 
+        // Existing rows are confidential clients (the only kind there was).
+        builder.Property(application => application.ClientType)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(16)
+            .HasDefaultValue(ApplicationClientType.Confidential)
+            .HasSentinel(ApplicationClientType.Confidential);
+
+        builder.Property(application => application.BackChannelLogoutUri)
+            .HasMaxLength(PortalApplication.UrlMaxLength);
+
+        builder.Property(application => application.AnnouncedBackChannelLogoutUri)
+            .HasMaxLength(PortalApplication.UrlMaxLength);
+
+        builder.Property(application => application.WebhookUrl)
+            .HasMaxLength(PortalApplication.UrlMaxLength);
+
+        builder.Property(application => application.ProtectedWebhookSecret)
+            .HasMaxLength(2000);
+
         foreach (var list in new[]
                  {
                      nameof(PortalApplication.RedirectUris),
@@ -75,6 +95,7 @@ internal sealed class PortalApplicationConfiguration : IEntityTypeConfiguration<
                      nameof(PortalApplication.AnnouncedRedirectUris),
                      nameof(PortalApplication.AnnouncedPostLogoutRedirectUris),
                      nameof(PortalApplication.ApiScopes),
+                     nameof(PortalApplication.WebhookEvents),
                  })
         {
             builder.Property<IReadOnlyList<string>>(list).AsStringList();
@@ -94,6 +115,7 @@ internal sealed class PortalApplicationConfiguration : IEntityTypeConfiguration<
             .HasSentinel(OrganizationMode.None);
 
         builder.Ignore(application => application.HasManifestChanges);
+        builder.Ignore(application => application.IsPublic);
 
         builder.HasMany(application => application.Roles)
             .WithOne()
@@ -178,6 +200,29 @@ internal sealed class GroupMemberConfiguration : IEntityTypeConfiguration<GroupM
         // "Which groups is this user in" is asked on every sign-in.
         builder.HasIndex(member => member.UserId)
             .HasDatabaseName("IX_GroupMembers_UserId");
+
+        // The expiry sweep asks for what ended.
+        builder.HasIndex(member => member.ExpiresAtUtc)
+            .HasDatabaseName("IX_GroupMembers_ExpiresAtUtc");
+    }
+}
+
+internal sealed class GroupNestingConfiguration : IEntityTypeConfiguration<GroupNesting>
+{
+    public void Configure(EntityTypeBuilder<GroupNesting> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("GroupNestings");
+
+        builder.HasKey(nesting => new { nesting.ParentGroupId, nesting.ChildGroupId });
+
+        // Deleting either group removes the nesting.
+        builder.HasOne<Group>().WithMany().HasForeignKey(nesting => nesting.ParentGroupId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<Group>().WithMany().HasForeignKey(nesting => nesting.ChildGroupId).OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasIndex(nesting => nesting.ChildGroupId)
+            .HasDatabaseName("IX_GroupNestings_ChildGroupId");
     }
 }
 
@@ -342,5 +387,42 @@ internal sealed class PageGroupGrantConfiguration : IEntityTypeConfiguration<Pag
         // "Which pages may this user open" joins memberships to grants by group on every admin request.
         builder.HasIndex(grant => grant.GroupId)
             .HasDatabaseName("IX_PageGroupGrants_GroupId");
+    }
+}
+
+internal sealed class AccessReviewConfiguration : IEntityTypeConfiguration<Domain.Reviews.AccessReview>
+{
+    public void Configure(EntityTypeBuilder<Domain.Reviews.AccessReview> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("AccessReviews");
+        builder.HasKey(review => review.Id);
+
+        builder.Property(review => review.Name).IsRequired().HasMaxLength(Domain.Reviews.AccessReview.NameMaxLength);
+        builder.Property(review => review.Status).IsRequired().HasConversion<string>().HasMaxLength(16);
+
+        // A review outlives nothing: deleting the application deletes its reviews.
+        builder.HasOne<PortalApplication>().WithMany().HasForeignKey(review => review.ApplicationId).OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(review => review.Items).WithOne().HasForeignKey(item => item.ReviewId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(review => review.Items).HasField("_items").UsePropertyAccessMode(PropertyAccessMode.Field);
+    }
+}
+
+internal sealed class AccessReviewItemConfiguration : IEntityTypeConfiguration<Domain.Reviews.AccessReviewItem>
+{
+    public void Configure(EntityTypeBuilder<Domain.Reviews.AccessReviewItem> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("AccessReviewItems");
+        builder.HasKey(item => item.Id);
+
+        builder.Property(item => item.SubjectType).IsRequired().HasConversion<string>().HasMaxLength(16);
+        builder.Property(item => item.SubjectLabel).IsRequired().HasMaxLength(Domain.Reviews.AccessReviewItem.LabelMaxLength);
+        builder.Property(item => item.Decision).IsRequired().HasConversion<string>().HasMaxLength(16);
+        builder.Property(item => item.Note).HasMaxLength(Domain.Reviews.AccessReview.NoteMaxLength);
+        builder.Property<IReadOnlyList<string>>(nameof(Domain.Reviews.AccessReviewItem.Roles)).AsStringList();
     }
 }

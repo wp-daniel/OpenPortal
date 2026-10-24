@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Access.Application.Contracts;
 using OpenPortal.SharedKernel.Results;
@@ -77,13 +78,33 @@ public sealed class AdminGroupsController : ControllerBase
         return deleted.IsSuccess ? NoContent() : ProblemResults.FromResult(HttpContext, deleted);
     }
 
-    /// <summary>Adds a member. Idempotent.</summary>
+    /// <summary>Adds a member, until <c>expiresAtUtc</c> when given (temporary membership). Idempotent.</summary>
     [RequirePortalPage(PortalPages.Groups)]
     [HttpPut("{groupId:guid}/members/{userId:guid}")]
     [ProducesResponseType<GroupDetailDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<GroupDetailDto>> AddMemberAsync(Guid groupId, Guid userId, CancellationToken cancellationToken) =>
-        Respond(await _groups.AddMemberAsync(groupId, userId, cancellationToken).ConfigureAwait(false));
+    public async Task<ActionResult<GroupDetailDto>> AddMemberAsync(
+        Guid groupId,
+        Guid userId,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] GroupMemberRequest? request,
+        CancellationToken cancellationToken) =>
+        Respond(await _groups.AddMemberAsync(groupId, userId, cancellationToken, request?.ExpiresAtUtc).ConfigureAwait(false));
+
+    /// <summary>Puts another group inside this one: its members get what this group is given. Refuses cycles.</summary>
+    [RequirePortalPage(PortalPages.Groups)]
+    [HttpPut("{groupId:guid}/subgroups/{childGroupId:guid}")]
+    [ProducesResponseType<GroupDetailDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<GroupDetailDto>> AddSubgroupAsync(Guid groupId, Guid childGroupId, CancellationToken cancellationToken) =>
+        Respond(await _groups.AddSubgroupAsync(groupId, childGroupId, cancellationToken).ConfigureAwait(false));
+
+    [RequirePortalPage(PortalPages.Groups)]
+    [HttpDelete("{groupId:guid}/subgroups/{childGroupId:guid}")]
+    [ProducesResponseType<GroupDetailDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<GroupDetailDto>> RemoveSubgroupAsync(Guid groupId, Guid childGroupId, CancellationToken cancellationToken) =>
+        Respond(await _groups.RemoveSubgroupAsync(groupId, childGroupId, cancellationToken).ConfigureAwait(false));
 
     /// <summary>Removes a member. Idempotent.</summary>
     [RequirePortalPage(PortalPages.Groups)]

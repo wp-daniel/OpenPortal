@@ -27,7 +27,8 @@ public sealed record UserSummaryDto(
     bool TwoFactorEnabled,
     bool PendingApproval,
     string Origin,
-    DateTimeOffset? DeletionScheduledAtUtc);
+    DateTimeOffset? DeletionScheduledAtUtc,
+    int PasskeyCount = 0);
 
 /// <summary>Values of <see cref="UserSummaryDto.Origin"/>.</summary>
 public static class AccountOrigins

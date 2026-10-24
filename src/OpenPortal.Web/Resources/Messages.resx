@@ -1222,7 +1222,7 @@
   <data name="settings.registration.confirm" xml:space="preserve"><value>Confirm the email address</value></data>
   <data name="settings.registration.confirmHint" xml:space="preserve"><value>A self-registered account signs in only after following the link sent to its address. Recommended: without it anyone can register an address that is not theirs.</value></data>
   <data name="settings.registration.confirmNeedsEmail" xml:space="preserve"><value>Email confirmation needs email delivery: configure it or turn confirmation off.</value></data>
-  <data name="settings.registration.noEmail" xml:space="preserve"><value>Email delivery is not configured (Email section of the settings): invitation links are shown to you instead of being emailed, and email confirmation is unavailable.</value></data>
+  <data name="settings.registration.noEmail" xml:space="preserve"><value>Email delivery is not configured (Settings → Email): invitation links are shown to you instead of being emailed, and email confirmation is unavailable.</value></data>
   <data name="settings.registration.domains" xml:space="preserve"><value>Allowed email domains</value></data>
   <data name="settings.registration.domainsHint" xml:space="preserve"><value>One per line (example.com). Empty allows any domain; subdomains are not included.</value></data>
   <data name="settings.registration.invitationDays" xml:space="preserve"><value>Invitations valid for (days)</value></data>
@@ -1591,4 +1591,314 @@
   <data name="users.import.outcome.error" xml:space="preserve"><value>Refused</value></data>
   <data name="users.import.done" xml:space="preserve"><value>Imported: {invited} invited, {updated} updated, {failed} refused</value></data>
   <data name="users.import.failed" xml:space="preserve"><value>Could not import the file</value></data>
+  <data name="settings.tabs.security" xml:space="preserve"><value>Security</value></data>
+  <data name="settings.tabs.registration" xml:space="preserve"><value>Registration</value></data>
+  <data name="settings.tabs.privacy" xml:space="preserve"><value>Privacy</value></data>
+  <data name="settings.tabs.email" xml:space="preserve"><value>Email</value></data>
+  <data name="settings.email.title" xml:space="preserve"><value>Email server</value></data>
+  <data name="settings.email.description" xml:space="preserve"><value>The SMTP server and sender the portal uses for invitations, confirmations, password resets and notices. Emails are queued and retried if the server is unavailable.</value></data>
+  <data name="settings.email.source.portal" xml:space="preserve"><value>The portal sends email with the server below.</value></data>
+  <data name="settings.email.source.configuration" xml:space="preserve"><value>No server is set here: the portal uses the one in its configuration file. A server saved here takes precedence.</value></data>
+  <data name="settings.email.source.none" xml:space="preserve"><value>Email is off: no server is configured. Enter one below to send invitations, confirmations and password resets.</value></data>
+  <data name="settings.email.host" xml:space="preserve"><value>SMTP server</value></data>
+  <data name="settings.email.hostHint" xml:space="preserve"><value>Host name or address, without http://. Leave empty to use the configuration file.</value></data>
+  <data name="settings.email.hostRequired" xml:space="preserve"><value>Enter the SMTP server to test.</value></data>
+  <data name="settings.email.hostInvalid" xml:space="preserve"><value>Enter a host name without spaces or scheme.</value></data>
+  <data name="settings.email.port" xml:space="preserve"><value>Port</value></data>
+  <data name="settings.email.portInvalid" xml:space="preserve"><value>1–65535</value></data>
+  <data name="settings.email.security" xml:space="preserve"><value>Connection security</value></data>
+  <data name="settings.email.securityOptions.auto" xml:space="preserve"><value>Automatic</value></data>
+  <data name="settings.email.securityOptions.autoHint" xml:space="preserve"><value>STARTTLS when offered, TLS on port 465.</value></data>
+  <data name="settings.email.securityOptions.starttls" xml:space="preserve"><value>STARTTLS</value></data>
+  <data name="settings.email.securityOptions.starttlsHint" xml:space="preserve"><value>Required encryption after connecting (usually port 587).</value></data>
+  <data name="settings.email.securityOptions.ssl" xml:space="preserve"><value>SSL/TLS</value></data>
+  <data name="settings.email.securityOptions.sslHint" xml:space="preserve"><value>Encrypted from the start (usually port 465).</value></data>
+  <data name="settings.email.securityOptions.none" xml:space="preserve"><value>None</value></data>
+  <data name="settings.email.securityOptions.noneHint" xml:space="preserve"><value>Plain text: only for a relay on the same network.</value></data>
+  <data name="settings.email.username" xml:space="preserve"><value>Username</value></data>
+  <data name="settings.email.usernameHint" xml:space="preserve"><value>Leave empty if the server needs no login.</value></data>
+  <data name="settings.email.password" xml:space="preserve"><value>Password</value></data>
+  <data name="settings.email.passwordHint" xml:space="preserve"><value>Stored encrypted; never shown again.</value></data>
+  <data name="settings.email.passwordStored" xml:space="preserve"><value>A password is stored. Leave empty to keep it.</value></data>
+  <data name="settings.email.clearPassword" xml:space="preserve"><value>Remove the stored password</value></data>
+  <data name="settings.email.fromAddress" xml:space="preserve"><value>Sender address</value></data>
+  <data name="settings.email.fromAddressHint" xml:space="preserve"><value>The server must be allowed to send as this address.</value></data>
+  <data name="settings.email.fromInvalid" xml:space="preserve"><value>Enter a valid email address.</value></data>
+  <data name="settings.email.fromName" xml:space="preserve"><value>Sender name</value></data>
+  <data name="settings.email.fromNameHint" xml:space="preserve"><value>Shown in the recipient's inbox.</value></data>
+  <data name="settings.email.testTitle" xml:space="preserve"><value>Send a test email</value></data>
+  <data name="settings.email.testDescription" xml:space="preserve"><value>Uses the values above, even before you save them, and shows the server's answer.</value></data>
+  <data name="settings.email.testTo" xml:space="preserve"><value>Recipient</value></data>
+  <data name="settings.email.toInvalid" xml:space="preserve"><value>Enter the address to send the test to.</value></data>
+  <data name="settings.email.testSend" xml:space="preserve"><value>Send test</value></data>
+  <data name="settings.email.testSent" xml:space="preserve"><value>Test email sent to {to}</value></data>
+  <data name="settings.email.testFailed" xml:space="preserve"><value>Could not send the test email</value></data>
+  <data name="settings.email.testOk" xml:space="preserve"><value>The server accepted the email</value></data>
+  <data name="settings.email.testOkHint" xml:space="preserve"><value>Check the inbox (and the spam folder) of the recipient.</value></data>
+  <data name="settings.email.testKo" xml:space="preserve"><value>The email could not be sent</value></data>
+  <data name="outbox.title" xml:space="preserve"><value>Delivery queue</value></data>
+  <data name="outbox.description" xml:space="preserve"><value>Emails and calls to applications waiting to go out. Failed deliveries are retried with growing delays; you can retry them now.</value></data>
+  <data name="outbox.status" xml:space="preserve"><value>Status</value></data>
+  <data name="outbox.statuses.pending" xml:space="preserve"><value>Waiting</value></data>
+  <data name="outbox.statuses.delivered" xml:space="preserve"><value>Delivered</value></data>
+  <data name="outbox.statuses.failed" xml:space="preserve"><value>Failed</value></data>
+  <data name="outbox.types.email" xml:space="preserve"><value>Email</value></data>
+  <data name="outbox.types.webhook" xml:space="preserve"><value>Webhook</value></data>
+  <data name="outbox.types.backchannel_logout" xml:space="preserve"><value>Sign-out notice to an application</value></data>
+  <data name="outbox.summary.pending" xml:space="preserve"><value>{count} waiting</value></data>
+  <data name="outbox.summary.failed" xml:space="preserve"><value>{count} failed</value></data>
+  <data name="outbox.summary.delivered" xml:space="preserve"><value>{count} delivered in 24 h</value></data>
+  <data name="outbox.summary.oldest" xml:space="preserve"><value>oldest waiting since {date}</value></data>
+  <data name="outbox.columns.message" xml:space="preserve"><value>Message</value></data>
+  <data name="outbox.columns.attempts" xml:space="preserve"><value>Attempts</value></data>
+  <data name="outbox.columns.created" xml:space="preserve"><value>Queued</value></data>
+  <data name="outbox.columns.error" xml:space="preserve"><value>Last error</value></data>
+  <data name="outbox.nextAttempt" xml:space="preserve"><value>next try {date}</value></data>
+  <data name="outbox.retry" xml:space="preserve"><value>Retry</value></data>
+  <data name="outbox.retryFailed" xml:space="preserve"><value>Retry all failed</value></data>
+  <data name="outbox.retried" xml:space="preserve"><value>Queued for another attempt</value></data>
+  <data name="outbox.retriedMany_one" xml:space="preserve"><value>{count} message queued again</value></data>
+  <data name="outbox.retriedMany_other" xml:space="preserve"><value>{count} messages queued again</value></data>
+  <data name="outbox.deleted" xml:space="preserve"><value>Message removed from the queue</value></data>
+  <data name="outbox.empty" xml:space="preserve"><value>Nothing here</value></data>
+  <data name="outbox.emptyDescription" xml:space="preserve"><value>No message matches these filters.</value></data>
+  <data name="email.test.subject" xml:space="preserve"><value>OpenPortal test email</value></data>
+  <data name="email.test.greeting" xml:space="preserve"><value>Hello,</value></data>
+  <data name="email.test.body" xml:space="preserve"><value>This is a test email sent from the portal's email settings through {host}. If you are reading it, delivery works.</value></data>
+  <data name="email.test.action" xml:space="preserve"><value>Open the email settings</value></data>
+  <data name="audit.action.mail.settings_updated" xml:space="preserve"><value>Changed the email server settings</value></data>
+  <data name="audit.action.mail.test_sent" xml:space="preserve"><value>Sent a test email</value></data>
+  <data name="audit.action.outbox.retried" xml:space="preserve"><value>Retried a queued delivery</value></data>
+  <data name="audit.action.outbox.deleted" xml:space="preserve"><value>Removed a queued delivery</value></data>
+  <data name="error.mail.host_invalid" xml:space="preserve"><value>The SMTP server must be a host name or an address, without a scheme.</value></data>
+  <data name="error.mail.port_invalid" xml:space="preserve"><value>The port must be between 1 and 65535.</value></data>
+  <data name="error.mail.from_invalid" xml:space="preserve"><value>The sender must be a valid email address.</value></data>
+  <data name="error.mail.security_invalid" xml:space="preserve"><value>The connection security must be auto, starttls, ssl or none.</value></data>
+  <data name="error.mail.text_too_long" xml:space="preserve"><value>A value of the email settings is too long.</value></data>
+  <data name="error.mail.recipient_invalid" xml:space="preserve"><value>The test email needs a valid recipient address.</value></data>
+  <data name="error.mail.not_configured" xml:space="preserve"><value>Enter an SMTP server first.</value></data>
+  <data name="error.mail.test_failed" xml:space="preserve"><value>The test email could not be sent.</value></data>
+  <data name="error.outbox.not_found" xml:space="preserve"><value>The queued message does not exist.</value></data>
+  <data name="error.outbox.already_delivered" xml:space="preserve"><value>The message was delivered already.</value></data>
+  <data name="error.outbox.manage_forbidden" xml:space="preserve"><value>Only an administrator can manage email and the delivery queue.</value></data>
+  <data name="error.outbox.type_invalid" xml:space="preserve"><value>A queued message needs a valid type.</value></data>
+  <data name="error.outbox.payload_required" xml:space="preserve"><value>A queued message needs a payload.</value></data>
+  <data name="validation.too_long" xml:space="preserve"><value>The value is too long.</value></data>
+  <data name="validation.port" xml:space="preserve"><value>The port must be between 1 and 65535.</value></data>
+  <data name="signIn.forgotPassword" xml:space="preserve"><value>Forgot your password?</value></data>
+  <data name="passwordReset.forgot.title" xml:space="preserve"><value>Reset your password</value></data>
+  <data name="passwordReset.forgot.description" xml:space="preserve"><value>Enter the address of your account and we will email you a link to choose a new password.</value></data>
+  <data name="passwordReset.forgot.submit" xml:space="preserve"><value>Send the link</value></data>
+  <data name="passwordReset.requestFailed" xml:space="preserve"><value>Could not send the link</value></data>
+  <data name="passwordReset.sent.title" xml:space="preserve"><value>Check your inbox</value></data>
+  <data name="passwordReset.sent.description" xml:space="preserve"><value>If {email} belongs to an account, a link to choose a new password is on its way. It works for one hour.</value></data>
+  <data name="passwordReset.reset.title" xml:space="preserve"><value>Choose a new password</value></data>
+  <data name="passwordReset.reset.description" xml:space="preserve"><value>Your account will be signed out on every device.</value></data>
+  <data name="passwordReset.reset.password" xml:space="preserve"><value>New password</value></data>
+  <data name="passwordReset.reset.confirmation" xml:space="preserve"><value>Repeat the new password</value></data>
+  <data name="passwordReset.reset.mismatch" xml:space="preserve"><value>The two passwords differ.</value></data>
+  <data name="passwordReset.reset.submit" xml:space="preserve"><value>Set the password</value></data>
+  <data name="passwordReset.reset.failed" xml:space="preserve"><value>Could not set the password</value></data>
+  <data name="passwordReset.invalid.title" xml:space="preserve"><value>This link no longer works</value></data>
+  <data name="passwordReset.invalid.description" xml:space="preserve"><value>A reset link works once and for one hour. Ask for a new one.</value></data>
+  <data name="passwordReset.invalid.again" xml:space="preserve"><value>Send a new link</value></data>
+  <data name="passwordReset.done.title" xml:space="preserve"><value>Password changed</value></data>
+  <data name="passwordReset.done.description" xml:space="preserve"><value>Sign in with your new password.</value></data>
+  <data name="passwordReset.done.signIn" xml:space="preserve"><value>Sign in</value></data>
+  <data name="email.password_reset.subject" xml:space="preserve"><value>Reset your OpenPortal password</value></data>
+  <data name="email.password_reset.greeting" xml:space="preserve"><value>Hello {name},</value></data>
+  <data name="email.password_reset.body" xml:space="preserve"><value>Someone asked to reset the password of your account. If it was you, choose a new one with the link below; it works once, for {minutes} minutes. If it was not you, ignore this email: your password stays as it is.</value></data>
+  <data name="email.password_reset.action" xml:space="preserve"><value>Choose a new password</value></data>
+  <data name="email.password_changed.subject" xml:space="preserve"><value>Your OpenPortal password was changed</value></data>
+  <data name="email.password_changed.greeting" xml:space="preserve"><value>Hello {name},</value></data>
+  <data name="email.password_changed.body" xml:space="preserve"><value>The password of your account was just changed and every session was signed out. If you did not do this, reset your password at once and tell your administrator.</value></data>
+  <data name="email.password_changed.action" xml:space="preserve"><value>Review your account security</value></data>
+  <data name="audit.action.account.password_reset_requested" xml:space="preserve"><value>Asked for a password reset link</value></data>
+  <data name="audit.action.account.password_recovered" xml:space="preserve"><value>Set a new password with a reset link</value></data>
+  <data name="error.identity.password_reset_invalid" xml:space="preserve"><value>The reset link is not valid, was used already or has expired.</value></data>
+  <data name="error.identity.password_recovery_unavailable" xml:space="preserve"><value>Password recovery needs email, which is not configured. Ask an administrator to reset your password.</value></data>
+  <data name="settings.passkeys" xml:space="preserve"><value>Passkeys</value></data>
+  <data name="settings.passkeysDescription" xml:space="preserve"><value>Accounts can sign in with a fingerprint, face or PIN on their device, or with a security key, instead of a password. A passkey cannot be phished and counts as two factors on its own.</value></data>
+  <data name="settings.requirement.title" xml:space="preserve"><value>Who must have a second factor</value></data>
+  <data name="settings.requirement.none" xml:space="preserve"><value>Nobody</value></data>
+  <data name="settings.requirement.noneHint" xml:space="preserve"><value>A second factor is offered, not required.</value></data>
+  <data name="settings.requirement.administrators" xml:space="preserve"><value>Administrators</value></data>
+  <data name="settings.requirement.administratorsHint" xml:space="preserve"><value>Their accounts can change everyone else's: recommended.</value></data>
+  <data name="settings.requirement.everyone" xml:space="preserve"><value>Everyone</value></data>
+  <data name="settings.requirement.everyoneHint" xml:space="preserve"><value>Accounts without an authenticator app or a passkey must set one up right after signing in.</value></data>
+  <data name="settings.requirement.unsatisfiable" xml:space="preserve"><value>Turn on authenticator apps or passkeys to require a second factor.</value></data>
+  <data name="passkeys.title" xml:space="preserve"><value>Passkeys</value></data>
+  <data name="passkeys.description" xml:space="preserve"><value>Sign in with your fingerprint, face or device PIN, or a security key: no password, no code, nothing to phish.</value></data>
+  <data name="passkeys.count_one" xml:space="preserve"><value>{count} passkey</value></data>
+  <data name="passkeys.count_other" xml:space="preserve"><value>{count} passkeys</value></data>
+  <data name="passkeys.add" xml:space="preserve"><value>Add a passkey</value></data>
+  <data name="passkeys.added" xml:space="preserve"><value>Passkey added</value></data>
+  <data name="passkeys.addFailed" xml:space="preserve"><value>Could not add the passkey</value></data>
+  <data name="passkeys.removed" xml:space="preserve"><value>Passkey removed</value></data>
+  <data name="passkeys.removeFailed" xml:space="preserve"><value>Could not remove the passkey</value></data>
+  <data name="passkeys.unsupported" xml:space="preserve"><value>This browser cannot use passkeys.</value></data>
+  <data name="passkeys.none" xml:space="preserve"><value>No passkey yet.</value></data>
+  <data name="passkeys.created" xml:space="preserve"><value>Added {date}</value></data>
+  <data name="passkeys.synced" xml:space="preserve"><value>synced across devices</value></data>
+  <data name="passkeys.removeTitle" xml:space="preserve"><value>Remove “{name}”?</value></data>
+  <data name="passkeys.removeDescription" xml:space="preserve"><value>You will no longer be able to sign in with it. Remove it from the device too, in its passkey settings.</value></data>
+  <data name="passkeys.renameTitle" xml:space="preserve"><value>Name this passkey</value></data>
+  <data name="passkeys.renameDescription" xml:space="preserve"><value>Something that tells you where it lives: “Work laptop”, “Phone”, “YubiKey”.</value></data>
+  <data name="passkeys.renameFailed" xml:space="preserve"><value>Could not rename the passkey</value></data>
+  <data name="passkeys.name" xml:space="preserve"><value>Name</value></data>
+  <data name="passkeys.nameInvalid" xml:space="preserve"><value>Use 1 to 64 characters.</value></data>
+  <data name="signIn.or" xml:space="preserve"><value>or</value></data>
+  <data name="signIn.withPasskey" xml:space="preserve"><value>Sign in with a passkey</value></data>
+  <data name="signIn.passkeyRejected" xml:space="preserve"><value>This passkey is not registered for an account here, or the account cannot sign in.</value></data>
+  <data name="signIn.passkeyRequired.title" xml:space="preserve"><value>Use your passkey</value></data>
+  <data name="signIn.passkeyRequired.description" xml:space="preserve"><value>This account must sign in with its passkey: the password alone is not enough.</value></data>
+  <data name="users.passkeysReset.open" xml:space="preserve"><value>Remove passkeys</value></data>
+  <data name="users.passkeysReset.title" xml:space="preserve"><value>Remove the passkeys of {name}?</value></data>
+  <data name="users.passkeysReset.description_one" xml:space="preserve"><value>Its {count} passkey stops working and its sessions end. Do this when the device is lost.</value></data>
+  <data name="users.passkeysReset.description_other" xml:space="preserve"><value>Its {count} passkeys stop working and its sessions end. Do this when the devices are lost.</value></data>
+  <data name="users.passkeysReset.confirm" xml:space="preserve"><value>Remove passkeys</value></data>
+  <data name="users.passkeysReset.done" xml:space="preserve"><value>Passkeys removed</value></data>
+  <data name="accessDenied.mfaTitle" xml:space="preserve"><value>This application needs a two-step sign-in</value></data>
+  <data name="accessDenied.mfa" xml:space="preserve"><value>Add an authenticator app or a passkey to your account, sign in again with it, then open the application.</value></data>
+  <data name="accessDenied.mfaAction" xml:space="preserve"><value>Set up a second factor</value></data>
+  <data name="securitySetup.title" xml:space="preserve"><value>Protect your account first</value></data>
+  <data name="securitySetup.description" xml:space="preserve"><value>This portal requires a second factor. Add a passkey or an authenticator app below to continue.</value></data>
+  <data name="securitySetup.doneTitle" xml:space="preserve"><value>Your account is protected</value></data>
+  <data name="securitySetup.doneDescription" xml:space="preserve"><value>Next time you sign in, the portal will ask for your second factor.</value></data>
+  <data name="securitySetup.continue" xml:space="preserve"><value>Continue</value></data>
+  <data name="securitySetup.signOut" xml:space="preserve"><value>Sign out</value></data>
+  <data name="audit.action.user.passkeys_reset" xml:space="preserve"><value>Removed the passkeys of an account</value></data>
+  <data name="audit.action.account.passkey_added" xml:space="preserve"><value>Added a passkey</value></data>
+  <data name="audit.action.account.passkey_renamed" xml:space="preserve"><value>Renamed a passkey</value></data>
+  <data name="audit.action.account.passkey_removed" xml:space="preserve"><value>Removed a passkey</value></data>
+  <data name="error.identity.two_factor_requirement_invalid" xml:space="preserve"><value>The second-factor requirement must be none, administrators or everyone.</value></data>
+  <data name="error.identity.two_factor_requirement_unsatisfiable" xml:space="preserve"><value>Requiring a second factor needs authenticator apps or passkeys to be on.</value></data>
+  <data name="error.identity.two_factor_requirement_self" xml:space="preserve"><value>Set up an authenticator app or a passkey on your own account before requiring one.</value></data>
+  <data name="error.identity.two_factor_setup_required" xml:space="preserve"><value>Your account must set up an authenticator app or a passkey before anything else.</value></data>
+  <data name="error.identity.two_factor_last_factor" xml:space="preserve"><value>This is your last second factor and the portal requires one: add another first.</value></data>
+  <data name="error.identity.passkey_required" xml:space="preserve"><value>This account signs in with a passkey: the password alone is not enough.</value></data>
+  <data name="error.identity.passkeys_disabled" xml:space="preserve"><value>Passkeys are turned off for this portal.</value></data>
+  <data name="error.identity.passkey_invalid" xml:space="preserve"><value>The passkey could not be verified.</value></data>
+  <data name="error.identity.passkey_not_found" xml:space="preserve"><value>The passkey does not exist.</value></data>
+  <data name="error.identity.passkey_name_invalid" xml:space="preserve"><value>A passkey name is 1 to 64 characters.</value></data>
+  <data name="error.identity.passkey_sign_in_failed" xml:space="preserve"><value>This passkey does not belong to an account that can sign in.</value></data>
+  <data name="validation.passkey.required" xml:space="preserve"><value>The passkey response is missing.</value></data>
+  <data name="validation.passkeyName.required" xml:space="preserve"><value>Enter a name.</value></data>
+  <data name="validation.passkeyName.max" xml:space="preserve"><value>Use at most 64 characters.</value></data>
+  <data name="signOut.title" xml:space="preserve"><value>Sign out of OpenPortal?</value></data>
+  <data name="signOut.description" xml:space="preserve"><value>An application asked to end your session ({email}). You will also be signed out of the other applications that support it.</value></data>
+  <data name="signOut.notSignedIn" xml:space="preserve"><value>You are not signed in.</value></data>
+  <data name="signOut.confirm" xml:space="preserve"><value>Sign out</value></data>
+  <data name="signOut.cancel" xml:space="preserve"><value>Stay signed in</value></data>
+  <data name="applications.form.backChannelLogoutUri" xml:space="preserve"><value>Back-channel logout URI</value></data>
+  <data name="applications.form.backChannelLogoutUriHint" xml:space="preserve"><value>The portal posts a logout token here when the user signs out, so the application ends its session too. Leave empty if it does not support it.</value></data>
+  <data name="applications.clientType.title" xml:space="preserve"><value>Client type</value></data>
+  <data name="applications.clientType.confidential" xml:space="preserve"><value>Confidential (server application)</value></data>
+  <data name="applications.clientType.confidentialHint" xml:space="preserve"><value>Runs on a server and keeps a client secret.</value></data>
+  <data name="applications.clientType.public" xml:space="preserve"><value>Public (single-page or mobile app)</value></data>
+  <data name="applications.clientType.publicHint" xml:space="preserve"><value>Runs in the browser or on a device and cannot keep a secret: it proves itself with PKCE.</value></data>
+  <data name="applications.clientType.locked" xml:space="preserve"><value>The client type is fixed once the application is registered.</value></data>
+  <data name="applications.api.publicClient" xml:space="preserve"><value>A public client has no secret, so it cannot have application API scopes.</value></data>
+  <data name="applications.secret.publicTitle" xml:space="preserve"><value>No secret for a public client</value></data>
+  <data name="applications.secret.publicDescription" xml:space="preserve"><value>Configure only the client id: the application signs in with the authorization code flow and PKCE.</value></data>
+  <data name="error.access.client_type_invalid" xml:space="preserve"><value>The client type must be confidential or public.</value></data>
+  <data name="error.access.api_scopes_need_confidential_client" xml:space="preserve"><value>A public client has no secret, so it cannot be given application API scopes.</value></data>
+  <data name="error.access.public_client_has_no_secret" xml:space="preserve"><value>A public client has no secret to regenerate.</value></data>
+  <data name="error.access.back_channel_logout_uri_invalid" xml:space="preserve"><value>The back-channel logout URI must be an absolute https address (http only for localhost).</value></data>
+  <data name="applications.tab.webhook" xml:space="preserve"><value>Webhook</value></data>
+  <data name="applications.webhook.hint" xml:space="preserve"><value>The portal posts the events you choose to this address, signed with the secret below (Standard Webhooks: webhook-id, webhook-timestamp, webhook-signature). Failed deliveries are retried and show in Settings → Email → Delivery queue.</value></data>
+  <data name="applications.webhook.url" xml:space="preserve"><value>Webhook URL</value></data>
+  <data name="applications.webhook.urlHint" xml:space="preserve"><value>https only (http for localhost). Leave empty to turn the webhook off.</value></data>
+  <data name="applications.webhook.events" xml:space="preserve"><value>Events</value></data>
+  <data name="applications.webhook.secretSet" xml:space="preserve"><value>A signing secret is set.</value></data>
+  <data name="applications.webhook.secretMissing" xml:space="preserve"><value>No signing secret yet: nothing is posted until you generate one.</value></data>
+  <data name="applications.webhook.secretOnce" xml:space="preserve"><value>Copy it now into the application's settings: it will not be shown again.</value></data>
+  <data name="applications.webhook.generate" xml:space="preserve"><value>Generate secret</value></data>
+  <data name="applications.webhook.rotate" xml:space="preserve"><value>Replace secret</value></data>
+  <data name="applications.webhook.test" xml:space="preserve"><value>Send a test event</value></data>
+  <data name="applications.webhook.testQueued" xml:space="preserve"><value>Test event queued</value></data>
+  <data name="applications.webhook.afterCreate" xml:space="preserve"><value>Generate the signing secret after creating the application.</value></data>
+  <data name="audit.action.application.webhook_secret_generated" xml:space="preserve"><value>Generated a webhook secret</value></data>
+  <data name="error.access.webhook_url_invalid" xml:space="preserve"><value>The webhook URL must be an absolute https address (http only for localhost).</value></data>
+  <data name="error.access.webhook_event_invalid" xml:space="preserve"><value>The webhook subscribes to an event that does not exist.</value></data>
+  <data name="error.access.webhook_not_configured" xml:space="preserve"><value>Set the webhook URL and generate its secret first.</value></data>
+  <data name="nav.accessReviews" xml:space="preserve"><value>Access reviews</value></data>
+  <data name="groups.tab.subgroups" xml:space="preserve"><value>Subgroups</value></data>
+  <data name="groups.subgroups.hint" xml:space="preserve"><value>Members of a subgroup get everything this group is given (applications and pages), and so do the members of its own subgroups.</value></data>
+  <data name="groups.subgroups.add" xml:space="preserve"><value>Add subgroup</value></data>
+  <data name="groups.subgroups.none" xml:space="preserve"><value>No subgroups.</value></data>
+  <data name="groups.subgroups.insideOf" xml:space="preserve"><value>This group is inside: {groups}</value></data>
+  <data name="access.expiry.until" xml:space="preserve"><value>Until</value></data>
+  <data name="access.expiry.hint" xml:space="preserve"><value>Optional: the access ends by itself then.</value></data>
+  <data name="access.expiry.badge" xml:space="preserve"><value>until {date}</value></data>
+  <data name="access.expiry.newGrantsUntil" xml:space="preserve"><value>Applications switched on below last until</value></data>
+  <data name="reviews.title" xml:space="preserve"><value>Access reviews</value></data>
+  <data name="reviews.description" xml:space="preserve"><value>Periodically confirm who can open each application. Completing a review removes what reviewers revoked.</value></data>
+  <data name="reviews.start" xml:space="preserve"><value>Start a review</value></data>
+  <data name="reviews.startTitle" xml:space="preserve"><value>Start an access review</value></data>
+  <data name="reviews.startDescription" xml:space="preserve"><value>Takes a snapshot of who can open the application now. The reviewers are notified.</value></data>
+  <data name="reviews.startFailed" xml:space="preserve"><value>Could not start the review</value></data>
+  <data name="reviews.grants_one" xml:space="preserve"><value>{count} grant</value></data>
+  <data name="reviews.grants_other" xml:space="preserve"><value>{count} grants</value></data>
+  <data name="reviews.name" xml:space="preserve"><value>Name</value></data>
+  <data name="reviews.nameHint" xml:space="preserve"><value>Empty: the application and today's date.</value></data>
+  <data name="reviews.due" xml:space="preserve"><value>Due by (optional)</value></data>
+  <data name="reviews.revokeUndecided" xml:space="preserve"><value>Revoke what nobody confirmed</value></data>
+  <data name="reviews.revokeUndecidedHint" xml:space="preserve"><value>When the review is completed, access nobody decided on is removed too.</value></data>
+  <data name="reviews.empty" xml:space="preserve"><value>No reviews yet</value></data>
+  <data name="reviews.emptyDescription" xml:space="preserve"><value>Start one to confirm who can open an application.</value></data>
+  <data name="reviews.column.review" xml:space="preserve"><value>Review</value></data>
+  <data name="reviews.column.application" xml:space="preserve"><value>Application</value></data>
+  <data name="reviews.column.progress" xml:space="preserve"><value>Decided</value></data>
+  <data name="reviews.column.due" xml:space="preserve"><value>Due</value></data>
+  <data name="reviews.column.who" xml:space="preserve"><value>Who</value></data>
+  <data name="reviews.column.roles" xml:space="preserve"><value>Roles</value></data>
+  <data name="reviews.column.decision" xml:space="preserve"><value>Decision</value></data>
+  <data name="reviews.status.open" xml:space="preserve"><value>Open</value></data>
+  <data name="reviews.status.completed" xml:space="preserve"><value>Completed</value></data>
+  <data name="reviews.status.cancelled" xml:space="preserve"><value>Cancelled</value></data>
+  <data name="reviews.decision.pending" xml:space="preserve"><value>To decide</value></data>
+  <data name="reviews.decision.keep" xml:space="preserve"><value>Keep</value></data>
+  <data name="reviews.decision.revoke" xml:space="preserve"><value>Revoke</value></data>
+  <data name="reviews.keep" xml:space="preserve"><value>Keep</value></data>
+  <data name="reviews.revoke" xml:space="preserve"><value>Revoke</value></data>
+  <data name="reviews.undo" xml:space="preserve"><value>Undo the decision</value></data>
+  <data name="reviews.progress" xml:space="preserve"><value>{decided} of {total} decided</value></data>
+  <data name="reviews.detailDescription" xml:space="preserve"><value>Who can open {application}, as it was when the review started.</value></data>
+  <data name="reviews.complete" xml:space="preserve"><value>Complete</value></data>
+  <data name="reviews.cancel" xml:space="preserve"><value>Cancel review</value></data>
+  <data name="reviews.completeTitle" xml:space="preserve"><value>Complete the review?</value></data>
+  <data name="reviews.completeDescription_one" xml:space="preserve"><value>{count} access will be removed now; the rest stays.</value></data>
+  <data name="reviews.completeDescription_other" xml:space="preserve"><value>{count} accesses will be removed now; the rest stays.</value></data>
+  <data name="reviews.cancelTitle" xml:space="preserve"><value>Cancel the review?</value></data>
+  <data name="reviews.cancelDescription" xml:space="preserve"><value>Nothing is removed; the decisions are kept for the record.</value></data>
+  <data name="reviews.completed" xml:space="preserve"><value>Review completed</value></data>
+  <data name="reviews.cancelled" xml:space="preserve"><value>Review cancelled</value></data>
+  <data name="organizations.manage.open" xml:space="preserve"><value>Manage members</value></data>
+  <data name="organizations.manage.description" xml:space="preserve"><value>As an administrator of this organization you add people by their address, change who administers it and remove members.</value></data>
+  <data name="organizations.manage.emailPlaceholder" xml:space="preserve"><value>name@example.com</value></data>
+  <data name="organizations.manage.add" xml:space="preserve"><value>Add</value></data>
+  <data name="organizations.manage.added" xml:space="preserve"><value>Member added</value></data>
+  <data name="organizations.manage.addFailed" xml:space="preserve"><value>Could not add this person (an account with that address must exist)</value></data>
+  <data name="organizations.manage.toggleRole" xml:space="preserve"><value>Switch between member and administrator</value></data>
+  <data name="audit.action.group.subgroup_added" xml:space="preserve"><value>Put a group inside another</value></data>
+  <data name="audit.action.group.subgroup_removed" xml:space="preserve"><value>Took a group out of another</value></data>
+  <data name="audit.action.access.review_started" xml:space="preserve"><value>Started an access review</value></data>
+  <data name="audit.action.access.review_completed" xml:space="preserve"><value>Completed an access review</value></data>
+  <data name="audit.action.access.review_cancelled" xml:space="preserve"><value>Cancelled an access review</value></data>
+  <data name="notification.access.review_started.title" xml:space="preserve"><value>Access review to do</value></data>
+  <data name="notification.access.review_started.body" xml:space="preserve"><value>{review}: confirm or revoke who can open {application} ({count} entries).</value></data>
+  <data name="error.access.group_nesting_cycle" xml:space="preserve"><value>A group cannot contain itself, directly or through its subgroups.</value></data>
+  <data name="error.access.expiry_in_past" xml:space="preserve"><value>The end of temporary access must be in the future.</value></data>
+  <data name="error.access.organization_manage_forbidden" xml:space="preserve"><value>Managing this organization's members takes a portal administrator or one of its own administrators.</value></data>
+  <data name="error.access.organization_last_admin" xml:space="preserve"><value>An organization keeps at least one administrator: make someone else administrator first.</value></data>
+  <data name="error.access.review_not_found" xml:space="preserve"><value>The access review does not exist.</value></data>
+  <data name="error.access.review_item_not_found" xml:space="preserve"><value>The review has no such entry.</value></data>
+  <data name="error.access.review_name_invalid" xml:space="preserve"><value>A review needs a name of at most 120 characters.</value></data>
+  <data name="error.access.review_due_in_past" xml:space="preserve"><value>The due date must be in the future.</value></data>
+  <data name="error.access.review_nothing_to_review" xml:space="preserve"><value>Nobody has been given this application: there is nothing to review.</value></data>
+  <data name="error.access.review_not_open" xml:space="preserve"><value>The review is already closed.</value></data>
+  <data name="error.access.review_decision_invalid" xml:space="preserve"><value>The decision must be pending, keep or revoke.</value></data>
+  <data name="error.access.review_note_too_long" xml:space="preserve"><value>A note is at most 500 characters.</value></data>
+  <data name="error.access.review_forbidden" xml:space="preserve"><value>Reviewing access takes an administrator account or the access reviews page.</value></data>
 </root>

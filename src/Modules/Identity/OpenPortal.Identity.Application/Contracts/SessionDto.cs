@@ -15,6 +15,10 @@ namespace OpenPortal.Identity.Application.Contracts;
 /// </param>
 /// <param name="DeletionScheduledAtUtc">When the account will be deleted, if its owner asked for it; they can still cancel.</param>
 /// <param name="Impersonator">The administrator acting as this account for support, in a support session.</param>
+/// <param name="TwoFactorSetupRequired">
+/// The portal requires a second factor of this account and it has none yet: the client offers only the setup.
+/// </param>
+/// <param name="AuthenticationMethods">How this session was established (<c>pwd</c>, <c>mfa</c>, <c>hwk</c>…).</param>
 public sealed record SessionUserDto(
     Guid Id,
     string Email,
@@ -26,7 +30,9 @@ public sealed record SessionUserDto(
     IReadOnlyList<string> Pages,
     IReadOnlyList<PendingLegalDocumentDto> PendingLegalDocuments,
     DateTimeOffset? DeletionScheduledAtUtc,
-    SessionImpersonatorDto? Impersonator);
+    SessionImpersonatorDto? Impersonator,
+    bool TwoFactorSetupRequired = false,
+    IReadOnlyList<string>? AuthenticationMethods = null);
 
 /// <summary>The administrator behind a support session.</summary>
 public sealed record SessionImpersonatorDto(Guid Id, string? Email, DateTimeOffset StartedAtUtc, DateTimeOffset EndsAtUtc);

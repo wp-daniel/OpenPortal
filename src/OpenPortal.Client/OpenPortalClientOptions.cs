@@ -42,6 +42,15 @@ public sealed class OpenPortalClientOptions
 
     public string SignedOutCallbackPath { get; set; } = "/signout-callback-oidc";
 
+    /// <summary>
+    /// Where the portal posts a logout token when the user signs out of it (OpenID Connect Back-Channel Logout).
+    /// Announced to the portal; map it with <c>MapOpenPortalBackChannelLogout()</c>. Empty turns single logout off.
+    /// </summary>
+    public string? BackChannelLogoutPath { get; set; } = "/signout-backchannel";
+
+    /// <summary>Revoke the refresh token at the portal when the user signs out here (RFC 7009).</summary>
+    public bool RevokeTokensOnSignOut { get; set; } = true;
+
     /// <summary>How often the application re-announces itself, which the portal shows as "last seen".</summary>
     public int AnnounceIntervalMinutes { get; set; } = 5;
 

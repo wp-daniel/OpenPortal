@@ -9,6 +9,8 @@ using Microsoft.Net.Http.Headers;
 using OpenPortal.Web.Localization;
 using OpenPortal.Web.Resources;
 
+using OpenPortal.Web.Authorization;
+
 namespace OpenPortal.Web.Controllers;
 
 /// <summary>An offered UI language.</summary>
@@ -31,6 +33,7 @@ public sealed record MessagesDto(string Language, IReadOnlyDictionary<string, st
 [ApiController]
 [Route("api/i18n")]
 [AllowAnonymous]
+[AllowDuringTwoFactorSetup]
 [Produces("application/json")]
 public sealed class I18nController : ControllerBase
 {

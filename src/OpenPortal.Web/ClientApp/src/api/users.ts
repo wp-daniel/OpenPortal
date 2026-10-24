@@ -36,6 +36,8 @@ export const userAdminApi = {
 
   /** Turns two-factor off for an account that lost its authenticator; its sessions end. */
   resetTwoFactor: (userId: string) => api.delete<void>(`/api/admin/users/${userId}/two-factor`),
+  /** Removes every passkey of an account that lost its devices; its sessions end. */
+  resetPasskeys: (userId: string) => api.delete<void>(`/api/admin/users/${userId}/passkeys`),
 
   uploadAvatar: (userId: string, image: Blob) => api.put<void>(`/api/admin/users/${userId}/avatar`, avatarForm(image)),
 

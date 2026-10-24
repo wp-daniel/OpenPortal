@@ -17,6 +17,9 @@ namespace OpenPortal.Access.Application.Contracts;
 /// <param name="ApiScopes">Application API scopes its backend may request with client credentials; empty for none.</param>
 /// <param name="AllowAccessRequests">Users who cannot open it see it in their catalog and may ask for it.</param>
 /// <param name="Organizations"><c>none</c>, <c>optional</c> or <c>required</c>: whether tokens name the user's organization.</param>
+/// <param name="ClientType"><c>confidential</c> (with a secret) or <c>public</c> (PKCE only).</param>
+/// <param name="BackChannelLogoutUri">Where the portal posts logout tokens when a user signs out; null for none.</param>
+/// <param name="AnnouncedBackChannelLogoutUri">The back-channel logout URI the application last proposed.</param>
 public sealed record ApplicationDto(
     Guid Id,
     string ClientId,
@@ -40,7 +43,26 @@ public sealed record ApplicationDto(
     string GroupClaims,
     IReadOnlyList<string> ApiScopes,
     bool AllowAccessRequests,
-    string Organizations);
+    string Organizations,
+    string ClientType = ApplicationClientTypes.Confidential,
+    string? BackChannelLogoutUri = null,
+    string? AnnouncedBackChannelLogoutUri = null,
+    string? WebhookUrl = null,
+    IReadOnlyList<string>? WebhookEvents = null,
+    bool HasWebhookSecret = false);
+
+/// <summary>A new webhook signing secret (<c>whsec_…</c>), shown once.</summary>
+public sealed record WebhookSecretDto(string Secret);
+
+/// <summary>Where and how to deliver a webhook to an application, with the secret in clear. Never leaves the server.</summary>
+public sealed record WebhookTarget(string ClientId, string Url, string Secret);
+
+/// <summary>Values of <see cref="ApplicationDto.ClientType"/>.</summary>
+public static class ApplicationClientTypes
+{
+    public const string Confidential = "confidential";
+    public const string Public = "public";
+}
 
 /// <summary>Values of <see cref="ApplicationDto.Organizations"/>.</summary>
 public static class OrganizationModes
@@ -65,7 +87,8 @@ public static class GroupClaimModes
 /// Returned by the operations that issue a client secret. The secret is never stored in clear and cannot be
 /// read again: the administrator copies it now or generates a new one.
 /// </summary>
-public sealed record ApplicationSecretDto(ApplicationDto Application, string ClientSecret);
+/// <param name="ClientSecret">Null for a public client, which has none.</param>
+public sealed record ApplicationSecretDto(ApplicationDto Application, string? ClientSecret);
 
 /// <summary>Field set for registering an application by hand.</summary>
 /// <param name="Roles">The roles the application understands; none when absent.</param>
@@ -73,6 +96,8 @@ public sealed record ApplicationSecretDto(ApplicationDto Application, string Cli
 /// <param name="ApiScopes">Application API scopes for the application's backend; none when absent.</param>
 /// <param name="AllowAccessRequests">Whether users may ask for it; no when absent.</param>
 /// <param name="Organizations"><c>none</c> (the default), <c>optional</c> or <c>required</c>.</param>
+/// <param name="ClientType"><c>confidential</c> (the default) or <c>public</c>; fixed once registered.</param>
+/// <param name="BackChannelLogoutUri">Where the portal posts logout tokens; none when absent.</param>
 public sealed record CreateApplicationRequest(
     string ClientId,
     string DisplayName,
@@ -84,7 +109,11 @@ public sealed record CreateApplicationRequest(
     string? GroupClaims = null,
     IReadOnlyList<string>? ApiScopes = null,
     bool? AllowAccessRequests = null,
-    string? Organizations = null);
+    string? Organizations = null,
+    string? ClientType = null,
+    string? BackChannelLogoutUri = null,
+    string? WebhookUrl = null,
+    IReadOnlyList<string>? WebhookEvents = null);
 
 /// <summary>Field set for editing an application. The client id cannot change.</summary>
 /// <param name="Roles">
@@ -95,6 +124,7 @@ public sealed record CreateApplicationRequest(
 /// <param name="ApiScopes">The complete list of application API scopes; absent (null) leaves them as they are.</param>
 /// <param name="AllowAccessRequests">Whether users may ask for it; absent leaves it as it is.</param>
 /// <param name="Organizations"><c>none</c>, <c>optional</c> or <c>required</c>; absent leaves it as it is.</param>
+/// <param name="BackChannelLogoutUri">Where the portal posts logout tokens; empty or absent for none.</param>
 public sealed record UpdateApplicationRequest(
     string DisplayName,
     string? Description,
@@ -105,7 +135,10 @@ public sealed record UpdateApplicationRequest(
     string? GroupClaims = null,
     IReadOnlyList<string>? ApiScopes = null,
     bool? AllowAccessRequests = null,
-    string? Organizations = null);
+    string? Organizations = null,
+    string? BackChannelLogoutUri = null,
+    string? WebhookUrl = null,
+    IReadOnlyList<string>? WebhookEvents = null);
 
 /// <summary>What a running application reports about itself when it announces to the portal.</summary>
 /// <param name="Roles">
@@ -120,7 +153,8 @@ public sealed record ApplicationManifest(
     IReadOnlyList<string>? RedirectUris,
     IReadOnlyList<string>? PostLogoutRedirectUris,
     string? Version,
-    IReadOnlyList<ApplicationRoleDto>? Roles = null);
+    IReadOnlyList<ApplicationRoleDto>? Roles = null,
+    string? BackChannelLogoutUri = null);
 
 /// <param name="Status">The application's status after the announcement, so it can log "waiting for approval".</param>
 public sealed record AnnouncementResultDto(string ClientId, string Status);
@@ -144,9 +178,15 @@ public sealed record GroupDetailDto(
     IReadOnlyList<UserReferenceDto> Members,
     IReadOnlyList<ApplicationReferenceDto> Applications,
     IReadOnlyList<string> Pages,
-    DateTimeOffset CreatedAtUtc);
+    DateTimeOffset CreatedAtUtc,
+    IReadOnlyList<GroupReferenceDto>? Subgroups = null,
+    IReadOnlyList<GroupReferenceDto>? ParentGroups = null,
+    IReadOnlyDictionary<Guid, DateTimeOffset>? MemberExpiries = null);
 
 public sealed record SaveGroupRequest(string Name, string? Description);
+
+/// <summary>Adds a member (or changes when their membership ends): no end date means until removed.</summary>
+public sealed record GroupMemberRequest(DateTimeOffset? ExpiresAtUtc = null);
 
 // ---------------------------------------------------------------------------
 // Access.
@@ -186,7 +226,16 @@ public sealed record AccessTreeUserDto(Guid Id, string Email, string DisplayName
 /// Role keys to come with the grant, replacing the ones it had. Absent (null) keeps an existing grant's roles
 /// and gives a new grant none.
 /// </param>
-public sealed record GrantRequest(IReadOnlyList<string>? Roles);
+/// <param name="ExpiresAtUtc">When the grant ends by itself (temporary access); absent leaves the end as it is.</param>
+/// <param name="ClearExpiry">Removes the end date: the grant lasts until it is removed.</param>
+public sealed record GrantRequest(IReadOnlyList<string>? Roles, DateTimeOffset? ExpiresAtUtc = null, bool ClearExpiry = false)
+{
+    /// <summary>The change to the end date the request asks for, or null for none.</summary>
+    public ExpiryChange? Expiry => ExpiresAtUtc is { } at ? new ExpiryChange(at) : ClearExpiry ? new ExpiryChange(null) : null;
+}
+
+/// <summary>A change of a grant's end date: present means "set it to this" (null: no end); absent leaves it.</summary>
+public sealed record ExpiryChange(DateTimeOffset? ExpiresAtUtc);
 
 /// <summary>What one user can open, and why.</summary>
 public sealed record UserAccessDto(
@@ -289,6 +338,9 @@ public sealed record UpdateOrganizationRequest(string Name, string? Description)
 /// <summary>Adds a member or changes their role.</summary>
 /// <param name="Role"><c>member</c> (the default) or <c>admin</c>.</param>
 public sealed record SetOrganizationMemberRequest(string? Role);
+
+/// <summary>Adds an existing account to an organization by its address.</summary>
+public sealed record AddOrganizationMemberRequest(string Email, string? Role);
 
 /// <summary>An organization the signed-in user belongs to, as applications are told about it.</summary>
 /// <param name="Role"><c>member</c> or <c>admin</c>.</param>
@@ -536,3 +588,42 @@ public static class PortalScopes
     /// </summary>
     public const string Organization = "organization";
 }
+
+// ---------------------------------------------------------------------------
+// Access reviews.
+// ---------------------------------------------------------------------------
+
+/// <param name="Status"><c>open</c>, <c>completed</c> or <c>cancelled</c>.</param>
+public sealed record AccessReviewSummaryDto(
+    Guid Id,
+    string Name,
+    Guid ApplicationId,
+    string ApplicationName,
+    string Status,
+    int ItemCount,
+    int DecidedCount,
+    int RevokeCount,
+    bool RevokeUndecided,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset? DueAtUtc,
+    DateTimeOffset? ClosedAtUtc);
+
+/// <param name="SubjectType"><c>user</c> or <c>group</c>.</param>
+/// <param name="Decision"><c>pending</c>, <c>keep</c> or <c>revoke</c>.</param>
+public sealed record AccessReviewItemDto(
+    Guid Id,
+    string SubjectType,
+    Guid SubjectId,
+    string SubjectLabel,
+    IReadOnlyList<string> Roles,
+    string Decision,
+    string? Note,
+    DateTimeOffset? DecidedAtUtc);
+
+public sealed record AccessReviewDto(AccessReviewSummaryDto Review, IReadOnlyList<AccessReviewItemDto> Items);
+
+/// <param name="RevokeUndecided">Completing the review also revokes what nobody confirmed.</param>
+public sealed record StartAccessReviewRequest(Guid ApplicationId, string? Name, DateTimeOffset? DueAtUtc, bool RevokeUndecided = false);
+
+/// <param name="Decision"><c>keep</c>, <c>revoke</c> or <c>pending</c> (to undo).</param>
+public sealed record DecideAccessReviewItemRequest(string Decision, string? Note = null);

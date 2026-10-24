@@ -133,6 +133,11 @@ export function invalidateAntiforgeryToken(): void {
   antiforgery.invalidate()
 }
 
+/** The current antiforgery token, for a classic form post to a server endpoint (the sign-out confirmation). */
+export function antiforgeryToken(): Promise<string> {
+  return antiforgery.get()
+}
+
 type Method = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
 const safeMethods: ReadonlySet<Method> = new Set<Method>(['GET'])

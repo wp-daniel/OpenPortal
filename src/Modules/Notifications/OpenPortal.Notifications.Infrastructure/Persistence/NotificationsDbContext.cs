@@ -5,8 +5,8 @@ using OpenPortal.Notifications.Domain;
 namespace OpenPortal.Notifications.Infrastructure.Persistence;
 
 /// <summary>
-/// Persistence boundary for the Notifications module: the notifications and the announcements. No provider is referenced here; the host
-/// chooses it through <c>AddNotificationsModule</c>.
+/// Persistence boundary for the Notifications module: the notifications, the announcements, the delivery queue and
+/// the email settings. No provider is referenced here; the host chooses it through <c>AddNotificationsModule</c>.
 /// </summary>
 public sealed class NotificationsDbContext : DbContext
 {
@@ -18,6 +18,10 @@ public sealed class NotificationsDbContext : DbContext
     public DbSet<Notification> Notifications => Set<Notification>();
 
     public DbSet<Announcement> Announcements => Set<Announcement>();
+
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+
+    public DbSet<MailSettings> MailSettings => Set<MailSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -85,5 +89,54 @@ internal sealed class AnnouncementConfiguration : IEntityTypeConfiguration<Annou
         });
 
         builder.Navigation(announcement => announcement.Texts).HasField("_texts").UsePropertyAccessMode(PropertyAccessMode.Field);
+    }
+}
+
+internal sealed class OutboxMessageConfiguration : IEntityTypeConfiguration<OutboxMessage>
+{
+    public void Configure(EntityTypeBuilder<OutboxMessage> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("OutboxMessages");
+
+        builder.HasKey(message => message.Id);
+
+        builder.Property(message => message.Type).IsRequired().HasMaxLength(OutboxMessage.TypeMaxLength);
+        builder.Property(message => message.Payload).IsRequired();
+        builder.Property(message => message.Description).HasMaxLength(OutboxMessage.DescriptionMaxLength);
+        builder.Property(message => message.Status).IsRequired().HasConversion<string>().HasMaxLength(16);
+        builder.Property(message => message.LockedBy).HasMaxLength(OutboxMessage.OwnerMaxLength);
+        builder.Property(message => message.LastError).HasMaxLength(OutboxMessage.ErrorMaxLength);
+
+        // The dispatcher asks for "pending and due", oldest first.
+        builder.HasIndex(message => new { message.Status, message.AvailableAtUtc })
+            .HasDatabaseName("IX_OutboxMessages_Status_AvailableAtUtc");
+
+        // The retention sweep deletes delivered messages by age.
+        builder.HasIndex(message => message.CreatedAtUtc)
+            .HasDatabaseName("IX_OutboxMessages_CreatedAtUtc");
+    }
+}
+
+internal sealed class MailSettingsConfiguration : IEntityTypeConfiguration<MailSettings>
+{
+    public void Configure(EntityTypeBuilder<MailSettings> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("MailSettings");
+
+        builder.HasKey(settings => settings.Id);
+        builder.Property(settings => settings.Id).ValueGeneratedNever();
+
+        builder.Property(settings => settings.Host).HasMaxLength(MailSettings.HostMaxLength);
+        builder.Property(settings => settings.Security).IsRequired().HasConversion<string>().HasMaxLength(16);
+        builder.Property(settings => settings.Username).HasMaxLength(MailSettings.UsernameMaxLength);
+        builder.Property(settings => settings.ProtectedPassword).HasMaxLength(MailSettings.ProtectedPasswordMaxLength);
+        builder.Property(settings => settings.FromAddress).HasMaxLength(MailSettings.AddressMaxLength);
+        builder.Property(settings => settings.FromName).HasMaxLength(MailSettings.FromNameMaxLength);
+
+        builder.Ignore(settings => settings.IsConfigured);
     }
 }

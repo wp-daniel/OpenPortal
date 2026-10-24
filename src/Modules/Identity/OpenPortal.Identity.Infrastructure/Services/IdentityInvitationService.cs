@@ -409,7 +409,7 @@ internal sealed class IdentityInvitationService : IInvitationService
 
     private async Task<bool> SendAsync(UserInvitation invitation, string token, CancellationToken cancellationToken)
     {
-        if (!_messaging.CanSendEmail)
+        if (!await _messaging.CanSendEmailAsync(cancellationToken).ConfigureAwait(false))
         {
             return false;
         }

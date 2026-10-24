@@ -1,12 +1,15 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AppWindow, Bell, Building2, KeyRound, ShieldAlert, UserPlus, type LucideIcon } from 'lucide-react'
-import { createElement, useCallback, type ReactElement } from 'react'
+import { createElement, useCallback, useEffect, useState, type ReactElement } from 'react'
 import { notificationKeys, notificationsApi } from '@/api/notifications'
-import type { PortalNotification } from '@/api/types'
+import type { NotificationCount, PortalNotification } from '@/api/types'
 import type { TFunction } from '@/i18n/store'
 
 /** How often the bell asks for the unread count while the tab is visible. */
 export const NOTIFICATION_POLL_MS = 30_000
+
+/** The same, while the event stream is connected and the poll is only a safety net. */
+const NOTIFICATION_LIVE_POLL_MS = 120_000
 
 /**
  * A notification's title and body in the active language. The server stores a type and the values its text
@@ -50,15 +53,50 @@ export function notificationIcon(type: string, className?: string): ReactElement
 }
 
 /** The unread count, polled while the tab is visible and refreshed when the user comes back to it. */
-export function useNotificationCount(enabled = true) {
+export function useNotificationCount(enabled = true, live = false) {
   return useQuery({
     queryKey: notificationKeys.count,
     queryFn: ({ signal }) => notificationsApi.count(signal),
     enabled,
     staleTime: 10_000,
-    refetchInterval: NOTIFICATION_POLL_MS,
+    refetchInterval: live ? NOTIFICATION_LIVE_POLL_MS : NOTIFICATION_POLL_MS,
     refetchOnWindowFocus: true,
   })
+}
+
+/**
+ * Listens to the server's notification stream (server-sent events): the count arrives the moment something changes,
+ * from this tab, another tab or another instance of the portal. Returns whether the stream is connected; the browser
+ * reconnects by itself after a drop, and the count query keeps a slow poll as a safety net.
+ */
+export function useNotificationStream(enabled = true): boolean {
+  const queryClient = useQueryClient()
+  const [connected, setConnected] = useState(false)
+
+  useEffect(() => {
+    if (!enabled || typeof EventSource === 'undefined') {
+      return
+    }
+
+    const source = new EventSource('/api/notifications/stream', { withCredentials: true })
+
+    source.onopen = () => setConnected(true)
+    source.onerror = () => setConnected(false)
+    source.addEventListener('count', (event) => {
+      try {
+        queryClient.setQueryData<NotificationCount>(notificationKeys.count, JSON.parse((event as MessageEvent<string>).data))
+      } catch {
+        // A malformed event changes nothing; the next one or the poll will.
+      }
+    })
+
+    return () => {
+      source.close()
+      setConnected(false)
+    }
+  }, [enabled, queryClient])
+
+  return connected
 }
 
 /** Refreshes every notification query (bell, list, count) after a change. */

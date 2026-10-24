@@ -108,7 +108,7 @@ public sealed class HardeningTests(OpenPortalFactory factory) : IClassFixture<Op
     }
 
     [Fact]
-    public async Task Health_endpoints_report_the_process_and_every_database()
+    public async Task Health_endpoints_report_the_process_every_database_and_the_delivery_queue()
     {
         using var http = factory.CreateClient();
 
@@ -124,7 +124,7 @@ public sealed class HardeningTests(OpenPortalFactory factory) : IClassFixture<Op
         var report = await ready.Content.ReadFromJsonAsync<JsonElement>();
         report.GetProperty("status").GetString().ShouldBe("Healthy");
         report.GetProperty("checks").EnumerateArray().Select(check => check.GetProperty("name").GetString())
-            .ShouldBe(["database-identity", "database-content", "database-access", "database-audit", "database-notifications"], ignoreOrder: true);
+            .ShouldBe(["database-identity", "database-content", "database-access", "database-audit", "database-notifications", "delivery-queue"], ignoreOrder: true);
 
         using var unknown = await http.GetAsync("/health/unknown");
         unknown.StatusCode.ShouldBe(HttpStatusCode.NotFound);

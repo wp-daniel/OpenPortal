@@ -17,6 +17,7 @@ import {
   notificationText,
   useNotificationCount,
   useNotificationRefresh,
+  useNotificationStream,
 } from '@/lib/notifications'
 import { cn } from '@/lib/utils'
 
@@ -24,7 +25,7 @@ import { cn } from '@/lib/utils'
 const LATEST = 8
 
 /**
- * The header's bell: the unread count (polled), a popover with the latest notifications, and a toast when a new
+ * The header's bell: the unread count (pushed by the server's event stream, polled as a fallback), a popover with the latest notifications, and a toast when a new
  * one arrives while the portal is open. Opening a notification marks it read and follows its link.
  */
 export function NotificationBell() {
@@ -32,7 +33,8 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false)
   const queryClient = useQueryClient()
   const refresh = useNotificationRefresh()
-  const count = useNotificationCount()
+  const live = useNotificationStream()
+  const count = useNotificationCount(true, live)
 
   const latest = useQuery({
     queryKey: notificationKeys.latest,

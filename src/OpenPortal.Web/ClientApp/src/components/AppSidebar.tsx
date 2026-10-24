@@ -97,6 +97,7 @@ const adminBranches: readonly NavBranch[] = [
       { to: '/admin/organizations', labelKey: 'nav.organizations', page: 'organizations' },
       { to: '/admin/access', labelKey: 'nav.access', page: 'access' },
       { to: '/admin/access-requests', labelKey: 'nav.accessRequests', page: 'access-requests', badge: 'accessRequests' },
+      { to: '/admin/access-reviews', labelKey: 'nav.accessReviews', page: 'access-reviews' },
       { to: '/admin/page-permissions', labelKey: 'nav.pagePermissions' },
     ],
   },

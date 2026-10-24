@@ -33,6 +33,7 @@ public sealed class AccountController : ControllerBase
     }
 
     /// <summary>Whether the portal offers two-factor authentication and whether this account uses it.</summary>
+    [AllowDuringTwoFactorSetup]
     [HttpGet("two-factor")]
     [ProducesResponseType<TwoFactorStatusDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
@@ -45,6 +46,7 @@ public sealed class AccountController : ControllerBase
 
     /// <summary>Returns the key (and otpauth URI for the QR code) to add to an authenticator app.</summary>
     [InteractiveSessionOnly]
+    [AllowDuringTwoFactorSetup]
     [HttpPost("two-factor/setup")]
     [ProducesResponseType<TwoFactorSetupDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
@@ -57,6 +59,7 @@ public sealed class AccountController : ControllerBase
 
     /// <summary>Turns two-factor on with a code from the app; the response holds the recovery codes, shown once.</summary>
     [InteractiveSessionOnly]
+    [AllowDuringTwoFactorSetup]
     [HttpPost("two-factor/enable")]
     [EnableRateLimiting(RateLimitPolicies.SignIn)]
     [ProducesResponseType<RecoveryCodesDto>(StatusCodes.Status200OK)]
@@ -133,6 +136,7 @@ public sealed class AccountController : ControllerBase
     }
 
     /// <summary>Stores the signed-in account's preferred UI language (null clears it).</summary>
+    [AllowDuringTwoFactorSetup]
     [HttpPut("language")]
     [ProducesResponseType<AccountProfileDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]

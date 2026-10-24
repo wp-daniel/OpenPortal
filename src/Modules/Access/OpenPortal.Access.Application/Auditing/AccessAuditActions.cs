@@ -19,6 +19,9 @@ public static class AccessAuditActions
 
     public const string ApplicationSecretRegenerated = "application.secret_regenerated";
 
+    /// <summary>A new webhook signing secret was generated for the application.</summary>
+    public const string ApplicationWebhookSecretGenerated = "application.webhook_secret_generated";
+
     public const string ApplicationManifestApplied = "application.manifest_applied";
 
     public const string ApplicationDisabled = "application.disabled";
@@ -36,6 +39,20 @@ public static class AccessAuditActions
     public const string GroupMemberAdded = "group.member_added";
 
     public const string GroupMemberRemoved = "group.member_removed";
+
+    /// <summary>A group was put inside another (target: the parent; details: the subgroup).</summary>
+    public const string SubgroupAdded = "group.subgroup_added";
+
+    public const string SubgroupRemoved = "group.subgroup_removed";
+
+    /// <summary>An access review was started on an application (details: name, entries).</summary>
+    public const string ReviewStarted = "access.review_started";
+
+    /// <summary>An access review was completed (details: revoked count).</summary>
+    public const string ReviewCompleted = "access.review_completed";
+
+    public const string ReviewCancelled = "access.review_cancelled";
+
 
     public const string UserGranted = "access.user_granted";
 

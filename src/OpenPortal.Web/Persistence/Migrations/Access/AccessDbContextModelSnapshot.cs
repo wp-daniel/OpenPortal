@@ -257,6 +257,10 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                     b.Property<bool>("AllowAccessRequests")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("AnnouncedBackChannelLogoutUri")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("AnnouncedPostLogoutRedirectUris")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -269,6 +273,10 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("BackChannelLogoutUri")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("BaseUrl")
                         .IsRequired()
                         .HasMaxLength(512)
@@ -278,6 +286,13 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("ClientType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Confidential");
 
                     b.Property<long>("CreatedAtUtc")
                         .HasColumnType("INTEGER");
@@ -310,6 +325,10 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ProtectedWebhookSecret")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("RedirectUris")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -331,6 +350,14 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("WebhookEvents")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("WebhookUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ClientId")
@@ -347,6 +374,9 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
 
                     b.Property<Guid>("GroupId")
                         .HasColumnType("TEXT");
+
+                    b.Property<long?>("ExpiresAtUtc")
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("GrantedAtUtc")
                         .HasColumnType("INTEGER");
@@ -370,6 +400,9 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("TEXT");
+
+                    b.Property<long?>("ExpiresAtUtc")
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("GrantedAtUtc")
                         .HasColumnType("INTEGER");
@@ -452,12 +485,37 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                     b.Property<long>("AddedAtUtc")
                         .HasColumnType("INTEGER");
 
+                    b.Property<long?>("ExpiresAtUtc")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("GroupId", "UserId");
+
+                    b.HasIndex("ExpiresAtUtc")
+                        .HasDatabaseName("IX_GroupMembers_ExpiresAtUtc");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("IX_GroupMembers_UserId");
 
                     b.ToTable("GroupMembers", (string)null);
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Groups.GroupNesting", b =>
+                {
+                    b.Property<Guid>("ParentGroupId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ChildGroupId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("AddedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("ParentGroupId", "ChildGroupId");
+
+                    b.HasIndex("ChildGroupId")
+                        .HasDatabaseName("IX_GroupNestings_ChildGroupId");
+
+                    b.ToTable("GroupNestings", (string)null);
                 });
 
             modelBuilder.Entity("OpenPortal.Access.Domain.Organizations.Organization", b =>
@@ -571,6 +629,98 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                     b.ToTable("AccessRequests", (string)null);
                 });
 
+            modelBuilder.Entity("OpenPortal.Access.Domain.Reviews.AccessReview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ApplicationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("ClosedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("ClosedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("DueAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RevokeUndecided")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationId");
+
+                    b.ToTable("AccessReviews", (string)null);
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Reviews.AccessReviewItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("DecidedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("DecidedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Decision")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ReviewId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Roles")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SubjectLabel")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SubjectType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReviewId");
+
+                    b.ToTable("AccessReviewItems", (string)null);
+                });
+
             modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreAuthorization<System.Guid>", b =>
                 {
                     b.HasOne("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication<System.Guid>", "Application")
@@ -646,6 +796,21 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("OpenPortal.Access.Domain.Groups.GroupNesting", b =>
+                {
+                    b.HasOne("OpenPortal.Access.Domain.Groups.Group", null)
+                        .WithMany()
+                        .HasForeignKey("ChildGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OpenPortal.Access.Domain.Groups.Group", null)
+                        .WithMany()
+                        .HasForeignKey("ParentGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("OpenPortal.Access.Domain.Organizations.OrganizationMember", b =>
                 {
                     b.HasOne("OpenPortal.Access.Domain.Organizations.Organization", null)
@@ -660,6 +825,24 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                     b.HasOne("OpenPortal.Access.Domain.Applications.PortalApplication", null)
                         .WithMany()
                         .HasForeignKey("ApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Reviews.AccessReview", b =>
+                {
+                    b.HasOne("OpenPortal.Access.Domain.Applications.PortalApplication", null)
+                        .WithMany()
+                        .HasForeignKey("ApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Reviews.AccessReviewItem", b =>
+                {
+                    b.HasOne("OpenPortal.Access.Domain.Reviews.AccessReview", null)
+                        .WithMany("Items")
+                        .HasForeignKey("ReviewId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -689,6 +872,11 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
             modelBuilder.Entity("OpenPortal.Access.Domain.Organizations.Organization", b =>
                 {
                     b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Reviews.AccessReview", b =>
+                {
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

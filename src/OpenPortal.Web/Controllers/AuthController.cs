@@ -8,6 +8,9 @@ using OpenPortal.Identity.Application.Contracts;
 using OpenPortal.SharedKernel.Results;
 using OpenPortal.Web.Infrastructure;
 
+using OpenPortal.Web.Authorization;
+using OpenPortal.Web.Oidc;
+
 namespace OpenPortal.Web.Controllers;
 
 /// <summary>
@@ -19,14 +22,23 @@ namespace OpenPortal.Web.Controllers;
 [ApiController]
 [Route("api/auth")]
 [AllowAnonymous]
+[AllowDuringTwoFactorSetup]
 [Produces("application/json")]
 public sealed class AuthController : ControllerBase
 {
     private readonly IAuthenticationService _authentication;
     private readonly IAntiforgery _antiforgery;
+    private readonly BackChannelLogoutNotifier _logout;
+    private readonly ICurrentUser _currentUser;
 
-    public AuthController(IAuthenticationService authentication, IAntiforgery antiforgery)
+    public AuthController(
+        IAuthenticationService authentication,
+        IAntiforgery antiforgery,
+        BackChannelLogoutNotifier logout,
+        ICurrentUser currentUser)
     {
+        _logout = logout;
+        _currentUser = currentUser;
         _authentication = authentication;
         _antiforgery = antiforgery;
     }
@@ -107,11 +119,55 @@ public sealed class AuthController : ControllerBase
             : Ok(SessionDto.AnonymousFor(_authentication.PasswordPolicy));
     }
 
+    /// <summary>
+    /// The options for <c>navigator.credentials.get()</c> (a JSON object, passed on as is): a fresh challenge any
+    /// passkey of this portal can answer.
+    /// </summary>
+    [HttpPost("passkey/options")]
+    [EnableRateLimiting(RateLimitPolicies.SignIn)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> PasskeyOptionsAsync(CancellationToken cancellationToken)
+    {
+        var options = await _authentication.PasskeyRequestOptionsAsync(cancellationToken).ConfigureAwait(false);
+
+        return options.IsSuccess ? Content(options.Value, "application/json") : ProblemResults.FromResult(HttpContext, options);
+    }
+
+    /// <summary>Establishes a session with a passkey (no password, no code: the passkey is both factors).</summary>
+    [HttpPost("login/passkey")]
+    [EnableRateLimiting(RateLimitPolicies.SignIn)]
+    [ProducesResponseType<SessionDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<SessionDto>> LoginWithPasskeyAsync(
+        [FromBody] PasskeySignInRequest request,
+        CancellationToken cancellationToken)
+    {
+        var signedIn = await _authentication.SignInWithPasskeyAsync(request, cancellationToken).ConfigureAwait(false);
+        if (signedIn.IsFailure)
+        {
+            return ProblemResults.FromResult(HttpContext, signedIn);
+        }
+
+        var session = await _authentication.GetSessionAsync(cancellationToken).ConfigureAwait(false);
+
+        return session.IsSuccess
+            ? Ok(session.Value)
+            : Ok(SessionDto.AnonymousFor(_authentication.PasswordPolicy));
+    }
+
     /// <summary>Terminates the session and clears its cookie.</summary>
     [HttpPost("logout")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> LogoutAsync(CancellationToken cancellationToken)
     {
+        // Signing out of the portal signs out of the applications too (back-channel logout); a support session
+        // ends only itself.
+        if (_currentUser.UserId is { } userId && _currentUser.ImpersonatorId is null)
+        {
+            await _logout.NotifyAsync(userId, cancellationToken).ConfigureAwait(false);
+        }
+
         await _authentication.SignOutAsync(cancellationToken).ConfigureAwait(false);
 
         return NoContent();

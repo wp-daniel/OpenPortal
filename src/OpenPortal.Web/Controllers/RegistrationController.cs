@@ -4,8 +4,12 @@ using Microsoft.AspNetCore.RateLimiting;
 using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Identity.Application.Contracts;
+using OpenPortal.Identity.Domain.Users;
+using OpenPortal.SharedKernel.Results;
 using OpenPortal.Web.Infrastructure;
 using OpenPortal.Web.Security;
+
+using OpenPortal.Web.Authorization;
 
 namespace OpenPortal.Web.Controllers;
 
@@ -17,6 +21,7 @@ namespace OpenPortal.Web.Controllers;
 [ApiController]
 [Route("api/auth")]
 [AllowAnonymous]
+[AllowDuringTwoFactorSetup]
 [Produces("application/json")]
 public sealed class RegistrationController : ControllerBase
 {
@@ -24,13 +29,16 @@ public sealed class RegistrationController : ControllerBase
     private readonly IInvitationService _invitations;
     private readonly IAuthenticationService _authentication;
     private readonly IAccessProvisioningService _provisioning;
+    private readonly IPasswordRecoveryService _recovery;
 
     public RegistrationController(
         IRegistrationService registration,
         IInvitationService invitations,
         IAuthenticationService authentication,
-        IAccessProvisioningService provisioning)
+        IAccessProvisioningService provisioning,
+        IPasswordRecoveryService recovery)
     {
+        _recovery = recovery;
         _registration = registration;
         _invitations = invitations;
         _authentication = authentication;
@@ -81,6 +89,42 @@ public sealed class RegistrationController : ControllerBase
         await _registration.ResendConfirmationAsync(request, cancellationToken).ConfigureAwait(false);
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Emails a password reset link when the address has an account that may sign in. Always 204 (or 409 when the
+    /// portal cannot send email at all), whatever the address, so it reveals nothing.
+    /// </summary>
+    [HttpPost("password/forgot")]
+    [EnableRateLimiting(RateLimitPolicies.SignIn)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ForgotPasswordAsync(
+        [FromBody] ForgotPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!await _recovery.IsAvailableAsync(cancellationToken).ConfigureAwait(false))
+        {
+            return ProblemResults.FromResult(HttpContext, Result.Failure(UserErrors.PasswordRecoveryUnavailable));
+        }
+
+        await _recovery.RequestAsync(request, cancellationToken).ConfigureAwait(false);
+
+        return NoContent();
+    }
+
+    /// <summary>Sets a new password with the link from the reset email. The account is signed out everywhere.</summary>
+    [HttpPost("password/reset")]
+    [EnableRateLimiting(RateLimitPolicies.SignIn)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ResetPasswordAsync(
+        [FromBody] CompletePasswordResetRequest request,
+        CancellationToken cancellationToken)
+    {
+        var reset = await _recovery.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
+
+        return reset.IsSuccess ? NoContent() : ProblemResults.FromResult(HttpContext, reset);
     }
 
     /// <summary>What an invitation says, while it can be accepted. POST so the token stays out of URLs and logs.</summary>

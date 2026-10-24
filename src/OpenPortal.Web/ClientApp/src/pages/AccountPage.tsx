@@ -13,6 +13,7 @@ import { PrivacySection } from '@/components/PrivacySection'
 import { Section } from '@/components/Section'
 import { LoadingState } from '@/components/StatePanels'
 import { TokensSection } from '@/components/TokensSection'
+import { PasskeysSection } from '@/components/PasskeysSection'
 import { TwoFactorSection } from '@/components/TwoFactorSection'
 import { UserDetailsFields } from '@/components/UserDetailsFields'
 import { Badge } from '@/components/ui/badge'
@@ -117,6 +118,7 @@ export function AccountPage() {
         <TabsContent value="security" className="space-y-6 pt-4">
           <PasswordForm policy={session.passwordPolicy} />
           <TwoFactorSection />
+          <PasskeysSection />
         </TabsContent>
 
         <TabsContent value="organizations" className="pt-4">

@@ -32,6 +32,23 @@ public sealed class ApplicationUserGrant
 
     public DateTimeOffset GrantedAtUtc { get; private set; }
 
+    /// <summary>When the grant ends by itself (temporary access); null: until it is removed.</summary>
+    public DateTimeOffset? ExpiresAtUtc { get; private set; }
+
+    public bool IsActiveAt(DateTimeOffset now) => ExpiresAtUtc is null || ExpiresAtUtc > now;
+
+    /// <summary>Sets or clears the end of the grant. Returns true when it changed.</summary>
+    public bool SetExpiry(DateTimeOffset? expiresAtUtc)
+    {
+        if (ExpiresAtUtc == expiresAtUtc)
+        {
+            return false;
+        }
+
+        ExpiresAtUtc = expiresAtUtc;
+        return true;
+    }
+
     /// <summary>Keys of the application roles that come with this grant.</summary>
     public IReadOnlyList<string> Roles { get; private set; } = [];
 
@@ -77,6 +94,23 @@ public sealed class ApplicationGroupGrant
     public Guid GroupId { get; private set; }
 
     public DateTimeOffset GrantedAtUtc { get; private set; }
+
+    /// <summary>When the grant ends by itself (temporary access); null: until it is removed.</summary>
+    public DateTimeOffset? ExpiresAtUtc { get; private set; }
+
+    public bool IsActiveAt(DateTimeOffset now) => ExpiresAtUtc is null || ExpiresAtUtc > now;
+
+    /// <summary>Sets or clears the end of the grant. Returns true when it changed.</summary>
+    public bool SetExpiry(DateTimeOffset? expiresAtUtc)
+    {
+        if (ExpiresAtUtc == expiresAtUtc)
+        {
+            return false;
+        }
+
+        ExpiresAtUtc = expiresAtUtc;
+        return true;
+    }
 
     /// <summary>Keys of the application roles that come with this grant.</summary>
     public IReadOnlyList<string> Roles { get; private set; } = [];

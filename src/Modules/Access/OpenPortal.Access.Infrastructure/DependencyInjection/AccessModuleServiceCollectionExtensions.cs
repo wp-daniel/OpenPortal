@@ -51,6 +51,11 @@ public static class AccessModuleServiceCollectionExtensions
 
         services.AddScoped<OidcClientRegistry>();
         services.AddScoped<AccessQueries>();
+        services.AddScoped<GroupGraph>();
+        services.AddDataProtection();
+        services.AddSingleton<WebhookSecretProtector>();
+        services.AddScoped<IWebhookDirectory, WebhookDirectory>();
+        services.AddScoped<IAccessReviewService, AccessReviewService>();
         services.AddScoped<UserGrantOperations>();
         services.AddScoped<IApplicationApiService, ApplicationApiService>();
         services.AddScoped<IApplicationRegistryService, ApplicationRegistryService>();
@@ -68,6 +73,10 @@ public static class AccessModuleServiceCollectionExtensions
         services.AddScoped<IPagePermissionEvaluator, PagePermissionEvaluator>();
 
         services.AddHostedService<OidcClientUpgradeService>();
+
+        // Temporary access (grants and memberships with an end date) ends by itself.
+        services.AddSingleton<AccessExpiryService>();
+        services.AddHostedService(provider => provider.GetRequiredService<AccessExpiryService>());
 
         return services;
     }

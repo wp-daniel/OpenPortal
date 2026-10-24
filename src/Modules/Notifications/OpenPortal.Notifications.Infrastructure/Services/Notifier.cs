@@ -25,14 +25,17 @@ internal sealed partial class Notifier : INotifier
     private readonly IOptions<NotificationsModuleOptions> _options;
     private readonly IClock _clock;
     private readonly ILogger<Notifier> _logger;
+    private readonly INotificationPublisher _publisher;
 
     public Notifier(
         NotificationsDbContext db,
         INotificationContext context,
         IOptions<NotificationsModuleOptions> options,
         IClock clock,
-        ILogger<Notifier> logger)
+        ILogger<Notifier> logger,
+        INotificationPublisher publisher)
     {
+        _publisher = publisher;
         _db = db;
         _context = context;
         _options = options;
@@ -73,7 +76,9 @@ internal sealed partial class Notifier : INotifier
             var now = _clock.UtcNow;
             var limit = Math.Max(1, _options.Value.MaxRecipientsPerNotice);
 
-            foreach (var recipient in recipients.Order().Take(limit))
+            var reached = recipients.Order().Take(limit).ToList();
+
+            foreach (var recipient in reached)
             {
                 var notification = Notification.Create(Guid.NewGuid(), recipient, notice.Type, parameters, notice.Link, now);
                 if (notification.IsFailure)
@@ -93,6 +98,8 @@ internal sealed partial class Notifier : INotifier
 
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             _db.ChangeTracker.Clear();
+
+            await _publisher.PublishAsync(reached, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

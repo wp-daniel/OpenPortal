@@ -14,6 +14,7 @@ namespace OpenPortal.Web.Controllers;
 [ApiController]
 [Route("api/announcements")]
 [AllowAnonymous]
+[AllowDuringTwoFactorSetup]
 [Produces("application/json")]
 public sealed class AnnouncementsController : ControllerBase
 {

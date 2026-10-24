@@ -21,6 +21,7 @@ namespace OpenPortal.Web.Controllers;
 [ApiController]
 [Route("api/apps/me")]
 [IgnoreAntiforgeryToken]
+[AllowDuringTwoFactorSetup]
 [Produces("application/json")]
 public sealed class ApplicationApiController : ControllerBase
 {

@@ -1222,7 +1222,7 @@
   <data name="settings.registration.confirm" xml:space="preserve"><value>Confirmar la dirección de correo</value></data>
   <data name="settings.registration.confirmHint" xml:space="preserve"><value>Una cuenta autoregistrada solo entra tras seguir el enlace enviado a su dirección. Recomendado: sin ello, cualquiera puede registrar una dirección ajena.</value></data>
   <data name="settings.registration.confirmNeedsEmail" xml:space="preserve"><value>La confirmación por correo requiere envío de correo: configúralo o desactiva la confirmación.</value></data>
-  <data name="settings.registration.noEmail" xml:space="preserve"><value>El envío de correo no está configurado (sección Email de la configuración): los enlaces de invitación se te muestran en lugar de enviarse y la confirmación por correo no está disponible.</value></data>
+  <data name="settings.registration.noEmail" xml:space="preserve"><value>El envío de correo no está configurado (Ajustes → Correo): los enlaces de invitación se te muestran en lugar de enviarse y la confirmación por correo no está disponible.</value></data>
   <data name="settings.registration.domains" xml:space="preserve"><value>Dominios de correo permitidos</value></data>
   <data name="settings.registration.domainsHint" xml:space="preserve"><value>Uno por línea (example.com). Vacío permite cualquier dominio; los subdominios no se incluyen.</value></data>
   <data name="settings.registration.invitationDays" xml:space="preserve"><value>Validez de las invitaciones (días)</value></data>
@@ -1591,4 +1591,314 @@
   <data name="users.import.outcome.error" xml:space="preserve"><value>Rechazado</value></data>
   <data name="users.import.done" xml:space="preserve"><value>Importación: {invited} invitados, {updated} actualizados, {failed} rechazados</value></data>
   <data name="users.import.failed" xml:space="preserve"><value>No se pudo importar el archivo</value></data>
+  <data name="settings.tabs.security" xml:space="preserve"><value>Seguridad</value></data>
+  <data name="settings.tabs.registration" xml:space="preserve"><value>Registro</value></data>
+  <data name="settings.tabs.privacy" xml:space="preserve"><value>Privacidad</value></data>
+  <data name="settings.tabs.email" xml:space="preserve"><value>Correo</value></data>
+  <data name="settings.email.title" xml:space="preserve"><value>Servidor de correo</value></data>
+  <data name="settings.email.description" xml:space="preserve"><value>El servidor SMTP y el remitente que usa el portal para invitaciones, confirmaciones, restablecimiento de contraseña y avisos. Los correos se ponen en cola y se reintentan si el servidor no está disponible.</value></data>
+  <data name="settings.email.source.portal" xml:space="preserve"><value>El portal envía correo con el servidor de abajo.</value></data>
+  <data name="settings.email.source.configuration" xml:space="preserve"><value>No hay servidor configurado aquí: el portal usa el de su archivo de configuración. Un servidor guardado aquí tiene prioridad.</value></data>
+  <data name="settings.email.source.none" xml:space="preserve"><value>Correo desactivado: no hay servidor configurado. Introduce uno abajo para enviar invitaciones, confirmaciones y restablecimientos de contraseña.</value></data>
+  <data name="settings.email.host" xml:space="preserve"><value>Servidor SMTP</value></data>
+  <data name="settings.email.hostHint" xml:space="preserve"><value>Nombre de host o dirección, sin http://. Déjalo vacío para usar el archivo de configuración.</value></data>
+  <data name="settings.email.hostRequired" xml:space="preserve"><value>Introduce el servidor SMTP que quieres probar.</value></data>
+  <data name="settings.email.hostInvalid" xml:space="preserve"><value>Introduce un nombre de host sin espacios ni esquema.</value></data>
+  <data name="settings.email.port" xml:space="preserve"><value>Puerto</value></data>
+  <data name="settings.email.portInvalid" xml:space="preserve"><value>1–65535</value></data>
+  <data name="settings.email.security" xml:space="preserve"><value>Seguridad de la conexión</value></data>
+  <data name="settings.email.securityOptions.auto" xml:space="preserve"><value>Automática</value></data>
+  <data name="settings.email.securityOptions.autoHint" xml:space="preserve"><value>STARTTLS si se ofrece, TLS en el puerto 465.</value></data>
+  <data name="settings.email.securityOptions.starttls" xml:space="preserve"><value>STARTTLS</value></data>
+  <data name="settings.email.securityOptions.starttlsHint" xml:space="preserve"><value>Cifrado obligatorio tras conectar (normalmente puerto 587).</value></data>
+  <data name="settings.email.securityOptions.ssl" xml:space="preserve"><value>SSL/TLS</value></data>
+  <data name="settings.email.securityOptions.sslHint" xml:space="preserve"><value>Cifrada desde el inicio (normalmente puerto 465).</value></data>
+  <data name="settings.email.securityOptions.none" xml:space="preserve"><value>Ninguna</value></data>
+  <data name="settings.email.securityOptions.noneHint" xml:space="preserve"><value>Sin cifrar: solo para un relay en la misma red.</value></data>
+  <data name="settings.email.username" xml:space="preserve"><value>Usuario</value></data>
+  <data name="settings.email.usernameHint" xml:space="preserve"><value>Déjalo vacío si el servidor no requiere inicio de sesión.</value></data>
+  <data name="settings.email.password" xml:space="preserve"><value>Contraseña</value></data>
+  <data name="settings.email.passwordHint" xml:space="preserve"><value>Se guarda cifrada; no se vuelve a mostrar.</value></data>
+  <data name="settings.email.passwordStored" xml:space="preserve"><value>Hay una contraseña guardada. Déjalo vacío para conservarla.</value></data>
+  <data name="settings.email.clearPassword" xml:space="preserve"><value>Eliminar la contraseña guardada</value></data>
+  <data name="settings.email.fromAddress" xml:space="preserve"><value>Dirección del remitente</value></data>
+  <data name="settings.email.fromAddressHint" xml:space="preserve"><value>El servidor debe poder enviar con esta dirección.</value></data>
+  <data name="settings.email.fromInvalid" xml:space="preserve"><value>Introduce una dirección de correo válida.</value></data>
+  <data name="settings.email.fromName" xml:space="preserve"><value>Nombre del remitente</value></data>
+  <data name="settings.email.fromNameHint" xml:space="preserve"><value>Se muestra en la bandeja del destinatario.</value></data>
+  <data name="settings.email.testTitle" xml:space="preserve"><value>Enviar un correo de prueba</value></data>
+  <data name="settings.email.testDescription" xml:space="preserve"><value>Usa los valores de arriba, incluso antes de guardarlos, y muestra la respuesta del servidor.</value></data>
+  <data name="settings.email.testTo" xml:space="preserve"><value>Destinatario</value></data>
+  <data name="settings.email.toInvalid" xml:space="preserve"><value>Introduce la dirección a la que enviar la prueba.</value></data>
+  <data name="settings.email.testSend" xml:space="preserve"><value>Enviar prueba</value></data>
+  <data name="settings.email.testSent" xml:space="preserve"><value>Correo de prueba enviado a {to}</value></data>
+  <data name="settings.email.testFailed" xml:space="preserve"><value>No se pudo enviar el correo de prueba</value></data>
+  <data name="settings.email.testOk" xml:space="preserve"><value>El servidor aceptó el correo</value></data>
+  <data name="settings.email.testOkHint" xml:space="preserve"><value>Revisa la bandeja (y el spam) del destinatario.</value></data>
+  <data name="settings.email.testKo" xml:space="preserve"><value>No se pudo enviar el correo</value></data>
+  <data name="outbox.title" xml:space="preserve"><value>Cola de envío</value></data>
+  <data name="outbox.description" xml:space="preserve"><value>Correos y llamadas a aplicaciones pendientes de envío. Los envíos fallidos se reintentan con esperas crecientes; puedes reintentarlos ahora.</value></data>
+  <data name="outbox.status" xml:space="preserve"><value>Estado</value></data>
+  <data name="outbox.statuses.pending" xml:space="preserve"><value>Pendiente</value></data>
+  <data name="outbox.statuses.delivered" xml:space="preserve"><value>Entregado</value></data>
+  <data name="outbox.statuses.failed" xml:space="preserve"><value>Fallido</value></data>
+  <data name="outbox.types.email" xml:space="preserve"><value>Correo</value></data>
+  <data name="outbox.types.webhook" xml:space="preserve"><value>Webhook</value></data>
+  <data name="outbox.types.backchannel_logout" xml:space="preserve"><value>Aviso de cierre de sesión a una aplicación</value></data>
+  <data name="outbox.summary.pending" xml:space="preserve"><value>{count} pendientes</value></data>
+  <data name="outbox.summary.failed" xml:space="preserve"><value>{count} fallidos</value></data>
+  <data name="outbox.summary.delivered" xml:space="preserve"><value>{count} entregados en 24 h</value></data>
+  <data name="outbox.summary.oldest" xml:space="preserve"><value>el más antiguo pendiente desde {date}</value></data>
+  <data name="outbox.columns.message" xml:space="preserve"><value>Mensaje</value></data>
+  <data name="outbox.columns.attempts" xml:space="preserve"><value>Intentos</value></data>
+  <data name="outbox.columns.created" xml:space="preserve"><value>En cola desde</value></data>
+  <data name="outbox.columns.error" xml:space="preserve"><value>Último error</value></data>
+  <data name="outbox.nextAttempt" xml:space="preserve"><value>próximo intento {date}</value></data>
+  <data name="outbox.retry" xml:space="preserve"><value>Reintentar</value></data>
+  <data name="outbox.retryFailed" xml:space="preserve"><value>Reintentar todos los fallidos</value></data>
+  <data name="outbox.retried" xml:space="preserve"><value>Puesto en cola de nuevo</value></data>
+  <data name="outbox.retriedMany_one" xml:space="preserve"><value>{count} mensaje puesto en cola de nuevo</value></data>
+  <data name="outbox.retriedMany_other" xml:space="preserve"><value>{count} mensajes puestos en cola de nuevo</value></data>
+  <data name="outbox.deleted" xml:space="preserve"><value>Mensaje eliminado de la cola</value></data>
+  <data name="outbox.empty" xml:space="preserve"><value>Nada por aquí</value></data>
+  <data name="outbox.emptyDescription" xml:space="preserve"><value>Ningún mensaje coincide con estos filtros.</value></data>
+  <data name="email.test.subject" xml:space="preserve"><value>Correo de prueba de OpenPortal</value></data>
+  <data name="email.test.greeting" xml:space="preserve"><value>Hola,</value></data>
+  <data name="email.test.body" xml:space="preserve"><value>Este es un correo de prueba enviado desde los ajustes de correo del portal a través de {host}. Si lo estás leyendo, el envío funciona.</value></data>
+  <data name="email.test.action" xml:space="preserve"><value>Abrir los ajustes de correo</value></data>
+  <data name="audit.action.mail.settings_updated" xml:space="preserve"><value>Cambió los ajustes del servidor de correo</value></data>
+  <data name="audit.action.mail.test_sent" xml:space="preserve"><value>Envió un correo de prueba</value></data>
+  <data name="audit.action.outbox.retried" xml:space="preserve"><value>Reintentó un envío en cola</value></data>
+  <data name="audit.action.outbox.deleted" xml:space="preserve"><value>Eliminó un envío en cola</value></data>
+  <data name="error.mail.host_invalid" xml:space="preserve"><value>El servidor SMTP debe ser un nombre de host o una dirección, sin esquema.</value></data>
+  <data name="error.mail.port_invalid" xml:space="preserve"><value>El puerto debe estar entre 1 y 65535.</value></data>
+  <data name="error.mail.from_invalid" xml:space="preserve"><value>El remitente debe ser una dirección de correo válida.</value></data>
+  <data name="error.mail.security_invalid" xml:space="preserve"><value>La seguridad de la conexión debe ser auto, starttls, ssl o none.</value></data>
+  <data name="error.mail.text_too_long" xml:space="preserve"><value>Un valor de los ajustes de correo es demasiado largo.</value></data>
+  <data name="error.mail.recipient_invalid" xml:space="preserve"><value>El correo de prueba necesita un destinatario válido.</value></data>
+  <data name="error.mail.not_configured" xml:space="preserve"><value>Introduce primero un servidor SMTP.</value></data>
+  <data name="error.mail.test_failed" xml:space="preserve"><value>No se pudo enviar el correo de prueba.</value></data>
+  <data name="error.outbox.not_found" xml:space="preserve"><value>El mensaje en cola no existe.</value></data>
+  <data name="error.outbox.already_delivered" xml:space="preserve"><value>El mensaje ya se entregó.</value></data>
+  <data name="error.outbox.manage_forbidden" xml:space="preserve"><value>Solo un administrador puede gestionar el correo y la cola de envío.</value></data>
+  <data name="error.outbox.type_invalid" xml:space="preserve"><value>Un mensaje en cola necesita un tipo válido.</value></data>
+  <data name="error.outbox.payload_required" xml:space="preserve"><value>Un mensaje en cola necesita un contenido.</value></data>
+  <data name="validation.too_long" xml:space="preserve"><value>El valor es demasiado largo.</value></data>
+  <data name="validation.port" xml:space="preserve"><value>El puerto debe estar entre 1 y 65535.</value></data>
+  <data name="signIn.forgotPassword" xml:space="preserve"><value>¿Olvidaste tu contraseña?</value></data>
+  <data name="passwordReset.forgot.title" xml:space="preserve"><value>Restablece tu contraseña</value></data>
+  <data name="passwordReset.forgot.description" xml:space="preserve"><value>Introduce la dirección de tu cuenta y te enviaremos un enlace para elegir una nueva contraseña.</value></data>
+  <data name="passwordReset.forgot.submit" xml:space="preserve"><value>Enviar el enlace</value></data>
+  <data name="passwordReset.requestFailed" xml:space="preserve"><value>No se pudo enviar el enlace</value></data>
+  <data name="passwordReset.sent.title" xml:space="preserve"><value>Revisa tu correo</value></data>
+  <data name="passwordReset.sent.description" xml:space="preserve"><value>Si {email} pertenece a una cuenta, va de camino un enlace para elegir una nueva contraseña. Es válido durante una hora.</value></data>
+  <data name="passwordReset.reset.title" xml:space="preserve"><value>Elige una nueva contraseña</value></data>
+  <data name="passwordReset.reset.description" xml:space="preserve"><value>Tu cuenta se cerrará en todos los dispositivos.</value></data>
+  <data name="passwordReset.reset.password" xml:space="preserve"><value>Nueva contraseña</value></data>
+  <data name="passwordReset.reset.confirmation" xml:space="preserve"><value>Repite la nueva contraseña</value></data>
+  <data name="passwordReset.reset.mismatch" xml:space="preserve"><value>Las dos contraseñas no coinciden.</value></data>
+  <data name="passwordReset.reset.submit" xml:space="preserve"><value>Establecer la contraseña</value></data>
+  <data name="passwordReset.reset.failed" xml:space="preserve"><value>No se pudo establecer la contraseña</value></data>
+  <data name="passwordReset.invalid.title" xml:space="preserve"><value>Este enlace ya no funciona</value></data>
+  <data name="passwordReset.invalid.description" xml:space="preserve"><value>Un enlace de restablecimiento sirve una vez y durante una hora. Pide uno nuevo.</value></data>
+  <data name="passwordReset.invalid.again" xml:space="preserve"><value>Enviar un nuevo enlace</value></data>
+  <data name="passwordReset.done.title" xml:space="preserve"><value>Contraseña cambiada</value></data>
+  <data name="passwordReset.done.description" xml:space="preserve"><value>Inicia sesión con tu nueva contraseña.</value></data>
+  <data name="passwordReset.done.signIn" xml:space="preserve"><value>Iniciar sesión</value></data>
+  <data name="email.password_reset.subject" xml:space="preserve"><value>Restablece tu contraseña de OpenPortal</value></data>
+  <data name="email.password_reset.greeting" xml:space="preserve"><value>Hola {name},</value></data>
+  <data name="email.password_reset.body" xml:space="preserve"><value>Alguien pidió restablecer la contraseña de tu cuenta. Si fuiste tú, elige una nueva con el enlace de abajo; sirve una vez, durante {minutes} minutos. Si no fuiste tú, ignora este correo: tu contraseña no cambia.</value></data>
+  <data name="email.password_reset.action" xml:space="preserve"><value>Elegir una nueva contraseña</value></data>
+  <data name="email.password_changed.subject" xml:space="preserve"><value>Se cambió tu contraseña de OpenPortal</value></data>
+  <data name="email.password_changed.greeting" xml:space="preserve"><value>Hola {name},</value></data>
+  <data name="email.password_changed.body" xml:space="preserve"><value>La contraseña de tu cuenta se acaba de cambiar y se cerraron todas las sesiones. Si no fuiste tú, restablece tu contraseña de inmediato y avisa a tu administrador.</value></data>
+  <data name="email.password_changed.action" xml:space="preserve"><value>Revisar la seguridad de tu cuenta</value></data>
+  <data name="audit.action.account.password_reset_requested" xml:space="preserve"><value>Pidió un enlace para restablecer la contraseña</value></data>
+  <data name="audit.action.account.password_recovered" xml:space="preserve"><value>Estableció una nueva contraseña con un enlace de restablecimiento</value></data>
+  <data name="error.identity.password_reset_invalid" xml:space="preserve"><value>El enlace de restablecimiento no es válido, ya se usó o ha caducado.</value></data>
+  <data name="error.identity.password_recovery_unavailable" xml:space="preserve"><value>La recuperación de contraseña necesita correo, que no está configurado. Pide a un administrador que restablezca tu contraseña.</value></data>
+  <data name="settings.passkeys" xml:space="preserve"><value>Llaves de acceso</value></data>
+  <data name="settings.passkeysDescription" xml:space="preserve"><value>Las cuentas pueden iniciar sesión con huella, rostro o PIN de su dispositivo, o con una llave de seguridad, en lugar de una contraseña. Una llave de acceso no se puede suplantar y cuenta por sí sola como dos factores.</value></data>
+  <data name="settings.requirement.title" xml:space="preserve"><value>Quién debe tener un segundo factor</value></data>
+  <data name="settings.requirement.none" xml:space="preserve"><value>Nadie</value></data>
+  <data name="settings.requirement.noneHint" xml:space="preserve"><value>El segundo factor se ofrece, no es obligatorio.</value></data>
+  <data name="settings.requirement.administrators" xml:space="preserve"><value>Administradores</value></data>
+  <data name="settings.requirement.administratorsHint" xml:space="preserve"><value>Sus cuentas pueden cambiar las de los demás: recomendado.</value></data>
+  <data name="settings.requirement.everyone" xml:space="preserve"><value>Todos</value></data>
+  <data name="settings.requirement.everyoneHint" xml:space="preserve"><value>Las cuentas sin aplicación de autenticación ni llave de acceso deben configurar una justo después de iniciar sesión.</value></data>
+  <data name="settings.requirement.unsatisfiable" xml:space="preserve"><value>Activa las aplicaciones de autenticación o las llaves de acceso para exigir un segundo factor.</value></data>
+  <data name="passkeys.title" xml:space="preserve"><value>Llaves de acceso</value></data>
+  <data name="passkeys.description" xml:space="preserve"><value>Inicia sesión con tu huella, rostro o PIN del dispositivo, o una llave de seguridad: sin contraseña, sin código, sin suplantación.</value></data>
+  <data name="passkeys.count_one" xml:space="preserve"><value>{count} llave</value></data>
+  <data name="passkeys.count_other" xml:space="preserve"><value>{count} llaves</value></data>
+  <data name="passkeys.add" xml:space="preserve"><value>Añadir una llave</value></data>
+  <data name="passkeys.added" xml:space="preserve"><value>Llave de acceso añadida</value></data>
+  <data name="passkeys.addFailed" xml:space="preserve"><value>No se pudo añadir la llave de acceso</value></data>
+  <data name="passkeys.removed" xml:space="preserve"><value>Llave de acceso eliminada</value></data>
+  <data name="passkeys.removeFailed" xml:space="preserve"><value>No se pudo eliminar la llave de acceso</value></data>
+  <data name="passkeys.unsupported" xml:space="preserve"><value>Este navegador no admite llaves de acceso.</value></data>
+  <data name="passkeys.none" xml:space="preserve"><value>Aún no hay llaves de acceso.</value></data>
+  <data name="passkeys.created" xml:space="preserve"><value>Añadida el {date}</value></data>
+  <data name="passkeys.synced" xml:space="preserve"><value>sincronizada entre dispositivos</value></data>
+  <data name="passkeys.removeTitle" xml:space="preserve"><value>¿Eliminar “{name}”?</value></data>
+  <data name="passkeys.removeDescription" xml:space="preserve"><value>Ya no podrás iniciar sesión con ella. Elimínala también del dispositivo, en sus ajustes de llaves de acceso.</value></data>
+  <data name="passkeys.renameTitle" xml:space="preserve"><value>Pon nombre a esta llave</value></data>
+  <data name="passkeys.renameDescription" xml:space="preserve"><value>Algo que te diga dónde está: “Portátil del trabajo”, “Móvil”, “YubiKey”.</value></data>
+  <data name="passkeys.renameFailed" xml:space="preserve"><value>No se pudo renombrar la llave</value></data>
+  <data name="passkeys.name" xml:space="preserve"><value>Nombre</value></data>
+  <data name="passkeys.nameInvalid" xml:space="preserve"><value>Usa de 1 a 64 caracteres.</value></data>
+  <data name="signIn.or" xml:space="preserve"><value>o</value></data>
+  <data name="signIn.withPasskey" xml:space="preserve"><value>Iniciar sesión con una llave de acceso</value></data>
+  <data name="signIn.passkeyRejected" xml:space="preserve"><value>Esta llave no está registrada para una cuenta aquí, o la cuenta no puede iniciar sesión.</value></data>
+  <data name="signIn.passkeyRequired.title" xml:space="preserve"><value>Usa tu llave de acceso</value></data>
+  <data name="signIn.passkeyRequired.description" xml:space="preserve"><value>Esta cuenta debe iniciar sesión con su llave de acceso: la contraseña sola no basta.</value></data>
+  <data name="users.passkeysReset.open" xml:space="preserve"><value>Eliminar llaves de acceso</value></data>
+  <data name="users.passkeysReset.title" xml:space="preserve"><value>¿Eliminar las llaves de acceso de {name}?</value></data>
+  <data name="users.passkeysReset.description_one" xml:space="preserve"><value>Su llave deja de funcionar y sus sesiones se cierran. Hazlo cuando se pierda el dispositivo.</value></data>
+  <data name="users.passkeysReset.description_other" xml:space="preserve"><value>Sus {count} llaves dejan de funcionar y sus sesiones se cierran. Hazlo cuando se pierdan los dispositivos.</value></data>
+  <data name="users.passkeysReset.confirm" xml:space="preserve"><value>Eliminar llaves</value></data>
+  <data name="users.passkeysReset.done" xml:space="preserve"><value>Llaves de acceso eliminadas</value></data>
+  <data name="accessDenied.mfaTitle" xml:space="preserve"><value>Esta aplicación requiere un inicio de sesión en dos pasos</value></data>
+  <data name="accessDenied.mfa" xml:space="preserve"><value>Añade una aplicación de autenticación o una llave de acceso a tu cuenta, vuelve a iniciar sesión con ella y abre la aplicación.</value></data>
+  <data name="accessDenied.mfaAction" xml:space="preserve"><value>Configurar un segundo factor</value></data>
+  <data name="securitySetup.title" xml:space="preserve"><value>Primero protege tu cuenta</value></data>
+  <data name="securitySetup.description" xml:space="preserve"><value>Este portal exige un segundo factor. Añade abajo una llave de acceso o una aplicación de autenticación para continuar.</value></data>
+  <data name="securitySetup.doneTitle" xml:space="preserve"><value>Tu cuenta está protegida</value></data>
+  <data name="securitySetup.doneDescription" xml:space="preserve"><value>La próxima vez que inicies sesión, el portal te pedirá el segundo factor.</value></data>
+  <data name="securitySetup.continue" xml:space="preserve"><value>Continuar</value></data>
+  <data name="securitySetup.signOut" xml:space="preserve"><value>Cerrar sesión</value></data>
+  <data name="audit.action.user.passkeys_reset" xml:space="preserve"><value>Eliminó las llaves de acceso de una cuenta</value></data>
+  <data name="audit.action.account.passkey_added" xml:space="preserve"><value>Añadió una llave de acceso</value></data>
+  <data name="audit.action.account.passkey_renamed" xml:space="preserve"><value>Renombró una llave de acceso</value></data>
+  <data name="audit.action.account.passkey_removed" xml:space="preserve"><value>Eliminó una llave de acceso</value></data>
+  <data name="error.identity.two_factor_requirement_invalid" xml:space="preserve"><value>El requisito de segundo factor debe ser nadie, administradores o todos.</value></data>
+  <data name="error.identity.two_factor_requirement_unsatisfiable" xml:space="preserve"><value>Para exigir un segundo factor deben estar activas las aplicaciones de autenticación o las llaves de acceso.</value></data>
+  <data name="error.identity.two_factor_requirement_self" xml:space="preserve"><value>Configura una aplicación de autenticación o una llave de acceso en tu propia cuenta antes de exigirla.</value></data>
+  <data name="error.identity.two_factor_setup_required" xml:space="preserve"><value>Tu cuenta debe configurar una aplicación de autenticación o una llave de acceso antes que nada.</value></data>
+  <data name="error.identity.two_factor_last_factor" xml:space="preserve"><value>Es tu último segundo factor y el portal exige uno: añade otro primero.</value></data>
+  <data name="error.identity.passkey_required" xml:space="preserve"><value>Esta cuenta inicia sesión con una llave de acceso: la contraseña sola no basta.</value></data>
+  <data name="error.identity.passkeys_disabled" xml:space="preserve"><value>Las llaves de acceso están desactivadas en este portal.</value></data>
+  <data name="error.identity.passkey_invalid" xml:space="preserve"><value>No se pudo verificar la llave de acceso.</value></data>
+  <data name="error.identity.passkey_not_found" xml:space="preserve"><value>La llave de acceso no existe.</value></data>
+  <data name="error.identity.passkey_name_invalid" xml:space="preserve"><value>El nombre de una llave tiene de 1 a 64 caracteres.</value></data>
+  <data name="error.identity.passkey_sign_in_failed" xml:space="preserve"><value>Esta llave no pertenece a una cuenta que pueda iniciar sesión.</value></data>
+  <data name="validation.passkey.required" xml:space="preserve"><value>Falta la respuesta de la llave de acceso.</value></data>
+  <data name="validation.passkeyName.required" xml:space="preserve"><value>Introduce un nombre.</value></data>
+  <data name="validation.passkeyName.max" xml:space="preserve"><value>Usa como máximo 64 caracteres.</value></data>
+  <data name="signOut.title" xml:space="preserve"><value>¿Cerrar sesión en OpenPortal?</value></data>
+  <data name="signOut.description" xml:space="preserve"><value>Una aplicación pidió cerrar tu sesión ({email}). También cerrarás sesión en las demás aplicaciones que lo admiten.</value></data>
+  <data name="signOut.notSignedIn" xml:space="preserve"><value>No has iniciado sesión.</value></data>
+  <data name="signOut.confirm" xml:space="preserve"><value>Cerrar sesión</value></data>
+  <data name="signOut.cancel" xml:space="preserve"><value>Mantener la sesión</value></data>
+  <data name="applications.form.backChannelLogoutUri" xml:space="preserve"><value>URI de cierre de sesión back-channel</value></data>
+  <data name="applications.form.backChannelLogoutUriHint" xml:space="preserve"><value>El portal envía aquí un token de cierre de sesión cuando el usuario sale, para que la aplicación también cierre su sesión. Déjalo vacío si no lo admite.</value></data>
+  <data name="applications.clientType.title" xml:space="preserve"><value>Tipo de cliente</value></data>
+  <data name="applications.clientType.confidential" xml:space="preserve"><value>Confidencial (aplicación de servidor)</value></data>
+  <data name="applications.clientType.confidentialHint" xml:space="preserve"><value>Se ejecuta en un servidor y guarda un secreto de cliente.</value></data>
+  <data name="applications.clientType.public" xml:space="preserve"><value>Público (aplicación de página única o móvil)</value></data>
+  <data name="applications.clientType.publicHint" xml:space="preserve"><value>Se ejecuta en el navegador o en un dispositivo y no puede guardar un secreto: se identifica con PKCE.</value></data>
+  <data name="applications.clientType.locked" xml:space="preserve"><value>El tipo de cliente no se puede cambiar tras el registro.</value></data>
+  <data name="applications.api.publicClient" xml:space="preserve"><value>Un cliente público no tiene secreto, así que no puede tener ámbitos de la API de aplicaciones.</value></data>
+  <data name="applications.secret.publicTitle" xml:space="preserve"><value>Sin secreto para un cliente público</value></data>
+  <data name="applications.secret.publicDescription" xml:space="preserve"><value>Configura solo el client id: la aplicación inicia sesión con el flujo de código de autorización y PKCE.</value></data>
+  <data name="error.access.client_type_invalid" xml:space="preserve"><value>El tipo de cliente debe ser confidential o public.</value></data>
+  <data name="error.access.api_scopes_need_confidential_client" xml:space="preserve"><value>Un cliente público no tiene secreto, así que no puede recibir ámbitos de la API de aplicaciones.</value></data>
+  <data name="error.access.public_client_has_no_secret" xml:space="preserve"><value>Un cliente público no tiene un secreto que regenerar.</value></data>
+  <data name="error.access.back_channel_logout_uri_invalid" xml:space="preserve"><value>La URI de cierre de sesión back-channel debe ser una dirección https absoluta (http solo para localhost).</value></data>
+  <data name="applications.tab.webhook" xml:space="preserve"><value>Webhook</value></data>
+  <data name="applications.webhook.hint" xml:space="preserve"><value>El portal envía a esta dirección los eventos elegidos, firmados con el secreto de abajo (Standard Webhooks: webhook-id, webhook-timestamp, webhook-signature). Los envíos fallidos se reintentan y aparecen en Ajustes → Correo → Cola de envío.</value></data>
+  <data name="applications.webhook.url" xml:space="preserve"><value>URL del webhook</value></data>
+  <data name="applications.webhook.urlHint" xml:space="preserve"><value>Solo https (http para localhost). Déjalo vacío para desactivar el webhook.</value></data>
+  <data name="applications.webhook.events" xml:space="preserve"><value>Eventos</value></data>
+  <data name="applications.webhook.secretSet" xml:space="preserve"><value>Hay un secreto de firma configurado.</value></data>
+  <data name="applications.webhook.secretMissing" xml:space="preserve"><value>Aún no hay secreto de firma: no se envía nada hasta que generes uno.</value></data>
+  <data name="applications.webhook.secretOnce" xml:space="preserve"><value>Cópialo ahora en los ajustes de la aplicación: no se volverá a mostrar.</value></data>
+  <data name="applications.webhook.generate" xml:space="preserve"><value>Generar secreto</value></data>
+  <data name="applications.webhook.rotate" xml:space="preserve"><value>Sustituir secreto</value></data>
+  <data name="applications.webhook.test" xml:space="preserve"><value>Enviar un evento de prueba</value></data>
+  <data name="applications.webhook.testQueued" xml:space="preserve"><value>Evento de prueba en cola</value></data>
+  <data name="applications.webhook.afterCreate" xml:space="preserve"><value>Genera el secreto de firma después de crear la aplicación.</value></data>
+  <data name="audit.action.application.webhook_secret_generated" xml:space="preserve"><value>Generó un secreto de webhook</value></data>
+  <data name="error.access.webhook_url_invalid" xml:space="preserve"><value>La URL del webhook debe ser una dirección https absoluta (http solo para localhost).</value></data>
+  <data name="error.access.webhook_event_invalid" xml:space="preserve"><value>El webhook se suscribe a un evento que no existe.</value></data>
+  <data name="error.access.webhook_not_configured" xml:space="preserve"><value>Configura primero la URL del webhook y genera su secreto.</value></data>
+  <data name="nav.accessReviews" xml:space="preserve"><value>Revisiones de acceso</value></data>
+  <data name="groups.tab.subgroups" xml:space="preserve"><value>Subgrupos</value></data>
+  <data name="groups.subgroups.hint" xml:space="preserve"><value>Los miembros de un subgrupo reciben todo lo que tiene este grupo (aplicaciones y páginas), y también los miembros de sus subgrupos.</value></data>
+  <data name="groups.subgroups.add" xml:space="preserve"><value>Añadir subgrupo</value></data>
+  <data name="groups.subgroups.none" xml:space="preserve"><value>Sin subgrupos.</value></data>
+  <data name="groups.subgroups.insideOf" xml:space="preserve"><value>Este grupo está dentro de: {groups}</value></data>
+  <data name="access.expiry.until" xml:space="preserve"><value>Hasta</value></data>
+  <data name="access.expiry.hint" xml:space="preserve"><value>Opcional: el acceso termina solo en esa fecha.</value></data>
+  <data name="access.expiry.badge" xml:space="preserve"><value>hasta el {date}</value></data>
+  <data name="access.expiry.newGrantsUntil" xml:space="preserve"><value>Las aplicaciones activadas abajo duran hasta</value></data>
+  <data name="reviews.title" xml:space="preserve"><value>Revisiones de acceso</value></data>
+  <data name="reviews.description" xml:space="preserve"><value>Confirma periódicamente quién puede abrir cada aplicación. Al completar una revisión se elimina lo que los revisores revocaron.</value></data>
+  <data name="reviews.start" xml:space="preserve"><value>Iniciar una revisión</value></data>
+  <data name="reviews.startTitle" xml:space="preserve"><value>Iniciar una revisión de acceso</value></data>
+  <data name="reviews.startDescription" xml:space="preserve"><value>Toma una instantánea de quién puede abrir la aplicación ahora. Los revisores reciben un aviso.</value></data>
+  <data name="reviews.startFailed" xml:space="preserve"><value>No se pudo iniciar la revisión</value></data>
+  <data name="reviews.grants_one" xml:space="preserve"><value>{count} acceso</value></data>
+  <data name="reviews.grants_other" xml:space="preserve"><value>{count} accesos</value></data>
+  <data name="reviews.name" xml:space="preserve"><value>Nombre</value></data>
+  <data name="reviews.nameHint" xml:space="preserve"><value>Vacío: la aplicación y la fecha de hoy.</value></data>
+  <data name="reviews.due" xml:space="preserve"><value>Fecha límite (opcional)</value></data>
+  <data name="reviews.revokeUndecided" xml:space="preserve"><value>Revocar lo que nadie confirmó</value></data>
+  <data name="reviews.revokeUndecidedHint" xml:space="preserve"><value>Al completar la revisión, también se elimina el acceso sobre el que nadie decidió.</value></data>
+  <data name="reviews.empty" xml:space="preserve"><value>Aún no hay revisiones</value></data>
+  <data name="reviews.emptyDescription" xml:space="preserve"><value>Inicia una para confirmar quién puede abrir una aplicación.</value></data>
+  <data name="reviews.column.review" xml:space="preserve"><value>Revisión</value></data>
+  <data name="reviews.column.application" xml:space="preserve"><value>Aplicación</value></data>
+  <data name="reviews.column.progress" xml:space="preserve"><value>Decididos</value></data>
+  <data name="reviews.column.due" xml:space="preserve"><value>Fecha límite</value></data>
+  <data name="reviews.column.who" xml:space="preserve"><value>Quién</value></data>
+  <data name="reviews.column.roles" xml:space="preserve"><value>Roles</value></data>
+  <data name="reviews.column.decision" xml:space="preserve"><value>Decisión</value></data>
+  <data name="reviews.status.open" xml:space="preserve"><value>Abierta</value></data>
+  <data name="reviews.status.completed" xml:space="preserve"><value>Completada</value></data>
+  <data name="reviews.status.cancelled" xml:space="preserve"><value>Cancelada</value></data>
+  <data name="reviews.decision.pending" xml:space="preserve"><value>Por decidir</value></data>
+  <data name="reviews.decision.keep" xml:space="preserve"><value>Mantener</value></data>
+  <data name="reviews.decision.revoke" xml:space="preserve"><value>Revocar</value></data>
+  <data name="reviews.keep" xml:space="preserve"><value>Mantener</value></data>
+  <data name="reviews.revoke" xml:space="preserve"><value>Revocar</value></data>
+  <data name="reviews.undo" xml:space="preserve"><value>Deshacer la decisión</value></data>
+  <data name="reviews.progress" xml:space="preserve"><value>{decided} de {total} decididos</value></data>
+  <data name="reviews.detailDescription" xml:space="preserve"><value>Quién puede abrir {application}, como estaba al iniciar la revisión.</value></data>
+  <data name="reviews.complete" xml:space="preserve"><value>Completar</value></data>
+  <data name="reviews.cancel" xml:space="preserve"><value>Cancelar revisión</value></data>
+  <data name="reviews.completeTitle" xml:space="preserve"><value>¿Completar la revisión?</value></data>
+  <data name="reviews.completeDescription_one" xml:space="preserve"><value>Se eliminará ahora {count} acceso; el resto se mantiene.</value></data>
+  <data name="reviews.completeDescription_other" xml:space="preserve"><value>Se eliminarán ahora {count} accesos; el resto se mantiene.</value></data>
+  <data name="reviews.cancelTitle" xml:space="preserve"><value>¿Cancelar la revisión?</value></data>
+  <data name="reviews.cancelDescription" xml:space="preserve"><value>No se elimina nada; las decisiones quedan registradas.</value></data>
+  <data name="reviews.completed" xml:space="preserve"><value>Revisión completada</value></data>
+  <data name="reviews.cancelled" xml:space="preserve"><value>Revisión cancelada</value></data>
+  <data name="organizations.manage.open" xml:space="preserve"><value>Gestionar miembros</value></data>
+  <data name="organizations.manage.description" xml:space="preserve"><value>Como administrador de esta organización añades personas por su dirección, cambias quién la administra y eliminas miembros.</value></data>
+  <data name="organizations.manage.emailPlaceholder" xml:space="preserve"><value>nombre@example.com</value></data>
+  <data name="organizations.manage.add" xml:space="preserve"><value>Añadir</value></data>
+  <data name="organizations.manage.added" xml:space="preserve"><value>Miembro añadido</value></data>
+  <data name="organizations.manage.addFailed" xml:space="preserve"><value>No se pudo añadir a esta persona (debe existir una cuenta con esa dirección)</value></data>
+  <data name="organizations.manage.toggleRole" xml:space="preserve"><value>Cambiar entre miembro y administrador</value></data>
+  <data name="audit.action.group.subgroup_added" xml:space="preserve"><value>Puso un grupo dentro de otro</value></data>
+  <data name="audit.action.group.subgroup_removed" xml:space="preserve"><value>Sacó un grupo de otro</value></data>
+  <data name="audit.action.access.review_started" xml:space="preserve"><value>Inició una revisión de acceso</value></data>
+  <data name="audit.action.access.review_completed" xml:space="preserve"><value>Completó una revisión de acceso</value></data>
+  <data name="audit.action.access.review_cancelled" xml:space="preserve"><value>Canceló una revisión de acceso</value></data>
+  <data name="notification.access.review_started.title" xml:space="preserve"><value>Revisión de acceso pendiente</value></data>
+  <data name="notification.access.review_started.body" xml:space="preserve"><value>{review}: confirma o revoca quién puede abrir {application} ({count} entradas).</value></data>
+  <data name="error.access.group_nesting_cycle" xml:space="preserve"><value>Un grupo no puede contenerse a sí mismo, directamente o mediante sus subgrupos.</value></data>
+  <data name="error.access.expiry_in_past" xml:space="preserve"><value>El fin del acceso temporal debe estar en el futuro.</value></data>
+  <data name="error.access.organization_manage_forbidden" xml:space="preserve"><value>Gestionar los miembros de esta organización requiere un administrador del portal o uno de sus administradores.</value></data>
+  <data name="error.access.organization_last_admin" xml:space="preserve"><value>Una organización mantiene al menos un administrador: nombra primero a otro administrador.</value></data>
+  <data name="error.access.review_not_found" xml:space="preserve"><value>La revisión de acceso no existe.</value></data>
+  <data name="error.access.review_item_not_found" xml:space="preserve"><value>La revisión no tiene esa entrada.</value></data>
+  <data name="error.access.review_name_invalid" xml:space="preserve"><value>Una revisión necesita un nombre de 120 caracteres como máximo.</value></data>
+  <data name="error.access.review_due_in_past" xml:space="preserve"><value>La fecha límite debe estar en el futuro.</value></data>
+  <data name="error.access.review_nothing_to_review" xml:space="preserve"><value>Nadie tiene esta aplicación: no hay nada que revisar.</value></data>
+  <data name="error.access.review_not_open" xml:space="preserve"><value>La revisión ya está cerrada.</value></data>
+  <data name="error.access.review_decision_invalid" xml:space="preserve"><value>La decisión debe ser pending, keep o revoke.</value></data>
+  <data name="error.access.review_note_too_long" xml:space="preserve"><value>Una nota tiene como máximo 500 caracteres.</value></data>
+  <data name="error.access.review_forbidden" xml:space="preserve"><value>Revisar accesos requiere una cuenta de administrador o la página de revisiones.</value></data>
 </root>

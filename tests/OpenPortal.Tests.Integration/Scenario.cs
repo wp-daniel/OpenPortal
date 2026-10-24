@@ -204,7 +204,7 @@ internal sealed class CapturingEmailSender : IEmailSender
 {
     private readonly List<EmailMessage> _messages = [];
 
-    public bool IsConfigured => true;
+    public Task<bool> IsConfiguredAsync(CancellationToken cancellationToken) => Task.FromResult(true);
 
     public IReadOnlyList<EmailMessage> Messages
     {

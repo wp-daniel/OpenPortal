@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { SESSION_QUERY_KEY } from '@/hooks/useSession'
 import { notify } from '@/hooks/useToast'
 import { useI18n } from '@/i18n/useI18n'
 import { describeError, traceIdOf } from '@/lib/errors'
@@ -41,7 +42,12 @@ export function TwoFactorSection() {
   const [codes, setCodes] = useState<readonly string[] | null>(null)
 
   const status = useQuery({ queryKey: STATUS_KEY, queryFn: ({ signal }) => accountApi.twoFactor(signal) })
-  const refresh = () => queryClient.invalidateQueries({ queryKey: STATUS_KEY })
+  // The session too: turning the app on may lift the portal's "set up a second factor" restriction.
+  const refresh = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: STATUS_KEY }),
+      queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY }),
+    ])
 
   if (status.isPending) {
     return <LoadingState />

@@ -59,7 +59,13 @@ public sealed class AdminAccessController : ControllerBase
         Guid userId,
         [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] GrantRequest? request,
         CancellationToken cancellationToken) =>
-        Respond(await _access.GrantUserAsync(applicationId, userId, request?.Roles, cancellationToken).ConfigureAwait(false));
+        Respond(await _access.GrantUserAsync(
+                applicationId,
+                userId,
+                request?.Roles,
+                cancellationToken,
+                request?.Expiry)
+            .ConfigureAwait(false));
 
     [RequirePortalPage(PortalPages.Access, PortalPages.Users)]
     [HttpDelete("applications/{applicationId:guid}/users/{userId:guid}")]
@@ -77,7 +83,13 @@ public sealed class AdminAccessController : ControllerBase
         Guid groupId,
         [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] GrantRequest? request,
         CancellationToken cancellationToken) =>
-        Respond(await _access.GrantGroupAsync(applicationId, groupId, request?.Roles, cancellationToken).ConfigureAwait(false));
+        Respond(await _access.GrantGroupAsync(
+                applicationId,
+                groupId,
+                request?.Roles,
+                cancellationToken,
+                request?.Expiry)
+            .ConfigureAwait(false));
 
     [RequirePortalPage(PortalPages.Access, PortalPages.Groups)]
     [HttpDelete("applications/{applicationId:guid}/groups/{groupId:guid}")]

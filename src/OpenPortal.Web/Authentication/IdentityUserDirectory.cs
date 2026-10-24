@@ -25,4 +25,9 @@ internal sealed class IdentityUserDirectory : IUserDirectory
 
         return users.ToDictionary(user => user.Id, user => new DirectoryUser(user.Id, user.Email, user.DisplayName));
     }
+
+    public async Task<DirectoryUser?> FindByEmailAsync(string email, CancellationToken cancellationToken) =>
+        await _users.FindByEmailAsync(email, cancellationToken).ConfigureAwait(false) is { } user
+            ? new DirectoryUser(user.Id, user.Email, user.DisplayName)
+            : null;
 }

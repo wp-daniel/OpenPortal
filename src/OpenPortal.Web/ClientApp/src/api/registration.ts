@@ -27,6 +27,18 @@ export const registrationApi = {
   /** Always succeeds, whatever the address. */
   resendConfirmation: (email: string) => api.post<void>('/api/auth/confirm-email/resend', { email }),
 
+  /** Always succeeds (204) whatever the address; 409 only when the portal cannot send email. */
+  forgotPassword: (email: string) => api.post<void>('/api/auth/password/forgot', { email }),
+
+  /** Sets a new password from the reset link; the account is signed out everywhere. */
+  async resetPassword(userId: string, token: string, newPassword: string): Promise<void> {
+    try {
+      await api.post<void>('/api/auth/password/reset', { userId, token, newPassword })
+    } finally {
+      invalidateAntiforgeryToken()
+    }
+  },
+
   /** POST, so the token stays out of URLs the server would log. */
   previewInvitation: (token: string) => api.post<InvitationPreview>('/api/auth/invitations/preview', { token }),
 

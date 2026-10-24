@@ -32,10 +32,22 @@ internal sealed class OidcClientRegistry
         _tokens = tokens;
     }
 
-    /// <summary>Creates the client, or replaces its secret, and returns the new secret in clear.</summary>
-    public async Task<string> IssueSecretAsync(PortalApplication application, CancellationToken cancellationToken)
+    /// <summary>The OpenIddict application property carrying the back-channel logout URI, read by the host.</summary>
+    public const string BackChannelLogoutProperty = "backchannel_logout_uri";
+
+    /// <summary>
+    /// Creates the client, or replaces its secret, and returns the new secret in clear; null for a public client,
+    /// which is created without one.
+    /// </summary>
+    public async Task<string?> IssueSecretAsync(PortalApplication application, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(application);
+
+        if (application.IsPublic)
+        {
+            await CreatePublicAsync(application, cancellationToken).ConfigureAwait(false);
+            return null;
+        }
 
         var secret = NewSecret();
         var client = await _applications.FindByClientIdAsync(application.ClientId, cancellationToken).ConfigureAwait(false);
@@ -59,6 +71,24 @@ internal sealed class OidcClientRegistry
         }
 
         return secret;
+    }
+
+    private async Task CreatePublicAsync(PortalApplication application, CancellationToken cancellationToken)
+    {
+        if (await _applications.FindByClientIdAsync(application.ClientId, cancellationToken).ConfigureAwait(false) is not null)
+        {
+            return;
+        }
+
+        var descriptor = new OpenIddictApplicationDescriptor
+        {
+            ClientId = application.ClientId,
+            ClientType = ClientTypes.Public,
+            ConsentType = ConsentTypes.Implicit,
+        };
+
+        Describe(descriptor, application);
+        await _applications.CreateAsync(descriptor, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Copies the editable details onto an existing client. Does nothing before approval.</summary>
@@ -174,12 +204,25 @@ internal sealed class OidcClientRegistry
 
         descriptor.Requirements.Clear();
         descriptor.Requirements.Add(Requirements.Features.ProofKeyForCodeExchange);
+
+        // Read by the portal when a user signs out, to tell the application (OpenID Connect Back-Channel Logout).
+        descriptor.Properties.Remove(BackChannelLogoutProperty);
+        if (application.BackChannelLogoutUri is { } logoutUri)
+        {
+            descriptor.Properties[BackChannelLogoutProperty] = System.Text.Json.JsonSerializer.SerializeToElement(logoutUri);
+        }
     }
 
     /// <summary>The OpenIddict permissions the application's client should hold today.</summary>
     private static HashSet<string> PermissionsFor(PortalApplication application)
     {
         var permissions = new HashSet<string>(UserFlowPermissions, StringComparer.Ordinal);
+
+        // Only a client that can authenticate may ask what a token means (introspection).
+        if (!application.IsPublic)
+        {
+            permissions.Add(Permissions.Endpoints.Introspection);
+        }
 
         if (application.ApiScopes.Count > 0)
         {
@@ -200,6 +243,7 @@ internal sealed class OidcClientRegistry
         Permissions.Endpoints.Authorization,
         Permissions.Endpoints.Token,
         Permissions.Endpoints.EndSession,
+        Permissions.Endpoints.Revocation,
         Permissions.GrantTypes.AuthorizationCode,
         Permissions.GrantTypes.RefreshToken,
         Permissions.ResponseTypes.Code,

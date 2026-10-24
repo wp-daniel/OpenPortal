@@ -18,14 +18,20 @@ internal sealed class IdentityAccountService : IAccountService
     private readonly IClock _clock;
     private readonly ILanguageCatalog _languages;
     private readonly IAuditTrail _audit;
+    private readonly IAccountMessaging _messaging;
+    private readonly SignInManager<ApplicationUser> _signInManager;
 
     public IdentityAccountService(
         UserManager<ApplicationUser> userManager,
         UserLookup userLookup,
         IClock clock,
         ILanguageCatalog languages,
-        IAuditTrail audit)
+        IAuditTrail audit,
+        IAccountMessaging messaging,
+        SignInManager<ApplicationUser> signInManager)
     {
+        _signInManager = signInManager;
+        _messaging = messaging;
         _audit = audit;
         _languages = languages;
         _userManager = userManager;
@@ -137,6 +143,14 @@ internal sealed class IdentityAccountService : IAccountService
                         details: new Dictionary<string, string?> { ["reason"] = result.Error.Code }),
                 cancellationToken)
             .ConfigureAwait(false);
+
+        if (result.IsSuccess)
+        {
+            // The new stamp ends every other session; this one is re-issued so its owner stays signed in.
+            await _signInManager.RefreshSignInAsync(lookup.Value).ConfigureAwait(false);
+
+            await PasswordChangeNotice.SendAsync(_messaging, lookup.Value, cancellationToken).ConfigureAwait(false);
+        }
 
         return result;
     }

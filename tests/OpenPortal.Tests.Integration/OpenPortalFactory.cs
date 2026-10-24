@@ -66,6 +66,13 @@ public sealed class OpenPortalFactory : WebApplicationFactory<Program>, IAsyncLi
 
         builder.UseSetting("Access:ProvisioningKey", ProvisioningKey);
 
+        // Queued work (emails, webhooks) is delivered within the request that queued it, so a test can read what
+        // was sent right after the call; it still goes through the queue and its retries.
+        builder.UseSetting("Outbox:DispatchInline", "true");
+
+        // Sessions are checked against the account on every request, so "signed out everywhere" shows at once.
+        builder.UseSetting("Identity:SignIn:SessionValidationSeconds", "0");
+
         // Every test client shares one (missing) remote address, so the per-address limits would trip across
         // tests. They are raised here; HardeningTests lowers them on a host of its own to prove they work.
         builder.UseSetting("RateLimiting:SignIn:PermitLimit", "100000");

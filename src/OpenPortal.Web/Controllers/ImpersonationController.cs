@@ -3,12 +3,15 @@ using Microsoft.AspNetCore.Mvc;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Web.Infrastructure;
 
+using OpenPortal.Web.Authorization;
+
 namespace OpenPortal.Web.Controllers;
 
 /// <summary>Ending a support session. Starting one is an administrator's action on a user (<c>/api/admin/users</c>).</summary>
 [ApiController]
 [Route("api/auth/impersonation")]
 [Authorize]
+[AllowDuringTwoFactorSetup]
 [Produces("application/json")]
 public sealed class ImpersonationController : ControllerBase
 {

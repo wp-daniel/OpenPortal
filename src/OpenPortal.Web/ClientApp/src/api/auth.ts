@@ -6,6 +6,7 @@ import type {
   PersonalAccessTokenScope,
   AccountProfile,
   ChangePasswordRequest,
+  Passkey,
   RecoveryCodes,
   Session,
   TwoFactorLoginRequest,
@@ -34,6 +35,18 @@ export const authApi = {
   async loginTwoFactor(body: TwoFactorLoginRequest): Promise<Session> {
     try {
       return await api.post<Session>('/api/auth/login/two-factor', body)
+    } finally {
+      invalidateAntiforgeryToken()
+    }
+  },
+
+  /** A challenge any passkey of this portal can answer (WebAuthn's JSON form). */
+  passkeyOptions: () => api.post<PublicKeyCredentialRequestOptionsJSON>('/api/auth/passkey/options'),
+
+  /** Signs in with the credential the browser returned; the identity changes, so the token goes. */
+  async loginPasskey(credential: string, rememberMe: boolean): Promise<Session> {
+    try {
+      return await api.post<Session>('/api/auth/login/passkey', { credential, rememberMe })
     } finally {
       invalidateAntiforgeryToken()
     }
@@ -82,6 +95,12 @@ export const accountApi = {
   disableTwoFactor: (password: string) => api.post<void>('/api/account/two-factor/disable', { password }),
   regenerateRecoveryCodes: (password: string) =>
     api.post<RecoveryCodes>('/api/account/two-factor/recovery-codes', { password }),
+
+  passkeys: (signal?: AbortSignal) => api.get<Passkey[]>('/api/account/passkeys', signal),
+  passkeyCreationOptions: () => api.post<PublicKeyCredentialCreationOptionsJSON>('/api/account/passkeys/creation-options'),
+  registerPasskey: (credential: string, name: string) => api.post<Passkey>('/api/account/passkeys', { credential, name }),
+  renamePasskey: (id: string, name: string) => api.put<Passkey>(`/api/account/passkeys/${encodeURIComponent(id)}`, { name }),
+  deletePasskey: (id: string) => api.delete<void>(`/api/account/passkeys/${encodeURIComponent(id)}`),
 
   /** A ZIP with everything the portal holds about the caller. */
   exportData: (password: string) => api.postForFile('/api/account/data-export', { password }),

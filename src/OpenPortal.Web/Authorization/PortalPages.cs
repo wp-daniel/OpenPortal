@@ -24,6 +24,7 @@ public static class PortalPages
     public const string Groups = "groups";
     public const string Access = "access";
     public const string AccessRequests = "access-requests";
+    public const string AccessReviews = "access-reviews";
     public const string Organizations = "organizations";
     public const string Statistics = "statistics";
     public const string Applications = "applications";
@@ -40,6 +41,7 @@ public static class PortalPages
         new(Groups, "nav.groups", "nav.identity"),
         new(Access, "nav.access", "nav.identity"),
         new(AccessRequests, "nav.accessRequests", "nav.identity"),
+        new(AccessReviews, "nav.accessReviews", "nav.identity"),
         new(Organizations, "nav.organizations", "nav.identity"),
         new(Applications, "nav.applications", "nav.applications"),
         new(ContentProfile, "nav.profile", "nav.content"),

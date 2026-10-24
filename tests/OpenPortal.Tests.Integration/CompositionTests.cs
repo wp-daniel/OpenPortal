@@ -5,6 +5,7 @@ using OpenPortal.Content.Application.Abstractions;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Notifications.Application.Abstractions;
 using OpenPortal.SharedKernel.Auditing;
+using OpenPortal.SharedKernel.Messaging;
 using OpenPortal.SharedKernel.Notifications;
 using OpenPortal.SharedKernel.Privacy;
 
@@ -78,6 +79,20 @@ public sealed class CompositionTests(OpenPortalFactory factory) : IClassFixture<
         typeof(IPersonalAccessTokenService),
         typeof(IPersonalAccessTokenValidator),
         typeof(IEnumerable<IPersonalDataSource>),
+        typeof(IOutbox),
+        typeof(IEnumerable<IOutboxHandler>),
+        typeof(IOutboxAdministration),
+        typeof(IOutboxMonitor),
+        typeof(IWebhookDirectory),
+        typeof(IAccessReviewService),
+        typeof(INotificationPublisher),
+        typeof(IPasskeyService),
+        typeof(ITwoFactorPolicy),
+        typeof(IPasswordRecoveryService),
+        typeof(IMailSettingsService),
+        typeof(IMailSettingsReader),
+        typeof(IMailFallbackSource),
+        typeof(IDeliveryAdministrationAuthorization),
     };
 
     [Theory]

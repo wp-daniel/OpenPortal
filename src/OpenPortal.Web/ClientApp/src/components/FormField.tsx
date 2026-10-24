@@ -14,6 +14,7 @@ export function FormField({
   htmlFor,
   hint,
   error,
+  action,
   className,
   children,
 }: {
@@ -21,6 +22,8 @@ export function FormField({
   htmlFor: string
   hint?: ReactNode
   error?: string | undefined
+  /** Shown at the end of the label's line (a "forgot your password?" link). */
+  action?: ReactNode
   className?: string
   children: ReactElement<Record<string, unknown>>
 }) {
@@ -28,7 +31,14 @@ export function FormField({
 
   return (
     <div className={cn('grid content-start gap-2', className)}>
-      <Label htmlFor={htmlFor}>{label}</Label>
+      {action ? (
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor={htmlFor}>{label}</Label>
+          {action}
+        </div>
+      ) : (
+        <Label htmlFor={htmlFor}>{label}</Label>
+      )}
       {isValidElement(children)
         ? cloneElement(children, {
             id: htmlFor,

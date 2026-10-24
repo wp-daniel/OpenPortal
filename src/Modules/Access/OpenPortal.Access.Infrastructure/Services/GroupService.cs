@@ -24,6 +24,7 @@ internal sealed class GroupService : IGroupService
     private readonly IClock _clock;
     private readonly IAuditTrail _audit;
     private readonly INotifier _notifier;
+    private readonly GroupGraph _graph;
 
     public GroupService(
         AccessDbContext db,
@@ -33,8 +34,10 @@ internal sealed class GroupService : IGroupService
         IPortalPageCatalog catalog,
         IClock clock,
         IAuditTrail audit,
-        INotifier notifier)
+        INotifier notifier,
+        GroupGraph graph)
     {
+        _graph = graph;
         _audit = audit;
         _notifier = notifier;
         _db = db;
@@ -180,8 +183,12 @@ internal sealed class GroupService : IGroupService
             return Result.Failure(AccessErrors.GroupNotFound);
         }
 
-        var memberIds = group.Members.Select(member => member.UserId).ToArray();
-        var applications = await GrantedApplicationsAsync(group.Id, cancellationToken).ConfigureAwait(false);
+        // Everyone in the group or its subgroups loses what the group, and the groups above it, gave them.
+        var memberIds = (await _graph.MembersOfGroupAsync(group.Id, cancellationToken).ConfigureAwait(false)).ToArray();
+        var applications = await GrantedApplicationsAsync(
+                await _graph.AncestorsAndSelfAsync([group.Id], cancellationToken).ConfigureAwait(false),
+                cancellationToken)
+            .ConfigureAwait(false);
 
         // Members and grants go with the group through the cascading foreign keys.
         _db.Groups.Remove(group);
@@ -203,8 +210,17 @@ internal sealed class GroupService : IGroupService
         return Result.Success();
     }
 
-    public async Task<Result<GroupDetailDto>> AddMemberAsync(Guid groupId, Guid userId, CancellationToken cancellationToken)
+    public async Task<Result<GroupDetailDto>> AddMemberAsync(
+        Guid groupId,
+        Guid userId,
+        CancellationToken cancellationToken,
+        DateTimeOffset? expiresAtUtc = null)
     {
+        if (expiresAtUtc is { } end && end <= _clock.UtcNow)
+        {
+            return Result<GroupDetailDto>.Failure(AccessErrors.ExpiryInPast);
+        }
+
         var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageGroups, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
@@ -223,7 +239,14 @@ internal sealed class GroupService : IGroupService
             return Result<GroupDetailDto>.Failure(AccessErrors.UserNotFound);
         }
 
-        if (group.AddMember(userId, _clock.UtcNow))
+        var wasMember = group.Members.Any(member => member.UserId == userId);
+
+        if (group.AddMember(userId, _clock.UtcNow, expiresAtUtc) && wasMember)
+        {
+            // Only the end of the membership changed.
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        else if (!wasMember)
         {
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
@@ -271,7 +294,8 @@ internal sealed class GroupService : IGroupService
         {
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-            foreach (var application in await GrantedApplicationsAsync(group.Id, cancellationToken).ConfigureAwait(false))
+            var groups = await _graph.AncestorsAndSelfAsync([group.Id], cancellationToken).ConfigureAwait(false);
+            foreach (var application in await GrantedApplicationsAsync(groups, cancellationToken).ConfigureAwait(false))
             {
                 await _access.RevokeIfNoLongerAllowedAsync(application, [userId], cancellationToken).ConfigureAwait(false);
             }
@@ -298,12 +322,112 @@ internal sealed class GroupService : IGroupService
             group => group.NormalisedName == normalisedName && (exceptId == null || group.Id != exceptId),
             cancellationToken);
 
+    public async Task<Result<GroupDetailDto>> AddSubgroupAsync(Guid groupId, Guid childGroupId, CancellationToken cancellationToken)
+    {
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageGroups, cancellationToken).ConfigureAwait(false);
+        if (guard.IsFailure)
+        {
+            return Result<GroupDetailDto>.Failure(guard.Error);
+        }
+
+        var group = await FindAsync(groupId, cancellationToken).ConfigureAwait(false);
+        var child = await _db.Groups.AsNoTracking().SingleOrDefaultAsync(candidate => candidate.Id == childGroupId, cancellationToken).ConfigureAwait(false);
+        if (group is null || child is null)
+        {
+            return Result<GroupDetailDto>.Failure(AccessErrors.GroupNotFound);
+        }
+
+        if (await _graph.WouldCycleAsync(groupId, childGroupId, cancellationToken).ConfigureAwait(false))
+        {
+            return Result<GroupDetailDto>.Failure(AccessErrors.GroupNestingCycle);
+        }
+
+        var exists = await _db.GroupNestings
+            .AnyAsync(nesting => nesting.ParentGroupId == groupId && nesting.ChildGroupId == childGroupId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!exists)
+        {
+            _db.GroupNestings.Add(new GroupNesting(groupId, childGroupId, _clock.UtcNow));
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            _graph.Invalidate();
+
+            await _audit.RecordAsync(
+                    AuditEvent.Succeeded(
+                        AccessAuditActions.SubgroupAdded,
+                        group.ToAuditSubject(),
+                        AccessAudit.Details(("subgroup", child.Name), ("subgroupId", child.Id.ToString()))),
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return Result<GroupDetailDto>.Success(await ToDetailAsync(group, cancellationToken).ConfigureAwait(false));
+    }
+
+    public async Task<Result<GroupDetailDto>> RemoveSubgroupAsync(Guid groupId, Guid childGroupId, CancellationToken cancellationToken)
+    {
+        var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageGroups, cancellationToken).ConfigureAwait(false);
+        if (guard.IsFailure)
+        {
+            return Result<GroupDetailDto>.Failure(guard.Error);
+        }
+
+        var group = await FindAsync(groupId, cancellationToken).ConfigureAwait(false);
+        if (group is null)
+        {
+            return Result<GroupDetailDto>.Failure(AccessErrors.GroupNotFound);
+        }
+
+        var nesting = await _db.GroupNestings
+            .SingleOrDefaultAsync(candidate => candidate.ParentGroupId == groupId && candidate.ChildGroupId == childGroupId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (nesting is not null)
+        {
+            // Read before the edge goes: who was reaching the parent's grants through the subgroup.
+            var members = await _graph.MembersOfGroupAsync(childGroupId, cancellationToken).ConfigureAwait(false);
+            var applications = await GrantedApplicationsAsync(
+                    await _graph.AncestorsAndSelfAsync([groupId], cancellationToken).ConfigureAwait(false),
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            _db.GroupNestings.Remove(nesting);
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            _graph.Invalidate();
+
+            foreach (var application in applications)
+            {
+                await _access.RevokeIfNoLongerAllowedAsync(application, members, cancellationToken).ConfigureAwait(false);
+            }
+
+            var childName = await _db.Groups.Where(candidate => candidate.Id == childGroupId).Select(candidate => candidate.Name)
+                .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+            await _audit.RecordAsync(
+                    AuditEvent.Succeeded(
+                        AccessAuditActions.SubgroupRemoved,
+                        group.ToAuditSubject(),
+                        AccessAudit.Details(("subgroup", childName), ("subgroupId", childGroupId.ToString()))),
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return Result<GroupDetailDto>.Success(await ToDetailAsync(group, cancellationToken).ConfigureAwait(false));
+    }
+
     private Task<List<Domain.Applications.PortalApplication>> GrantedApplicationsAsync(
         Guid groupId,
         CancellationToken cancellationToken) =>
+        GrantedApplicationsAsync([groupId], cancellationToken);
+
+    private Task<List<Domain.Applications.PortalApplication>> GrantedApplicationsAsync(
+        IReadOnlyCollection<Guid> groupIds,
+        CancellationToken cancellationToken) =>
         _db.GroupGrants
-            .Where(grant => grant.GroupId == groupId)
-            .Join(_db.Applications, grant => grant.ApplicationId, application => application.Id, (_, application) => application)
+            .Where(grant => groupIds.Contains(grant.GroupId))
+            .Select(grant => grant.ApplicationId)
+            .Distinct()
+            .Join(_db.Applications, id => id, application => application.Id, (_, application) => application)
             .ToListAsync(cancellationToken);
 
     private async Task<GroupDetailDto> ToDetailAsync(Group group, CancellationToken cancellationToken)
@@ -334,6 +458,28 @@ internal sealed class GroupService : IGroupService
                 .Select(application => application.ToReference())
                 .ToList(),
             pages.Where(_catalog.IsKnown).Order(StringComparer.Ordinal).ToList(),
-            group.CreatedAtUtc);
+            group.CreatedAtUtc,
+            await NestedAsync(group.Id, children: true, cancellationToken).ConfigureAwait(false),
+            await NestedAsync(group.Id, children: false, cancellationToken).ConfigureAwait(false),
+            group.Members
+                .Where(member => member.ExpiresAtUtc is not null)
+                .ToDictionary(member => member.UserId, member => member.ExpiresAtUtc!.Value));
+    }
+
+    /// <summary>The groups directly inside the group (<paramref name="children"/>) or directly above it.</summary>
+    private async Task<IReadOnlyList<GroupReferenceDto>> NestedAsync(Guid groupId, bool children, CancellationToken cancellationToken)
+    {
+        var ids = children
+            ? _db.GroupNestings.Where(nesting => nesting.ParentGroupId == groupId).Select(nesting => nesting.ChildGroupId)
+            : _db.GroupNestings.Where(nesting => nesting.ChildGroupId == groupId).Select(nesting => nesting.ParentGroupId);
+
+        var groups = await _db.Groups
+            .AsNoTracking()
+            .Where(group => ids.Contains(group.Id))
+            .Select(group => new GroupReferenceDto(group.Id, group.Name))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return groups.OrderBy(group => group.Name, StringComparer.OrdinalIgnoreCase).ToList();
     }
 }

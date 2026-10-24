@@ -24,6 +24,15 @@
     <PackageReference Include="Scalar.AspNetCore" />
     <!-- Account email (invitations, address confirmation) over SMTP; System.Net.Mail.SmtpClient is not recommended for new code. -->
     <PackageReference Include="MailKit" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
+    <PackageReference Include="Npgsql.OpenTelemetry" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" />
+    <PackageReference Include="RedisRateLimiting" />
     <!--
       The concrete database provider is referenced by the composition root only. Domain, Application
       and the module Infrastructure projects never see it, which is what keeps the SQLite -> PostgreSQL

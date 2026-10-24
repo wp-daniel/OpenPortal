@@ -85,6 +85,12 @@ public static class AccountMessageKinds
 
     /// <summary>Values: <c>name</c>, <c>expires</c> (the scheduled deletion, an ISO date).</summary>
     public const string DeletionScheduled = "deletion_scheduled";
+
+    /// <summary>Values: <c>name</c>, <c>minutes</c> (how long the link works).</summary>
+    public const string PasswordReset = "password_reset";
+
+    /// <summary>Sent after the password changed, by its owner or through a reset link. Values: <c>name</c>.</summary>
+    public const string PasswordChanged = "password_changed";
 }
 
 /// <summary>One email about an account.</summary>
@@ -106,12 +112,37 @@ public sealed record AccountMessage(
 /// </summary>
 public interface IAccountMessaging
 {
-    /// <summary>Whether email can be sent at all (an SMTP server is configured).</summary>
-    bool CanSendEmail { get; }
+    /// <summary>Whether email can be sent at all (an SMTP server or pickup folder is configured).</summary>
+    Task<bool> CanSendEmailAsync(CancellationToken cancellationToken);
 
     /// <summary>The absolute address of a portal page, for a link shown to an administrator.</summary>
     string LinkTo(string pathAndQuery);
 
-    /// <summary>Sends the message; false when it could not be (delivery off or failed). Never throws for delivery.</summary>
+    /// <summary>
+    /// Queues the message for delivery (retried until the mail server takes it); false when email is off. Never
+    /// throws for delivery.
+    /// </summary>
     Task<bool> SendAsync(AccountMessage message, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// "Forgot your password?": a link by email that lets the owner of the address choose a new password. Anonymous by
+/// nature; asking never reveals whether an account exists.
+/// </summary>
+public interface IPasswordRecoveryService
+{
+    /// <summary>Whether recovery is offered at all: it needs email delivery.</summary>
+    Task<bool> IsAvailableAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Emails a reset link when the address belongs to an account that may sign in. Completes the same way whatever
+    /// the address, so it reveals nothing.
+    /// </summary>
+    Task RequestAsync(ForgotPasswordRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Sets the new password when the link is valid (single use, short-lived), signs the account out everywhere and
+    /// tells its owner by email.
+    /// </summary>
+    Task<Result> CompleteAsync(CompletePasswordResetRequest request, CancellationToken cancellationToken);
 }

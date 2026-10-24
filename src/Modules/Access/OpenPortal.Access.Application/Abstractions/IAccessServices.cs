@@ -28,6 +28,9 @@ public interface IApplicationRegistryService
     /// <summary>Replaces the client secret. The old one stops working immediately.</summary>
     Task<Result<ApplicationSecretDto>> RegenerateSecretAsync(Guid applicationId, CancellationToken cancellationToken);
 
+    /// <summary>Generates the secret the application's webhook deliveries are signed with, and returns it once.</summary>
+    Task<Result<WebhookSecretDto>> GenerateWebhookSecretAsync(Guid applicationId, CancellationToken cancellationToken);
+
     /// <summary>Adopts the redirect URIs the application last proposed.</summary>
     Task<Result<ApplicationDto>> ApplyManifestAsync(Guid applicationId, CancellationToken cancellationToken);
 
@@ -55,7 +58,12 @@ public interface IGroupService
     Task<Result> DeleteAsync(Guid groupId, CancellationToken cancellationToken);
 
     /// <summary>Adds a member. Adding an existing member succeeds and changes nothing.</summary>
-    Task<Result<GroupDetailDto>> AddMemberAsync(Guid groupId, Guid userId, CancellationToken cancellationToken);
+    Task<Result<GroupDetailDto>> AddMemberAsync(Guid groupId, Guid userId, CancellationToken cancellationToken, DateTimeOffset? expiresAtUtc = null);
+
+    /// <summary>Puts <paramref name="childGroupId"/> inside the group: its members get what the group is given.</summary>
+    Task<Result<GroupDetailDto>> AddSubgroupAsync(Guid groupId, Guid childGroupId, CancellationToken cancellationToken);
+
+    Task<Result<GroupDetailDto>> RemoveSubgroupAsync(Guid groupId, Guid childGroupId, CancellationToken cancellationToken);
 
     Task<Result<GroupDetailDto>> RemoveMemberAsync(Guid groupId, Guid userId, CancellationToken cancellationToken);
 }
@@ -80,7 +88,8 @@ public interface IAccessAdministrationService
         Guid applicationId,
         Guid userId,
         IReadOnlyList<string>? roles,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        ExpiryChange? expiry = null);
 
     Task<Result> RevokeUserAsync(Guid applicationId, Guid userId, CancellationToken cancellationToken);
 
@@ -89,7 +98,8 @@ public interface IAccessAdministrationService
         Guid applicationId,
         Guid groupId,
         IReadOnlyList<string>? roles,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        ExpiryChange? expiry = null);
 
     Task<Result> RevokeGroupAsync(Guid applicationId, Guid groupId, CancellationToken cancellationToken);
 
@@ -161,6 +171,12 @@ public interface IOrganizationService
 
     /// <summary>Removes a member, ending their sessions in the applications that work per organization. Idempotent.</summary>
     Task<Result<OrganizationDetailDto>> RemoveMemberAsync(Guid organizationId, Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Adds an existing account by its address. Like the other member operations it is open to the portal's
+    /// administrators and to the organization's own administrators (delegated management).
+    /// </summary>
+    Task<Result<OrganizationDetailDto>> AddMemberByEmailAsync(Guid organizationId, AddOrganizationMemberRequest request, CancellationToken cancellationToken);
 
     /// <summary>The organizations one user belongs to (administration screens).</summary>
     Task<Result<IReadOnlyList<OrganizationMembershipDto>>> ListForUserAsync(Guid userId, CancellationToken cancellationToken);
@@ -357,6 +373,7 @@ public enum AccessOperation
     ListOrganizations,
     ManageOrganizations,
     ViewStatistics,
+    ReviewAccess,
 }
 
 /// <summary>
@@ -375,4 +392,46 @@ public interface IUserDirectory
     Task<IReadOnlyDictionary<Guid, DirectoryUser>> FindAsync(
         IReadOnlyCollection<Guid> userIds,
         CancellationToken cancellationToken);
+
+    /// <summary>The account with this exact address, or null.</summary>
+    Task<DirectoryUser?> FindByEmailAsync(string email, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// Which applications should hear about an event, for the host's webhook delivery. Performs no caller check: the host
+/// calls it while recording something that already happened, so it must never be put behind an endpoint.
+/// </summary>
+public interface IWebhookDirectory
+{
+    /// <summary>Active applications the user can open that subscribe to <paramref name="eventType"/>.</summary>
+    Task<IReadOnlyList<WebhookTarget>> ForUserAsync(Guid userId, string eventType, CancellationToken cancellationToken);
+
+    /// <summary>Active applications the group has been given that subscribe to <paramref name="eventType"/>.</summary>
+    Task<IReadOnlyList<WebhookTarget>> ForGroupAsync(Guid groupId, string eventType, CancellationToken cancellationToken);
+
+    /// <summary>The application itself, when it subscribes to <paramref name="eventType"/>.</summary>
+    Task<IReadOnlyList<WebhookTarget>> ForApplicationAsync(string clientId, string eventType, CancellationToken cancellationToken);
+
+    /// <summary>The application's webhook as it is now (for a delivery or a retry); null once it was turned off.</summary>
+    Task<WebhookTarget?> FindAsync(string clientId, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// Access reviews (recertification): a snapshot of an application's grants that reviewers confirm or revoke, applied
+/// when the review is completed. Checked as <see cref="AccessOperation.ReviewAccess"/>.
+/// </summary>
+public interface IAccessReviewService
+{
+    Task<Result<IReadOnlyList<AccessReviewSummaryDto>>> ListAsync(CancellationToken cancellationToken);
+
+    Task<Result<AccessReviewDto>> GetAsync(Guid reviewId, CancellationToken cancellationToken);
+
+    Task<Result<AccessReviewDto>> StartAsync(StartAccessReviewRequest request, CancellationToken cancellationToken);
+
+    Task<Result<AccessReviewDto>> DecideAsync(Guid reviewId, Guid itemId, DecideAccessReviewItemRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Closes the review and removes the access marked for revocation (and, if so set, the undecided).</summary>
+    Task<Result<AccessReviewDto>> CompleteAsync(Guid reviewId, CancellationToken cancellationToken);
+
+    Task<Result<AccessReviewDto>> CancelAsync(Guid reviewId, CancellationToken cancellationToken);
 }

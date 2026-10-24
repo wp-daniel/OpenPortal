@@ -16,6 +16,8 @@ public sealed class IdentityModuleOptions
 
     public CookiePolicy Cookie { get; set; } = new();
 
+    public PasskeyPolicy Passkeys { get; set; } = new();
+
     /// <summary>
     /// How long an administrator's support session (acting as another account) lasts before it ends by itself and
     /// they must sign in again.
@@ -58,6 +60,28 @@ public sealed class IdentityModuleOptions
         public string CookieName { get; set; } = "OpenPortal.Auth";
 
         public int CookieLifetimeHours { get; set; } = 8;
+
+        /// <summary>
+        /// How often a session cookie is checked against the account (its security stamp). A password change, a
+        /// reset, "sign out everywhere" or a deactivation ends the other sessions within this delay; 0 checks on
+        /// every request.
+        /// </summary>
+        public int SessionValidationSeconds { get; set; } = 60;
+    }
+
+    public sealed class PasskeyPolicy
+    {
+        /// <summary>
+        /// The relying party id passkeys are bound to: the portal's host name (<c>portal.example.com</c>) or a parent
+        /// domain of it. Empty uses the host of each request. Changing it later makes existing passkeys unusable.
+        /// </summary>
+        public string? ServerDomain { get; set; }
+
+        /// <summary>
+        /// The origins (<c>https://portal.example.com</c>) a passkey ceremony may come from. Empty accepts only the
+        /// origin of the request itself, which is right unless the browser reaches the portal under several names.
+        /// </summary>
+        public string[] AllowedOrigins { get; set; } = [];
     }
 
     public sealed class CookiePolicy

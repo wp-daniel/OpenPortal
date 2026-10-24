@@ -4,6 +4,7 @@ using System.Text.Encodings.Web;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OpenPortal.Identity.Application.Abstractions;
+using OpenPortal.SharedKernel.Messaging;
 using OpenPortal.Web.Localization;
 using OpenPortal.Web.Resources;
 
@@ -12,11 +13,12 @@ namespace OpenPortal.Web.Email;
 /// <summary>
 /// Writes the Identity module's account emails from the resource files (<c>email.&lt;kind&gt;.subject</c>,
 /// <c>.greeting</c>, <c>.body</c>, <c>.action</c>) in the recipient's language, links them to the portal's public
-/// address and hands them to <see cref="IEmailSender"/>.
+/// address and queues them for delivery (<see cref="IOutbox"/>, delivered by <see cref="EmailOutboxHandler"/>).
 /// </summary>
-internal sealed partial class HostAccountMessaging : IAccountMessaging
+public sealed partial class HostAccountMessaging : IAccountMessaging
 {
     private readonly IEmailSender _sender;
+    private readonly IOutbox _outbox;
     private readonly IStringLocalizer<Messages> _localizer;
     private readonly ILanguageCatalog _languages;
     private readonly IHttpContextAccessor _httpContext;
@@ -25,6 +27,7 @@ internal sealed partial class HostAccountMessaging : IAccountMessaging
 
     public HostAccountMessaging(
         IEmailSender sender,
+        IOutbox outbox,
         IStringLocalizer<Messages> localizer,
         ILanguageCatalog languages,
         IHttpContextAccessor httpContext,
@@ -32,6 +35,7 @@ internal sealed partial class HostAccountMessaging : IAccountMessaging
         ILogger<HostAccountMessaging> logger)
     {
         _sender = sender;
+        _outbox = outbox;
         _localizer = localizer;
         _languages = languages;
         _httpContext = httpContext;
@@ -39,7 +43,7 @@ internal sealed partial class HostAccountMessaging : IAccountMessaging
         _logger = logger;
     }
 
-    public bool CanSendEmail => _sender.IsConfigured;
+    public Task<bool> CanSendEmailAsync(CancellationToken cancellationToken) => _sender.IsConfiguredAsync(cancellationToken);
 
     public string LinkTo(string pathAndQuery)
     {
@@ -60,12 +64,40 @@ internal sealed partial class HostAccountMessaging : IAccountMessaging
     {
         ArgumentNullException.ThrowIfNull(message);
 
-        if (!_sender.IsConfigured)
+        if (!await _sender.IsConfiguredAsync(cancellationToken).ConfigureAwait(false))
         {
             return false;
         }
 
-        // The recipient's language when they have one the portal offers, else the language of the request.
+        try
+        {
+            // Queued, not sent here: the request does not wait for the mail server, and a server that is down
+            // costs a delay (the queue retries) instead of the email.
+            await _outbox.EnqueueAsync(EmailOutboxHandler.Draft(Render(message)), cancellationToken).ConfigureAwait(false);
+
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+#pragma warning disable CA1031 // A message that cannot be queued is reported as "not sent", never as a failed request.
+        catch (Exception exception)
+#pragma warning restore CA1031
+        {
+            LogDeliveryFailed(exception, message.Kind);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// The email in the recipient's language (when the portal offers it, else the request's), linked to the
+    /// portal's public address.
+    /// </summary>
+    public EmailMessage Render(AccountMessage message)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+
         var previous = CultureInfo.CurrentUICulture;
         if (message.Language is { } language && _languages.IsSupported(language))
         {
@@ -91,28 +123,12 @@ internal sealed partial class HostAccountMessaging : IAccountMessaging
             var note = values.GetValueOrDefault("message");
             var footer = Text("email.footer", values);
 
-            await _sender.SendAsync(
-                    new EmailMessage(
-                        message.ToEmail,
-                        message.ToName,
-                        subject,
-                        PlainText(greeting, body, note, action, link, footer),
-                        Html(subject, greeting, body, note, action, link, footer)),
-                    cancellationToken)
-                .ConfigureAwait(false);
-
-            return true;
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-#pragma warning disable CA1031 // A failed delivery is reported as "not sent", never as a failed request.
-        catch (Exception exception)
-#pragma warning restore CA1031
-        {
-            LogDeliveryFailed(exception, message.Kind);
-            return false;
+            return new EmailMessage(
+                message.ToEmail,
+                message.ToName,
+                subject,
+                PlainText(greeting, body, note, action, link, footer),
+                Html(subject, greeting, body, note, action, link, footer));
         }
         finally
         {
@@ -183,6 +199,6 @@ internal sealed partial class HostAccountMessaging : IAccountMessaging
             """;
     }
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "The {Kind} email could not be delivered.")]
+    [LoggerMessage(Level = LogLevel.Error, Message = "The {Kind} email could not be queued.")]
     private partial void LogDeliveryFailed(Exception exception, string kind);
 }

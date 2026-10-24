@@ -51,3 +51,12 @@ public interface INotificationContext
     /// <summary>The accounts that may do the work <paramref name="role"/> names; none for a role the host does not know.</summary>
     Task<IReadOnlyCollection<Guid>> ResolveRoleAsync(string role, CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// Tells open browsers that someone's notifications changed, so the bell updates at once instead of at its next poll.
+/// Supplied by the host (in-process, or across instances through Redis); the module only says whose.
+/// </summary>
+public interface INotificationPublisher
+{
+    Task PublishAsync(IReadOnlyCollection<Guid> recipientIds, CancellationToken cancellationToken);
+}

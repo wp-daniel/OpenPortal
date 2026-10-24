@@ -30,6 +30,9 @@ public interface ICurrentUser
 
     /// <summary>The personal access token the request authenticated with; null for a browser session.</summary>
     Guid? PersonalAccessTokenId { get; }
+
+    /// <summary>The session's <c>amr</c> values (see <see cref="Abstractions.AuthenticationMethods"/>).</summary>
+    IReadOnlyList<string> AuthenticationMethods { get; }
 }
 
 /// <summary>
@@ -49,4 +52,20 @@ public static class PortalClaimTypes
 
     /// <summary>One claim per scope the personal access token holds.</summary>
     public const string PersonalAccessTokenScope = "portal_pat_scope";
+}
+
+/// <summary>
+/// How the session was authenticated: the <c>amr</c> claim (RFC 8176) on the portal cookie, carried into the tokens
+/// applications receive. Identity writes <c>pwd</c> for a password and <c>mfa</c> after an authenticator code; the
+/// portal adds the passkey values.
+/// </summary>
+public static class AuthenticationMethods
+{
+    public const string ClaimType = "amr";
+
+    public const string Password = "pwd";
+    public const string OneTimePassword = "otp";
+    public const string HardwareKey = "hwk";
+    public const string UserPresence = "user";
+    public const string MultiFactor = "mfa";
 }

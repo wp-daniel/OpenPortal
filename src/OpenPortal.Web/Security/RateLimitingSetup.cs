@@ -84,12 +84,12 @@ public static class RateLimitingSetup
             // Static files are served before routing and never reach the limiter; health probes opt out.
             limiter.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
                 IsLimited(context)
-                    ? Window($"general:{CallerKey(context)}", options.General)
+                    ? Window(context, $"general:{CallerKey(context)}", options.General)
                     : RateLimitPartition.GetNoLimiter(string.Empty));
 
-            limiter.AddPolicy(RateLimitPolicies.SignIn, context => Window($"sign-in:{AddressOf(context)}", options.SignIn));
-            limiter.AddPolicy(RateLimitPolicies.Machine, context => Window($"machine:{AddressOf(context)}", options.Machine));
-            limiter.AddPolicy(RateLimitPolicies.Export, context => Window($"export:{CallerKey(context)}", options.Export));
+            limiter.AddPolicy(RateLimitPolicies.SignIn, context => Window(context, $"sign-in:{AddressOf(context)}", options.SignIn));
+            limiter.AddPolicy(RateLimitPolicies.Machine, context => Window(context, $"machine:{AddressOf(context)}", options.Machine));
+            limiter.AddPolicy(RateLimitPolicies.Export, context => Window(context, $"export:{CallerKey(context)}", options.Export));
         });
 
         return services;
@@ -99,7 +99,28 @@ public static class RateLimitingSetup
         context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase)
         || context.Request.Path.StartsWithSegments("/connect", StringComparison.OrdinalIgnoreCase);
 
-    private static RateLimitPartition<string> Window(string key, RateLimitingOptions.WindowLimit limit) =>
+    /// <summary>
+    /// A fixed window per key: counted in Redis when it is configured, so the limit holds across every instance (one
+    /// address cannot get N times the sign-in attempts by spreading them over N instances), else in this process.
+    /// </summary>
+    private static RateLimitPartition<string> Window(HttpContext context, string key, RateLimitingOptions.WindowLimit limit)
+    {
+        if (context.RequestServices.GetService<StackExchange.Redis.IConnectionMultiplexer>() is { } redis)
+        {
+            var prefix = context.RequestServices.GetRequiredService<OpenPortal.Web.Scale.RedisOptions>().KeyPrefix;
+
+            return RedisRateLimiting.RedisRateLimitPartition.GetFixedWindowRateLimiter(prefix + "rate:" + key, _ => new RedisRateLimiting.RedisFixedWindowRateLimiterOptions
+            {
+                ConnectionMultiplexerFactory = () => redis,
+                PermitLimit = Math.Max(1, limit.PermitLimit),
+                Window = TimeSpan.FromSeconds(Math.Max(1, limit.WindowSeconds)),
+            });
+        }
+
+        return LocalWindow(key, limit);
+    }
+
+    private static RateLimitPartition<string> LocalWindow(string key, RateLimitingOptions.WindowLimit limit) =>
         RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = Math.Max(1, limit.PermitLimit),

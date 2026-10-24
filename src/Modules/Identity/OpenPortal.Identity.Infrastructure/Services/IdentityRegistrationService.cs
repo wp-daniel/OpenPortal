@@ -70,7 +70,7 @@ internal sealed class IdentityRegistrationService : IRegistrationService
         }
 
         var confirm = settings.RequireEmailConfirmation;
-        if (confirm && !_messaging.CanSendEmail)
+        if (confirm && !await _messaging.CanSendEmailAsync(cancellationToken).ConfigureAwait(false))
         {
             return Result<RegistrationResultDto>.Failure(UserErrors.EmailDeliveryUnavailable);
         }

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Loader2, Smartphone } from 'lucide-react'
+import { ArrowLeft, Fingerprint, Loader2, Smartphone } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { z } from 'zod'
 import { Link } from 'react-router-dom'
@@ -18,6 +18,9 @@ import { notify } from '@/hooks/useToast'
 import { useI18n } from '@/i18n/useI18n'
 import type { TFunction } from '@/i18n/store'
 import { zodFieldErrors } from '@/lib/forms'
+import { getPasskey, isPasskeyCancelled, passkeysSupported } from '@/lib/webauthn'
+
+const PASSKEY_REQUIRED = 'identity.passkey_required'
 
 /**
  * Sign-in.
@@ -67,6 +70,28 @@ function PasswordStep({ onTwoFactorRequired }: { onTwoFactorRequired: (rememberM
     onSuccess: () => notify.success(t('confirmEmail.resent'), t('confirmEmail.resentDescription')),
   })
 
+  const passkey = useMutation({
+    mutationFn: async () => {
+      const options = await authApi.passkeyOptions()
+      const credential = await getPasskey(options)
+
+      return authApi.loginPasskey(credential, fields.rememberMe)
+    },
+    meta: { handlesErrors: true },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY }),
+    onError: (error) => {
+      if (isPasskeyCancelled(error)) {
+        return
+      }
+
+      if (error instanceof ApiError && error.isUnauthenticated) {
+        notify.error(t('signIn.failed'), t('signIn.passkeyRejected'))
+      } else {
+        notify.fromError(error, t('signIn.failed'))
+      }
+    },
+  })
+
   const signIn = useMutation({
     mutationFn: (values: Fields) => authApi.login(values.email, values.password, values.rememberMe),
     meta: { handlesErrors: true },
@@ -87,6 +112,13 @@ function PasswordStep({ onTwoFactorRequired }: { onTwoFactorRequired: (rememberM
 
       if (error instanceof ApiError && error.problem?.errorCode === EMAIL_NOT_CONFIRMED) {
         setUnconfirmed(values.email)
+
+        return
+      }
+
+      // The account must use its passkey: the password was right, but alone it is not enough.
+      if (error instanceof ApiError && error.problem?.errorCode === PASSKEY_REQUIRED) {
+        notify.warning(t('signIn.passkeyRequired.title'), t('signIn.passkeyRequired.description'))
 
         return
       }
@@ -137,7 +169,18 @@ function PasswordStep({ onTwoFactorRequired }: { onTwoFactorRequired: (rememberM
           />
         </FormField>
 
-        <FormField label={t('common.password')} htmlFor="password" error={fieldErrors.password ?? serverErrors.password?.[0]}>
+        <FormField
+          label={t('common.password')}
+          htmlFor="password"
+          error={fieldErrors.password ?? serverErrors.password?.[0]}
+          action={
+            session.registration.passwordReset ? (
+              <Link to="/forgot-password" className="text-muted-foreground hover:text-foreground text-xs underline-offset-2 hover:underline">
+                {t('signIn.forgotPassword')}
+              </Link>
+            ) : undefined
+          }
+        >
           <Input
             name="password"
             type="password"
@@ -163,6 +206,20 @@ function PasswordStep({ onTwoFactorRequired }: { onTwoFactorRequired: (rememberM
           {signIn.isPending && <Loader2 className="animate-spin" />}
           {signIn.isPending ? t('signIn.submitting') : t('signIn.submit')}
         </Button>
+
+        {session.registration.passkeys && passkeysSupported() && (
+          <>
+            <div className="text-muted-foreground flex items-center gap-3 text-xs uppercase">
+              <span className="bg-border h-px flex-1" />
+              {t('signIn.or')}
+              <span className="bg-border h-px flex-1" />
+            </div>
+            <Button variant="outline" className="w-full" disabled={passkey.isPending} onClick={() => passkey.mutate()}>
+              {passkey.isPending ? <Loader2 className="animate-spin" /> : <Fingerprint />}
+              {t('signIn.withPasskey')}
+            </Button>
+          </>
+        )}
 
         {unconfirmed && (
           <div role="alert" className="bg-warning/10 grid gap-2 rounded-lg border p-3 text-sm">

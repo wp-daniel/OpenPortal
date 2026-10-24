@@ -34,7 +34,7 @@ export function useSession() {
       isAuthenticated: false,
       user: null,
       passwordPolicy: UNAVAILABLE_PASSWORD_POLICY,
-      registration: { enabled: false, requiresApproval: false },
+      registration: { enabled: false, requiresApproval: false, passwordReset: false, passkeys: false },
       legal: { privacy: false, terms: false },
       features: { selfDeletion: false, personalAccessTokens: false },
     },

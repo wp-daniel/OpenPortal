@@ -147,6 +147,33 @@ public static class AccessErrors
             Prefix + "api_scope_invalid",
             "Unknown application API scope; the scopes are portal.users.read, portal.access.manage and portal.users.create.");
 
+    public static Error GroupNestingCycle { get; } =
+        Error.Validation(Prefix + "group_nesting_cycle", "A group cannot contain itself, directly or through its subgroups.");
+
+    public static Error ExpiryInPast { get; } =
+        Error.Validation(Prefix + "expiry_in_past", "The end of temporary access must be in the future.");
+
+    public static Error WebhookUrlInvalid { get; } =
+        Error.Validation(Prefix + "webhook_url_invalid", "The webhook URL must be an absolute https address (http only for localhost).");
+
+    public static Error WebhookEventInvalid { get; } =
+        Error.Validation(Prefix + "webhook_event_invalid", "The webhook subscribes to an event that does not exist.");
+
+    public static Error WebhookNotConfigured { get; } =
+        Error.Conflict(Prefix + "webhook_not_configured", "Set the webhook URL and generate its secret first.");
+
+    public static Error ClientTypeInvalid { get; } =
+        Error.Validation(Prefix + "client_type_invalid", "The client type must be confidential or public.");
+
+    public static Error ApiScopesNeedConfidentialClient { get; } =
+        Error.Validation(Prefix + "api_scopes_need_confidential_client", "A public client has no secret, so it cannot be given application API scopes.");
+
+    public static Error PublicClientHasNoSecret { get; } =
+        Error.Conflict(Prefix + "public_client_has_no_secret", "A public client has no secret to regenerate.");
+
+    public static Error BackChannelLogoutUriInvalid { get; } =
+        Error.Validation(Prefix + "back_channel_logout_uri_invalid", "The back-channel logout URI must be an absolute https address (http only for localhost).");
+
     public static Error ApiScopeRequiresAccessManage { get; } =
         Error.Validation(
             Prefix + "api_scope_requires_access_manage",
@@ -191,6 +218,12 @@ public static class AccessErrors
         Error.Validation(
             Prefix + "request_note_too_long",
             $"The note must not exceed {Requests.AccessRequest.NoteMaxLength} characters.");
+
+    public static Error OrganizationManageForbidden { get; } =
+        Error.Forbidden(Prefix + "organization_manage_forbidden", "Managing this organization's members takes a portal administrator or one of its own administrators.");
+
+    public static Error OrganizationLastAdmin { get; } =
+        Error.Conflict(Prefix + "organization_last_admin", "An organization keeps at least one administrator: make someone else administrator first.");
 
     public static Error OrganizationNotFound { get; } =
         Error.NotFound(Prefix + "organization_not_found", "The requested organization does not exist.");

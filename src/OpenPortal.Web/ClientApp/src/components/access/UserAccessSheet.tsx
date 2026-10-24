@@ -1,10 +1,12 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Users } from 'lucide-react'
+import { useState } from 'react'
 import { accessApi, accessKeys, applicationsApi } from '@/api/access'
 import type { UserSummary } from '@/api/types'
 import { ErrorPanel, LoadingState } from '@/components/StatePanels'
 import { UserAvatar } from '@/components/UserAvatar'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
@@ -13,6 +15,7 @@ import { Switch } from '@/components/ui/switch'
 import { useI18n } from '@/i18n/useI18n'
 import { describeError } from '@/lib/errors'
 import { useAccessRefresh } from '@/lib/access'
+import { fromLocalInput } from '@/lib/dateInput'
 import { RoleBadges } from './RoleAssignment'
 import { ApplicationStatusBadge } from './shared'
 
@@ -36,9 +39,13 @@ export function UserAccessSheet({ user, onClose }: { user: UserSummary | null; o
     enabled: user !== null,
   })
 
+  const [until, setUntil] = useState('')
+
   const toggle = useMutation({
     mutationFn: ({ applicationId, granted }: { applicationId: string; granted: boolean }) =>
-      granted ? accessApi.grantUser(applicationId, user!.id) : accessApi.revokeUser(applicationId, user!.id),
+      granted
+        ? accessApi.grantUser(applicationId, user!.id, undefined, fromLocalInput(until))
+        : accessApi.revokeUser(applicationId, user!.id),
     onSuccess: () => refresh(),
   })
 
@@ -57,6 +64,13 @@ export function UserAccessSheet({ user, onClose }: { user: UserSummary | null; o
 
         <ScrollArea className="min-h-0 flex-1">
           <div className="grid gap-6 px-4 pb-6">
+            <div className="grid gap-1">
+              <Label htmlFor="grant-until" className="text-xs">
+                {t('access.expiry.newGrantsUntil')}
+              </Label>
+              <Input id="grant-until" type="datetime-local" className="h-8 text-xs" value={until} onChange={(event) => setUntil(event.target.value)} />
+              <p className="text-muted-foreground text-xs">{t('access.expiry.hint')}</p>
+            </div>
             {(access.isError || applications.isError) && (
               <ErrorPanel
                 message={describeError(access.error ?? applications.error)}

@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Building2, Undo2 } from 'lucide-react'
+import { useState } from 'react'
 import { myOrganizationsApi, organizationKeys } from '@/api/organizations'
 import { myAccessRequestsApi, requestKeys } from '@/api/requests'
 import type { AccessRequestStatus } from '@/api/types'
+import { OrganizationMembersDialog } from '@/components/OrganizationMembersDialog'
 import { Section } from '@/components/Section'
 import { ErrorPanel, LoadingState } from '@/components/StatePanels'
 import { Badge } from '@/components/ui/badge'
@@ -15,6 +17,7 @@ import { describeError } from '@/lib/errors'
 /** The organizations the signed-in user belongs to, as applications that work per organization see them. */
 export function MyOrganizationsSection() {
   const { t } = useI18n()
+  const [managing, setManaging] = useState<string | null>(null)
 
   const organizations = useQuery({
     queryKey: organizationKeys.mine,
@@ -41,10 +44,16 @@ export function MyOrganizationsSection() {
               <Badge variant={organization.role === 'admin' ? 'default' : 'secondary'}>
                 {t(`organizations.roleName.${organization.role}`)}
               </Badge>
+              {organization.role === 'admin' && (
+                <Button size="sm" variant="outline" onClick={() => setManaging(organization.id)}>
+                  {t('organizations.manage.open')}
+                </Button>
+              )}
             </li>
           ))}
         </ul>
       )}
+      <OrganizationMembersDialog organizationId={managing} onClose={() => setManaging(null)} />
     </Section>
   )
 }

@@ -76,7 +76,8 @@ internal sealed class ApplicationAnnouncementService : IApplicationAnnouncementS
             manifest.Description,
             manifest.BaseUrl,
             manifest.RedirectUris ?? [],
-            manifest.PostLogoutRedirectUris ?? []);
+            manifest.PostLogoutRedirectUris ?? [],
+            string.IsNullOrWhiteSpace(manifest.BackChannelLogoutUri) ? null : manifest.BackChannelLogoutUri);
 
         var now = _clock.UtcNow;
 

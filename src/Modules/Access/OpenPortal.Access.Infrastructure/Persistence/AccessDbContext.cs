@@ -43,6 +43,10 @@ public sealed class AccessDbContext : DbContext
 
     public DbSet<OrganizationMember> OrganizationMembers => Set<OrganizationMember>();
 
+    public DbSet<GroupNesting> GroupNestings => Set<GroupNesting>();
+
+    public DbSet<Domain.Reviews.AccessReview> AccessReviews => Set<Domain.Reviews.AccessReview>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);

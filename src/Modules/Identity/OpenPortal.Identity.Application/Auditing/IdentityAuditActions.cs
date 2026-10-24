@@ -46,6 +46,16 @@ public static class IdentityAuditActions
     /// <summary>An administrator turned two-factor authentication off for an account (a lost phone).</summary>
     public const string TwoFactorReset = "user.two_factor_reset";
 
+    /// <summary>An administrator removed every passkey of an account.</summary>
+    public const string PasskeysReset = "user.passkeys_reset";
+
+    /// <summary>The caller added a passkey to their account. Details carry its name.</summary>
+    public const string PasskeyAdded = "account.passkey_added";
+
+    public const string PasskeyRenamed = "account.passkey_renamed";
+
+    public const string PasskeyRemoved = "account.passkey_removed";
+
     /// <summary>The portal's security settings changed. Details carry the new values.</summary>
     public const string SecuritySettingsUpdated = "settings.security_updated";
 
@@ -60,6 +70,12 @@ public static class IdentityAuditActions
 
     /// <summary>A self-registered account confirmed its address.</summary>
     public const string EmailConfirmed = "account.email_confirmed";
+
+    /// <summary>Someone asked for a password reset link (recorded whether or not the address has an account).</summary>
+    public const string PasswordResetRequested = "account.password_reset_requested";
+
+    /// <summary>The owner set a new password through a reset link.</summary>
+    public const string PasswordRecovered = "account.password_recovered";
 
     /// <summary>An address was invited; the target is the invitation (labelled with the address).</summary>
     public const string Invited = "user.invited";
@@ -117,6 +133,7 @@ public static class SignInMethods
 {
     public const string Authenticator = "authenticator";
     public const string RecoveryCode = "recovery_code";
+    public const string Passkey = "passkey";
 }
 
 /// <summary>Values of the <c>reason</c> detail on a failed sign-in.</summary>
@@ -129,4 +146,6 @@ public static class SignInFailureReasons
     public const string PendingApproval = "pending_approval";
     public const string EmailNotConfirmed = "email_not_confirmed";
     public const string InvalidCode = "invalid_code";
+    public const string InvalidPasskey = "invalid_passkey";
+    public const string PasskeyRequired = "passkey_required";
 }

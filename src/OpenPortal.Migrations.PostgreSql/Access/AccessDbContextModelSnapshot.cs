@@ -262,6 +262,10 @@ namespace OpenPortal.Migrations.PostgreSql.Access
                     b.Property<bool>("AllowAccessRequests")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("AnnouncedBackChannelLogoutUri")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
                     b.Property<string>("AnnouncedPostLogoutRedirectUris")
                         .IsRequired()
                         .HasColumnType("text");
@@ -274,6 +278,10 @@ namespace OpenPortal.Migrations.PostgreSql.Access
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("BackChannelLogoutUri")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
                     b.Property<string>("BaseUrl")
                         .IsRequired()
                         .HasMaxLength(512)
@@ -283,6 +291,13 @@ namespace OpenPortal.Migrations.PostgreSql.Access
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
+
+                    b.Property<string>("ClientType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasDefaultValue("Confidential");
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -315,6 +330,10 @@ namespace OpenPortal.Migrations.PostgreSql.Access
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("ProtectedWebhookSecret")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<string>("RedirectUris")
                         .IsRequired()
                         .HasColumnType("text");
@@ -336,6 +355,14 @@ namespace OpenPortal.Migrations.PostgreSql.Access
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<string>("WebhookEvents")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("WebhookUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ClientId")
@@ -352,6 +379,9 @@ namespace OpenPortal.Migrations.PostgreSql.Access
 
                     b.Property<Guid>("GroupId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset>("GrantedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -375,6 +405,9 @@ namespace OpenPortal.Migrations.PostgreSql.Access
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset>("GrantedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -457,12 +490,37 @@ namespace OpenPortal.Migrations.PostgreSql.Access
                     b.Property<DateTimeOffset>("AddedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTimeOffset?>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("GroupId", "UserId");
+
+                    b.HasIndex("ExpiresAtUtc")
+                        .HasDatabaseName("IX_GroupMembers_ExpiresAtUtc");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("IX_GroupMembers_UserId");
 
                     b.ToTable("GroupMembers", (string)null);
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Groups.GroupNesting", b =>
+                {
+                    b.Property<Guid>("ParentGroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ChildGroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AddedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("ParentGroupId", "ChildGroupId");
+
+                    b.HasIndex("ChildGroupId")
+                        .HasDatabaseName("IX_GroupNestings_ChildGroupId");
+
+                    b.ToTable("GroupNestings", (string)null);
                 });
 
             modelBuilder.Entity("OpenPortal.Access.Domain.Organizations.Organization", b =>
@@ -576,6 +634,98 @@ namespace OpenPortal.Migrations.PostgreSql.Access
                     b.ToTable("AccessRequests", (string)null);
                 });
 
+            modelBuilder.Entity("OpenPortal.Access.Domain.Reviews.AccessReview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ApplicationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ClosedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ClosedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("DueAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<bool>("RevokeUndecided")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationId");
+
+                    b.ToTable("AccessReviews", (string)null);
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Reviews.AccessReviewItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("DecidedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DecidedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Decision")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("ReviewId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Roles")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SubjectLabel")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("SubjectType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReviewId");
+
+                    b.ToTable("AccessReviewItems", (string)null);
+                });
+
             modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreAuthorization<System.Guid>", b =>
                 {
                     b.HasOne("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication<System.Guid>", "Application")
@@ -651,6 +801,21 @@ namespace OpenPortal.Migrations.PostgreSql.Access
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("OpenPortal.Access.Domain.Groups.GroupNesting", b =>
+                {
+                    b.HasOne("OpenPortal.Access.Domain.Groups.Group", null)
+                        .WithMany()
+                        .HasForeignKey("ChildGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OpenPortal.Access.Domain.Groups.Group", null)
+                        .WithMany()
+                        .HasForeignKey("ParentGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("OpenPortal.Access.Domain.Organizations.OrganizationMember", b =>
                 {
                     b.HasOne("OpenPortal.Access.Domain.Organizations.Organization", null)
@@ -665,6 +830,24 @@ namespace OpenPortal.Migrations.PostgreSql.Access
                     b.HasOne("OpenPortal.Access.Domain.Applications.PortalApplication", null)
                         .WithMany()
                         .HasForeignKey("ApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Reviews.AccessReview", b =>
+                {
+                    b.HasOne("OpenPortal.Access.Domain.Applications.PortalApplication", null)
+                        .WithMany()
+                        .HasForeignKey("ApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Reviews.AccessReviewItem", b =>
+                {
+                    b.HasOne("OpenPortal.Access.Domain.Reviews.AccessReview", null)
+                        .WithMany("Items")
+                        .HasForeignKey("ReviewId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -694,6 +877,11 @@ namespace OpenPortal.Migrations.PostgreSql.Access
             modelBuilder.Entity("OpenPortal.Access.Domain.Organizations.Organization", b =>
                 {
                     b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Reviews.AccessReview", b =>
+                {
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

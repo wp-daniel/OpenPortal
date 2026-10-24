@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using OpenPortal.Identity.Application.Abstractions;
@@ -40,6 +41,8 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
     private readonly PrivacySettingsStore _privacy;
     private readonly IOptions<IdentityModuleOptions> _moduleOptions;
     private readonly SecuritySettingsStore _security;
+    private readonly IAccountMessaging _messaging;
+    private readonly IdentityTwoFactorPolicy _policy;
     private readonly Lazy<string> _timingEqualisationHash;
 
     public IdentityAuthenticationService(
@@ -56,8 +59,12 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
         IdentityLegalDocumentService legal,
         PrivacySettingsStore privacy,
         IOptions<IdentityModuleOptions> moduleOptions,
-        SecuritySettingsStore security)
+        SecuritySettingsStore security,
+        IAccountMessaging messaging,
+        IdentityTwoFactorPolicy policy)
     {
+        _policy = policy;
+        _messaging = messaging;
         _security = security;
         _legal = legal;
         _privacy = privacy;
@@ -124,6 +131,29 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
                 .ConfigureAwait(false);
 
             return Result.Failure(UserErrors.InvalidCredentials);
+        }
+
+        // An account whose only second factor is a passkey, and that must have one, cannot sign in with its
+        // password alone. The password is still checked (and counts toward the lockout), so the answer reveals
+        // the rule only to whoever knows it.
+        if (await _policy.RequiresPasskeySignInAsync(user, cancellationToken).ConfigureAwait(false))
+        {
+            var check = await _signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true).ConfigureAwait(false);
+            if (check.Succeeded)
+            {
+                await RecordSignInAsync(user.ToAuditSubject(), SignInFailureReasons.PasskeyRequired, cancellationToken).ConfigureAwait(false);
+
+                return Result.Failure(UserErrors.PasskeyRequired);
+            }
+
+            if (check.IsNotAllowed)
+            {
+                return await RefuseNotAllowedAsync(user, request.Password, cancellationToken).ConfigureAwait(false);
+            }
+
+            await RecordSignInAsync(user.ToAuditSubject(), FailureReason(check), cancellationToken).ConfigureAwait(false);
+
+            return Result.Failure(DescribeFailure(check));
         }
 
         // SignInManager (rather than a manual hash comparison) is what provides account lockout and
@@ -226,6 +256,81 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
         return Result.Success();
     }
 
+    public async Task<Result<string>> PasskeyRequestOptionsAsync(CancellationToken cancellationToken)
+    {
+        if (!(await _security.ReadAsync(cancellationToken).ConfigureAwait(false)).PasskeysEnabled)
+        {
+            return Result<string>.Failure(UserErrors.PasskeysDisabled);
+        }
+
+        // No user: the browser offers every passkey it holds for this portal (discoverable credentials).
+        return Result<string>.Success(await _signInManager.MakePasskeyRequestOptionsAsync(null).ConfigureAwait(false));
+    }
+
+    public async Task<Result> SignInWithPasskeyAsync(PasskeySignInRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (!(await _security.ReadAsync(cancellationToken).ConfigureAwait(false)).PasskeysEnabled)
+        {
+            return Result.Failure(UserErrors.PasskeysDisabled);
+        }
+
+        // Verifies the signature against the challenge issued last (kept in a short-lived cookie) and the stored key.
+        var assertion = await _signInManager.PerformPasskeyAssertionAsync(request.Credential).ConfigureAwait(false);
+        if (!assertion.Succeeded)
+        {
+            await RecordSignInAsync(
+                    new AuditSubject(AuditSubjectTypes.User, string.Empty, null),
+                    SignInFailureReasons.InvalidPasskey,
+                    cancellationToken,
+                    SignInMethods.Passkey)
+                .ConfigureAwait(false);
+
+            return Result.Failure(UserErrors.PasskeySignInFailed);
+        }
+
+        var user = assertion.User;
+
+        // The same checks as a password sign-in: approval, confirmed address, lockout.
+        if (!await _signInManager.CanSignInAsync(user).ConfigureAwait(false)
+            || await _userManager.IsLockedOutAsync(user).ConfigureAwait(false))
+        {
+            var (reason, error) = user.PendingApproval
+                ? (SignInFailureReasons.PendingApproval, UserErrors.AccountPendingApproval)
+                : await _registration.AwaitsEmailConfirmationAsync(user, cancellationToken).ConfigureAwait(false)
+                    ? (SignInFailureReasons.EmailNotConfirmed, UserErrors.EmailNotConfirmed)
+                    : await _userManager.IsLockedOutAsync(user).ConfigureAwait(false)
+                        ? (SignInFailureReasons.LockedOut, UserErrors.AccountLockedOut)
+                        : (SignInFailureReasons.NotAllowed, UserErrors.AccountNotAllowed);
+
+            await RecordSignInAsync(user.ToAuditSubject(), reason, cancellationToken, SignInMethods.Passkey).ConfigureAwait(false);
+
+            return Result.Failure(error);
+        }
+
+        // The signature counter moves on with every use, which is how a cloned authenticator would show.
+        await _userManager.AddOrUpdatePasskeyAsync(user, assertion.Passkey).ConfigureAwait(false);
+
+        // A passkey proves possession of the device and, with user verification required, the person: both
+        // factors at once (RFC 8176 hwk and user, hence mfa), so no authenticator code is asked for.
+        await _signInManager
+            .SignInWithClaimsAsync(
+                user,
+                request.RememberMe,
+                [
+                    new Claim(AuthenticationMethods.ClaimType, AuthenticationMethods.HardwareKey),
+                    new Claim(AuthenticationMethods.ClaimType, AuthenticationMethods.UserPresence),
+                    new Claim(AuthenticationMethods.ClaimType, AuthenticationMethods.MultiFactor),
+                ])
+            .ConfigureAwait(false);
+
+        await _userManager.ResetAccessFailedCountAsync(user).ConfigureAwait(false);
+        await CompleteSignInAsync(user, SignInMethods.Passkey, cancellationToken).ConfigureAwait(false);
+
+        return Result.Success();
+    }
+
     private async Task CompleteSignInAsync(ApplicationUser user, string? method, CancellationToken cancellationToken)
     {
         user.RecordSignIn(_clock.UtcNow);
@@ -254,7 +359,12 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
     public async Task<Result<SessionDto>> GetSessionAsync(CancellationToken cancellationToken)
     {
         var settings = await _registration.ReadAsync(cancellationToken).ConfigureAwait(false);
-        var registration = new RegistrationInfoDto(settings.IsOpen, settings.Mode == Domain.Settings.RegistrationMode.Approval);
+        var security = await _security.ReadAsync(cancellationToken).ConfigureAwait(false);
+        var registration = new RegistrationInfoDto(
+            settings.IsOpen,
+            settings.Mode == Domain.Settings.RegistrationMode.Approval,
+            PasswordReset: await _messaging.CanSendEmailAsync(cancellationToken).ConfigureAwait(false),
+            Passkeys: security.PasskeysEnabled);
         var legal = await _legal.GetInfoAsync(cancellationToken).ConfigureAwait(false);
 
         if (!_currentUser.IsAuthenticated)
@@ -276,7 +386,6 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
         var pages = await _pages.GetPagesAsync(user.Id, roles.ToArray(), cancellationToken).ConfigureAwait(false);
         var pendingLegal = await _legal.PendingAsync(user.Id, cancellationToken).ConfigureAwait(false);
         var privacy = await _privacy.ReadAsync(cancellationToken).ConfigureAwait(false);
-        var security = await _security.ReadAsync(cancellationToken).ConfigureAwait(false);
         var impersonator = _currentUser.ImpersonatorId is { } impersonatorId && _currentUser.ImpersonationStartedAtUtc is { } startedAt
             ? new SessionImpersonatorDto(
                 impersonatorId,
@@ -298,7 +407,10 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
                 Pages: pages,
                 PendingLegalDocuments: pendingLegal,
                 DeletionScheduledAtUtc: user.DeletionScheduledAtUtc,
-                Impersonator: impersonator),
+                Impersonator: impersonator,
+                TwoFactorSetupRequired: impersonator is null
+                    && await _policy.IsSetupRequiredAsync(user.Id, cancellationToken).ConfigureAwait(false),
+                AuthenticationMethods: _currentUser.AuthenticationMethods),
             PasswordPolicy: PasswordPolicy,
             Registration: registration,
             Legal: legal,
@@ -326,6 +438,12 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
             details["method"] = method;
         }
 
+        IdentityMetrics.SignIns.Add(
+            1,
+            new KeyValuePair<string, object?>("outcome", failureReason is null ? "success" : "failure"),
+            new KeyValuePair<string, object?>("method", method ?? "password"),
+            new KeyValuePair<string, object?>("reason", failureReason ?? "none"));
+
         return _audit.RecordAsync(
             new AuditEvent
             {
@@ -352,4 +470,16 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
         { IsNotAllowed: true } => UserErrors.AccountNotAllowed,
         _ => UserErrors.InvalidCredentials,
     };
+}
+
+/// <summary>The Identity module's counters for OpenTelemetry (meter <c>OpenPortal.Identity</c>).</summary>
+internal static class IdentityMetrics
+{
+    public const string MeterName = "OpenPortal.Identity";
+
+    private static readonly System.Diagnostics.Metrics.Meter Meter = new(MeterName);
+
+    /// <summary>Portal sign-ins by outcome, method (password, authenticator, recovery_code, passkey) and failure reason.</summary>
+    public static readonly System.Diagnostics.Metrics.Counter<long> SignIns =
+        Meter.CreateCounter<long>("openportal.sign_ins", description: "Portal sign-in attempts.");
 }

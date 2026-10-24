@@ -92,6 +92,13 @@ export function AccountGate() {
     return <Navigate to="/legal/accept" state={state} replace />
   }
 
+  // The portal requires a second factor and the account has none yet: that comes before anything else.
+  if (user && !user.impersonator && user.twoFactorSetupRequired) {
+    const state: RedirectState = { from: `${location.pathname}${location.search}` }
+
+    return <Navigate to="/account/security-setup" state={state} replace />
+  }
+
   return <Outlet />
 }
 

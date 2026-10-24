@@ -5,6 +5,7 @@ using OpenPortal.Access.Application.Contracts;
 using OpenPortal.SharedKernel.Results;
 using OpenPortal.Web.Authorization;
 using OpenPortal.Web.Infrastructure;
+using OpenPortal.Web.Webhooks;
 
 namespace OpenPortal.Web.Controllers;
 
@@ -82,6 +83,46 @@ public sealed class AdminApplicationsController : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ApplicationSecretDto>> RegenerateSecretAsync(Guid applicationId, CancellationToken cancellationToken) =>
         Respond(await _applications.RegenerateSecretAsync(applicationId, cancellationToken).ConfigureAwait(false));
+
+    /// <summary>Generates the secret webhook deliveries are signed with (<c>whsec_…</c>); the previous one stops working.</summary>
+    [RequirePortalPage(PortalPages.Applications)]
+    [HttpPost("{applicationId:guid}/webhook/secret")]
+    [ProducesResponseType<WebhookSecretDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<WebhookSecretDto>> GenerateWebhookSecretAsync(Guid applicationId, CancellationToken cancellationToken) =>
+        Respond(await _applications.GenerateWebhookSecretAsync(applicationId, cancellationToken).ConfigureAwait(false));
+
+    /// <summary>Queues a <c>webhook.test</c> event to the application's webhook; the delivery shows in the queue.</summary>
+    [RequirePortalPage(PortalPages.Applications)]
+    [HttpPost("{applicationId:guid}/webhook/test")]
+    [ProducesResponseType(StatusCodes.Status202Accepted)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> TestWebhookAsync(
+        Guid applicationId,
+        [FromServices] IWebhookDirectory webhooks,
+        [FromServices] WebhookPublisher publisher,
+        CancellationToken cancellationToken)
+    {
+        var application = await _applications.GetAsync(applicationId, cancellationToken).ConfigureAwait(false);
+        if (application.IsFailure)
+        {
+            return ProblemResults.FromResult(HttpContext, application);
+        }
+
+        if (await webhooks.FindAsync(application.Value.ClientId, cancellationToken).ConfigureAwait(false) is not { } target)
+        {
+            return ProblemResults.FromResult(HttpContext, OpenPortal.SharedKernel.Results.Result.Failure(OpenPortal.Access.Domain.AccessErrors.WebhookNotConfigured));
+        }
+
+        await publisher.PublishAsync(
+                OpenPortal.Access.Domain.Applications.WebhookEventTypes.Test,
+                new { message = "A test event sent from the portal." },
+                [target],
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return Accepted();
+    }
 
     /// <summary>Adopts the redirect URIs the application last announced.</summary>
     [RequirePortalPage(PortalPages.Applications)]

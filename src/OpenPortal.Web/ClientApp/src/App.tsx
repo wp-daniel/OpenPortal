@@ -16,13 +16,17 @@ import { AccountPage } from '@/pages/AccountPage'
 import { AdminAccessPage } from '@/pages/AdminAccessPage'
 import { AdminLegalPage } from '@/pages/AdminLegalPage'
 import { AcceptLegalPage, LegalDocumentPage } from '@/pages/LegalPages'
+import { SecuritySetupPage } from '@/pages/SecuritySetupPage'
+import { SignOutPage } from '@/pages/SignOutPage'
 import { DeletionPendingPage } from '@/pages/DeletionPendingPage'
 import { AdminAnnouncementsPage } from '@/pages/AdminAnnouncementsPage'
 import { AdminAccessRequestsPage } from '@/pages/AdminAccessRequestsPage'
+import { AdminAccessReviewsPage } from '@/pages/AdminAccessReviewsPage'
 import { AdminInvitationsPage } from '@/pages/AdminInvitationsPage'
 import { AdminOrganizationsPage } from '@/pages/AdminOrganizationsPage'
 import { AdminStatisticsPage } from '@/pages/AdminStatisticsPage'
 import { ConfirmEmailPage } from '@/pages/ConfirmEmailPage'
+import { ForgotPasswordPage, ResetPasswordPage } from '@/pages/PasswordRecoveryPages'
 import { NotificationsPage } from '@/pages/NotificationsPage'
 import { RegisterPage } from '@/pages/RegisterPage'
 import { SelectOrganizationPage } from '@/pages/SelectOrganizationPage'
@@ -106,6 +110,7 @@ const router = createBrowserRouter([
               { path: 'sign-in', element: <SignInPage /> },
               { path: 'register', element: <RegisterPage /> },
               { path: 'invitation', element: <AcceptInvitationPage /> },
+              { path: 'forgot-password', element: <ForgotPasswordPage /> },
             ],
           },
         ],
@@ -113,7 +118,11 @@ const router = createBrowserRouter([
       {
         // An emailed link may be opened signed in or not, on any device: no guard either way.
         element: <AuthLayout />,
-        children: [{ path: 'confirm-email', element: <ConfirmEmailPage /> }],
+        children: [
+          { path: 'confirm-email', element: <ConfirmEmailPage /> },
+          { path: 'reset-password', element: <ResetPasswordPage /> },
+          { path: 'sign-out', element: <SignOutPage /> },
+        ],
       },
       {
         // The privacy notice and the terms of use are for everyone: the registration form links them.
@@ -131,6 +140,7 @@ const router = createBrowserRouter([
             element: <AuthLayout wide />,
             children: [
               { path: 'legal/accept', element: <AcceptLegalPage /> },
+              { path: 'account/security-setup', element: <SecuritySetupPage /> },
               { path: 'account/deletion', element: <DeletionPendingPage /> },
             ],
           },
@@ -176,6 +186,16 @@ const router = createBrowserRouter([
                             path: 'admin/access-requests',
                             element: <AdminAccessRequestsPage />,
                             handle: page('access-requests', { labelKey: 'nav.accessRequests' }),
+                          },
+                          {
+                            path: 'admin/access-reviews',
+                            element: <AdminAccessReviewsPage />,
+                            handle: page('access-reviews', { labelKey: 'nav.accessReviews' }),
+                          },
+                          {
+                            path: 'admin/access-reviews/:reviewId',
+                            element: <AdminAccessReviewsPage />,
+                            handle: page('access-reviews', { labelKey: 'nav.accessReviews' }),
                           },
                           {
                             path: 'admin/page-permissions',

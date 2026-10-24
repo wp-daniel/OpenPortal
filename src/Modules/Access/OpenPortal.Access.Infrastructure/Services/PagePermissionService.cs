@@ -216,19 +216,24 @@ internal sealed class PagePermissionEvaluator : IPagePermissionEvaluator
 {
     private readonly AccessDbContext _db;
     private readonly IPortalPageCatalog _catalog;
+    private readonly GroupGraph _graph;
 
-    public PagePermissionEvaluator(AccessDbContext db, IPortalPageCatalog catalog)
+    public PagePermissionEvaluator(AccessDbContext db, IPortalPageCatalog catalog, GroupGraph graph)
     {
         _db = db;
         _catalog = catalog;
+        _graph = graph;
     }
 
     public async Task<IReadOnlyList<string>> GetPagesAsync(Guid userId, CancellationToken cancellationToken)
     {
-        var keys = await _db.GroupMembers
+        // Subgroups count: a page granted to a group is open to the members of the groups inside it.
+        var groups = await _graph.GroupsOfUserAsync(userId, cancellationToken).ConfigureAwait(false);
+
+        var keys = await _db.PageGrants
             .AsNoTracking()
-            .Where(member => member.UserId == userId)
-            .Join(_db.PageGrants, member => member.GroupId, grant => grant.GroupId, (_, grant) => grant.PageKey)
+            .Where(grant => groups.Contains(grant.GroupId))
+            .Select(grant => grant.PageKey)
             .Distinct()
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -247,12 +252,20 @@ internal sealed class PagePermissionEvaluator : IPagePermissionEvaluator
             return [];
         }
 
-        return await _db.PageGrants
+        var groups = await _db.PageGrants
             .AsNoTracking()
             .Where(grant => keys.Contains(grant.PageKey))
-            .Join(_db.GroupMembers, grant => grant.GroupId, member => member.GroupId, (_, member) => member.UserId)
+            .Select(grant => grant.GroupId)
             .Distinct()
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+
+        var holders = new HashSet<Guid>();
+        foreach (var groupId in groups)
+        {
+            holders.UnionWith(await _graph.MembersOfGroupAsync(groupId, cancellationToken).ConfigureAwait(false));
+        }
+
+        return holders.ToList();
     }
 }

@@ -82,6 +82,10 @@ Installed from NuGet, not copied into this repository.
 | [Scalar](https://scalar.com) (`Scalar.AspNetCore`: the API reference at `/scalar`, including the browser script it embeds and serves) | MIT | © 2023-present Scalar |
 | [MailKit](https://github.com/jstedfast/MailKit) and [MimeKit](https://github.com/jstedfast/MimeKit) (account email over SMTP) | MIT | © 2013-present .NET Foundation and Contributors |
 | [Bouncy Castle](https://www.bouncycastle.org/csharp/) (`BouncyCastle.Cryptography`, through MimeKit) | MIT | © 2000-present The Legion of the Bouncy Castle Inc. |
+| [OpenTelemetry .NET](https://github.com/open-telemetry/opentelemetry-dotnet) and contrib instrumentations (`OpenTelemetry.*`, `Npgsql.OpenTelemetry`) | Apache-2.0 | © The OpenTelemetry Authors |
+| [StackExchange.Redis](https://github.com/StackExchange/StackExchange.Redis) (through `Microsoft.Extensions.Caching.StackExchangeRedis` and `Microsoft.AspNetCore.DataProtection.StackExchangeRedis`) | MIT | © 2014 Stack Exchange |
+| [RedisRateLimiting](https://github.com/cristipufu/aspnetcore-redis-rate-limiting) (`RedisRateLimiting`) | MIT | © Cristi Pufu |
+| [Pipelines.Sockets.Unofficial](https://github.com/mgravell/Pipelines.Sockets.Unofficial) (through StackExchange.Redis) | MIT | © 2018 Marc Gravell |
 
 The Docker image is built on Microsoft's `mcr.microsoft.com/dotnet/aspnet` image (MIT for the .NET parts; the
 Debian base carries its own package licenses) and uses `node` only to build the client, which does not ship in

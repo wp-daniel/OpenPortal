@@ -39,7 +39,7 @@ export function SecretDialog({ secret, onClose }: { secret: ApplicationSecret | 
         {
           OpenPortal: {
             ClientId: secret.application.clientId,
-            ClientSecret: secret.clientSecret,
+            ...(secret.clientSecret ? { ClientSecret: secret.clientSecret } : {}),
           },
         },
         null,
@@ -70,20 +70,29 @@ export function SecretDialog({ secret, onClose }: { secret: ApplicationSecret | 
 
         {secret && (
           <div className="grid gap-4">
-            <Alert>
-              <AlertTitle>{t('applications.secret.onceTitle')}</AlertTitle>
-              <AlertDescription>{t('applications.secret.onceDescription')}</AlertDescription>
-            </Alert>
+            {secret.clientSecret === null ? (
+              <Alert>
+                <AlertTitle>{t('applications.secret.publicTitle')}</AlertTitle>
+                <AlertDescription>{t('applications.secret.publicDescription')}</AlertDescription>
+              </Alert>
+            ) : (
+              <>
+                <Alert>
+                  <AlertTitle>{t('applications.secret.onceTitle')}</AlertTitle>
+                  <AlertDescription>{t('applications.secret.onceDescription')}</AlertDescription>
+                </Alert>
 
-            <div className="grid gap-2">
-              <Label htmlFor="client-secret">{t('applications.secret.label')}</Label>
-              <div className="flex gap-2">
-                <Input id="client-secret" readOnly value={secret.clientSecret} className="font-mono text-xs" onFocus={(event) => event.target.select()} />
-                <Button variant="outline" size="icon" aria-label={t('applications.secret.copy')} onClick={() => void copy(secret.clientSecret)}>
-                  {copied ? <Check /> : <Copy />}
-                </Button>
-              </div>
-            </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="client-secret">{t('applications.secret.label')}</Label>
+                  <div className="flex gap-2">
+                    <Input id="client-secret" readOnly value={secret.clientSecret} className="font-mono text-xs" onFocus={(event) => event.target.select()} />
+                    <Button variant="outline" size="icon" aria-label={t('applications.secret.copy')} onClick={() => void copy(secret.clientSecret ?? '')}>
+                      {copied ? <Check /> : <Copy />}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
 
             <div className="grid gap-2">
               <p className="text-muted-foreground text-sm">{t('applications.secret.settingsHint')}</p>

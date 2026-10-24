@@ -23,6 +23,7 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
     private readonly IAuditTrail _audit;
     private readonly UserGrantOperations _grants;
     private readonly IAccessUserMaintenance _maintenance;
+    private readonly GroupGraph _graph;
 
     public AccessAdministrationService(
         AccessDbContext db,
@@ -32,8 +33,10 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
         IClock clock,
         IAuditTrail audit,
         UserGrantOperations grants,
-        IAccessUserMaintenance maintenance)
+        IAccessUserMaintenance maintenance,
+        GroupGraph graph)
     {
+        _graph = graph;
         _db = db;
         _access = access;
         _directory = directory;
@@ -114,10 +117,12 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
             return Result<UserAccessDto>.Failure(guard.Error);
         }
 
-        var memberships = await _db.GroupMembers
+        // Every group the user is in, subgroups' parents included, so "via groups" explains inherited access too.
+        var effective = await _graph.GroupsOfUserAsync(userId, cancellationToken).ConfigureAwait(false);
+        var memberships = await _db.Groups
             .AsNoTracking()
-            .Where(member => member.UserId == userId)
-            .Join(_db.Groups, member => member.GroupId, group => group.Id, (_, group) => new GroupReferenceDto(group.Id, group.Name))
+            .Where(group => effective.Contains(group.Id))
+            .Select(group => new GroupReferenceDto(group.Id, group.Name))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -179,8 +184,14 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
         Guid applicationId,
         Guid userId,
         IReadOnlyList<string>? roles,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ExpiryChange? expiry = null)
     {
+        if (expiry?.ExpiresAtUtc is { } end && end <= _clock.UtcNow)
+        {
+            return Result.Failure(AccessErrors.ExpiryInPast);
+        }
+
         var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageUserGrants, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
@@ -193,7 +204,7 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
             return Result.Failure(AccessErrors.ApplicationNotFound);
         }
 
-        var granted = await _grants.GrantAsync(application, userId, roles, cancellationToken).ConfigureAwait(false);
+        var granted = await _grants.GrantAsync(application, userId, roles, notifyUser: true, cancellationToken, expiry).ConfigureAwait(false);
 
         return granted.IsSuccess ? Result.Success() : Result.Failure(granted.Error);
     }
@@ -221,8 +232,14 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
         Guid applicationId,
         Guid groupId,
         IReadOnlyList<string>? roles,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ExpiryChange? expiry = null)
     {
+        if (expiry?.ExpiresAtUtc is { } end && end <= _clock.UtcNow)
+        {
+            return Result.Failure(AccessErrors.ExpiryInPast);
+        }
+
         var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageGroupGrants, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
@@ -260,9 +277,15 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
         }
 
         var rolesChanged = roles is not null && grant.SetRoles(roles);
+        var expiryChanged = expiry is not null && grant.SetExpiry(expiry.ExpiresAtUtc);
 
         if (!created && !rolesChanged)
         {
+            if (expiryChanged)
+            {
+                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             return Result.Success();
         }
 
@@ -302,11 +325,8 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
 
         if (grant is not null)
         {
-            var members = await _db.GroupMembers
-                .Where(member => member.GroupId == groupId)
-                .Select(member => member.UserId)
-                .ToListAsync(cancellationToken)
-                .ConfigureAwait(false);
+            // The members of its subgroups held the application through it too.
+            var members = await _graph.MembersOfGroupAsync(groupId, cancellationToken).ConfigureAwait(false);
 
             var groupName = await _db.Groups
                 .Where(group => group.Id == groupId)

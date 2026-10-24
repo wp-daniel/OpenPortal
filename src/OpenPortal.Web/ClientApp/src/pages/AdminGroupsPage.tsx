@@ -5,7 +5,9 @@ import { z } from 'zod'
 import { accessApi, accessKeys, applicationsApi, groupsApi } from '@/api/access'
 import type { GroupDetail, GroupSummary } from '@/api/types'
 import { GroupPagesSection } from '@/components/access/GroupPagesSection'
-import { UserPicker, type PickedPrincipal } from '@/components/access/PrincipalPicker'
+import { GroupPicker, UserPicker, type PickedPrincipal } from '@/components/access/PrincipalPicker'
+import { formatDate } from '@/i18n/store'
+import { fromLocalInput } from '@/lib/dateInput'
 import { ApplicationStatusBadge } from '@/components/access/shared'
 import { useAccessRefresh } from '@/lib/access'
 import { FormField } from '@/components/FormField'
@@ -46,7 +48,7 @@ import { useI18n } from '@/i18n/useI18n'
 import { describeError, traceIdOf } from '@/lib/errors'
 import { reportFormError, zodFieldErrors } from '@/lib/forms'
 
-type GroupTab = 'details' | 'members' | 'applications' | 'pages'
+type GroupTab = 'details' | 'members' | 'subgroups' | 'applications' | 'pages'
 
 /** What the group dialog is showing: a new group, or an existing one on one of its tabs. */
 type DialogState = { readonly mode: 'create' } | { readonly mode: 'edit'; readonly groupId: string; readonly tab: GroupTab }
@@ -263,6 +265,10 @@ function GroupEditor({ groupId, initialTab, onClose }: { groupId: string; initia
             {t('groups.tab.members')}
             {count(group.data.members.length)}
           </TabsTrigger>
+          <TabsTrigger value="subgroups">
+            {t('groups.tab.subgroups')}
+            {count(group.data.subgroups?.length ?? 0)}
+          </TabsTrigger>
           <TabsTrigger value="applications">
             {t('groups.tab.applications')}
             {count(group.data.applications.length)}
@@ -282,6 +288,10 @@ function GroupEditor({ groupId, initialTab, onClose }: { groupId: string; initia
 
         <TabsContent value="members" className="pt-4">
           <GroupMembers group={group.data} />
+        </TabsContent>
+
+        <TabsContent value="subgroups" className="pt-4">
+          <GroupSubgroups group={group.data} />
         </TabsContent>
 
         <TabsContent value="applications" className="pt-4">
@@ -399,11 +409,13 @@ function GroupMembers({ group }: { group: GroupDetail }) {
   const { t } = useI18n()
   const refresh = useAccessRefresh()
   const [picked, setPicked] = useState<PickedPrincipal | null>(null)
+  const [until, setUntil] = useState('')
 
   const addMember = useMutation({
-    mutationFn: (userId: string) => groupsApi.addMember(group.id, userId),
+    mutationFn: (userId: string) => groupsApi.addMember(group.id, userId, fromLocalInput(until)),
     onSuccess: async (updated: GroupDetail) => {
       setPicked(null)
+      setUntil('')
       notify.success(t('groups.memberAdded'), updated.name)
       await refresh()
     },
@@ -425,6 +437,13 @@ function GroupMembers({ group }: { group: GroupDetail }) {
           {t('groups.sheet.add')}
         </Button>
       </div>
+      <div className="flex items-center gap-2">
+        <Label htmlFor="member-until" className="text-muted-foreground text-xs font-normal whitespace-nowrap">
+          {t('access.expiry.until')}
+        </Label>
+        <Input id="member-until" type="datetime-local" className="h-8 max-w-56 text-xs" value={until} onChange={(event) => setUntil(event.target.value)} />
+        <span className="text-muted-foreground text-xs">{t('access.expiry.hint')}</span>
+      </div>
 
       {group.members.length === 0 ? (
         <p className="text-muted-foreground text-sm">{t('groups.sheet.noMembers')}</p>
@@ -437,6 +456,11 @@ function GroupMembers({ group }: { group: GroupDetail }) {
                 <span className="truncate text-sm">{member.isKnown ? member.displayName : t('access.unknownUser')}</span>
                 <span className="text-muted-foreground truncate font-mono text-xs">{member.email}</span>
               </div>
+              {group.memberExpiries?.[member.id] && (
+                <Badge variant="warning" title={formatDate(group.memberExpiries[member.id], { dateStyle: 'full', timeStyle: 'short' })}>
+                  {t('access.expiry.badge', { date: formatDate(group.memberExpiries[member.id], { dateStyle: 'short' }) })}
+                </Badge>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -449,6 +473,65 @@ function GroupMembers({ group }: { group: GroupDetail }) {
             </li>
           ))}
         </ul>
+      )}
+    </section>
+  )
+}
+
+/** Groups inside this one (their members get what this group is given) and the groups it is inside. */
+function GroupSubgroups({ group }: { group: GroupDetail }) {
+  const { t } = useI18n()
+  const refresh = useAccessRefresh()
+  const [picked, setPicked] = useState<PickedPrincipal | null>(null)
+
+  const add = useMutation({
+    mutationFn: (childId: string) => groupsApi.addSubgroup(group.id, childId),
+    onSuccess: async () => {
+      setPicked(null)
+      await refresh()
+    },
+  })
+
+  const remove = useMutation({
+    mutationFn: (childId: string) => groupsApi.removeSubgroup(group.id, childId),
+    onSuccess: () => refresh(),
+  })
+
+  const subgroups = group.subgroups ?? []
+  const parents = group.parentGroups ?? []
+
+  return (
+    <section className="grid gap-3">
+      <p className="text-muted-foreground text-xs">{t('groups.subgroups.hint')}</p>
+      <div className="flex gap-2">
+        <div className="min-w-0 flex-1">
+          <GroupPicker value={picked} onChange={setPicked} exclude={[group.id, ...subgroups.map((child) => child.id), ...parents.map((parent) => parent.id)]} />
+        </div>
+        <Button disabled={!picked || add.isPending} onClick={() => picked && add.mutate(picked.id)}>
+          <Plus />
+          {t('groups.subgroups.add')}
+        </Button>
+      </div>
+
+      {subgroups.length === 0 ? (
+        <p className="text-muted-foreground text-sm">{t('groups.subgroups.none')}</p>
+      ) : (
+        <ul className="divide-y rounded-md border">
+          {subgroups.map((child) => (
+            <li key={child.id} className="flex items-center gap-3 px-3 py-2">
+              <span className="min-w-0 flex-1 truncate text-sm">{child.name}</span>
+              <Button variant="ghost" size="sm" aria-label={t('common.delete')} disabled={remove.isPending} onClick={() => remove.mutate(child.id)}>
+                <X />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {parents.length > 0 && (
+        <p className="text-muted-foreground text-xs">
+          {t('groups.subgroups.insideOf', { groups: parents.map((parent) => parent.name).join(', ') })}
+        </p>
       )}
     </section>
   )

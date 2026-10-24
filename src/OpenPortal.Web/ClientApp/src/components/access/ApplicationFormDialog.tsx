@@ -3,7 +3,7 @@ import { ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { z } from 'zod'
 import { applicationsApi } from '@/api/access'
-import type { ApplicationApiScope, ApplicationSecret, ApplicationSummary, GroupClaimMode, OrganizationMode } from '@/api/types'
+import type { ApplicationApiScope, ApplicationClientType, ApplicationSecret, ApplicationSummary, GroupClaimMode, OrganizationMode } from '@/api/types'
 import { FormField } from '@/components/FormField'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -30,7 +30,21 @@ import { linesToList } from '@/lib/access'
 
 type Field = 'clientId' | 'displayName' | 'description' | 'baseUrl' | 'redirectUris' | 'postLogoutRedirectUris' | 'roles'
 
-type FormTab = 'general' | 'roles' | 'access' | 'api'
+type FormTab = 'general' | 'roles' | 'access' | 'api' | 'webhook'
+
+/** The events an application can subscribe to (WebhookEventTypes on the server). */
+const WEBHOOK_EVENTS = [
+  'user.updated',
+  'user.deleted',
+  'access.granted',
+  'access.revoked',
+  'access.roles_changed',
+  'group.member_added',
+  'group.member_removed',
+  'organization.member_added',
+  'organization.member_removed',
+  'organization.member_role_changed',
+] as const
 
 const ORGANIZATION_MODES: readonly OrganizationMode[] = ['none', 'optional', 'required']
 
@@ -147,6 +161,11 @@ function ApplicationForm({
   const [apiScopes, setApiScopes] = useState<ReadonlySet<ApplicationApiScope>>(() => new Set(application?.apiScopes ?? []))
   const [allowAccessRequests, setAllowAccessRequests] = useState(application?.allowAccessRequests ?? false)
   const [organizations, setOrganizations] = useState<OrganizationMode>(application?.organizations ?? 'none')
+  const [clientType, setClientType] = useState<ApplicationClientType>(application?.clientType ?? 'confidential')
+  const [backChannelLogoutUri, setBackChannelLogoutUri] = useState(application?.backChannelLogoutUri ?? '')
+  const [webhookUrl, setWebhookUrl] = useState(application?.webhookUrl ?? '')
+  const [webhookEvents, setWebhookEvents] = useState<ReadonlySet<string>>(() => new Set(application?.webhookEvents ?? []))
+  const [webhookSecret, setWebhookSecret] = useState<string | null>(null)
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({})
 
   const schema = useMemo(
@@ -183,6 +202,22 @@ function ApplicationForm({
     apiScopes: API_SCOPES.map((entry) => entry.scope).filter((scope) => apiScopes.has(scope)),
     allowAccessRequests,
     organizations,
+    backChannelLogoutUri: backChannelLogoutUri.trim() === '' ? null : backChannelLogoutUri.trim(),
+    webhookUrl: webhookUrl.trim(),
+    webhookEvents: WEBHOOK_EVENTS.filter((event) => webhookEvents.has(event)),
+  })
+
+  const generateSecret = useMutation({
+    mutationFn: () => applicationsApi.generateWebhookSecret(application!.id),
+    onSuccess: (result) => {
+      setWebhookSecret(result.secret)
+      onSaved()
+    },
+  })
+
+  const testWebhook = useMutation({
+    mutationFn: () => applicationsApi.testWebhook(application!.id),
+    onSuccess: () => notify.success(t('applications.webhook.testQueued')),
   })
 
   /** Creating users implies managing access (the server enforces it too): the two boxes move together. */
@@ -209,7 +244,7 @@ function ApplicationForm({
         return null
       }
 
-      return applicationsApi.create({ clientId: clientId.trim(), ...body() })
+      return applicationsApi.create({ clientId: clientId.trim(), clientType, ...body() })
     },
     meta: { handlesErrors: true },
     onSuccess: (created) => {
@@ -275,6 +310,7 @@ function ApplicationForm({
             <TabsTrigger value="roles">{t('applications.tab.roles')}</TabsTrigger>
             <TabsTrigger value="access">{t('applications.tab.access')}</TabsTrigger>
             <TabsTrigger value="api">{t('applications.tab.api')}</TabsTrigger>
+            <TabsTrigger value="webhook">{t('applications.tab.webhook')}</TabsTrigger>
           </TabsList>
           <Separator className="-mt-2" />
 
@@ -337,6 +373,41 @@ function ApplicationForm({
                 onChange={(event) => setPostLogoutRedirectUris(event.target.value)}
               />
             </FormField>
+
+            <FormField
+              label={t('applications.form.backChannelLogoutUri')}
+              htmlFor="app-back-channel"
+              hint={t('applications.form.backChannelLogoutUriHint')}
+            >
+              <Input
+                type="url"
+                className="font-mono text-xs"
+                placeholder="https://crm.example.com/signout-backchannel"
+                value={backChannelLogoutUri}
+                onChange={(event) => setBackChannelLogoutUri(event.target.value)}
+              />
+            </FormField>
+
+            <fieldset className="grid gap-3">
+              <legend className="mb-1 text-sm font-medium">{t('applications.clientType.title')}</legend>
+              <RadioGroup
+                value={clientType}
+                onValueChange={(value) => setClientType(value as ApplicationClientType)}
+                className="gap-2"
+                disabled={isEdit}
+              >
+                {(['confidential', 'public'] as const).map((value) => (
+                  <div key={value} className="flex items-start gap-3">
+                    <RadioGroupItem value={value} id={`app-client-type-${value}`} className="mt-0.5" />
+                    <div className="grid gap-0.5">
+                      <Label htmlFor={`app-client-type-${value}`}>{t(`applications.clientType.${value}`)}</Label>
+                      <p className="text-muted-foreground text-xs">{t(`applications.clientType.${value}Hint`)}</p>
+                    </div>
+                  </div>
+                ))}
+              </RadioGroup>
+              {isEdit && <p className="text-muted-foreground text-xs">{t('applications.clientType.locked')}</p>}
+            </fieldset>
           </TabsContent>
 
           <TabsContent value="roles" className="grid items-start gap-6 pt-4">
@@ -468,6 +539,7 @@ function ApplicationForm({
             <fieldset className="grid gap-3">
               <legend className="mb-1 text-sm font-medium">{t('applications.api.title')}</legend>
               <p className="text-muted-foreground text-xs">{t('applications.api.hint')}</p>
+              {clientType === 'public' && <p className="text-muted-foreground text-xs">{t('applications.api.publicClient')}</p>}
 
               {API_SCOPES.map(({ scope, key }) => (
                 <div key={scope} className="flex items-start gap-3">
@@ -475,6 +547,7 @@ function ApplicationForm({
                     id={`app-api-${key}`}
                     className="mt-0.5"
                     checked={apiScopes.has(scope)}
+                    disabled={clientType === 'public'}
                     onCheckedChange={(checked) => toggleApiScope(scope, checked === true)}
                   />
                   <div className="grid gap-0.5">
@@ -494,6 +567,75 @@ function ApplicationForm({
                 <ExternalLink className="size-3" />
               </a>
             </p>
+          </TabsContent>
+
+          <TabsContent value="webhook" className="grid items-start gap-5 pt-4">
+            <p className="text-muted-foreground text-xs">{t('applications.webhook.hint')}</p>
+
+            <FormField label={t('applications.webhook.url')} htmlFor="app-webhook-url" hint={t('applications.webhook.urlHint')}>
+              <Input
+                type="url"
+                className="font-mono text-xs"
+                placeholder="https://crm.example.com/hooks/openportal"
+                value={webhookUrl}
+                onChange={(event) => setWebhookUrl(event.target.value)}
+              />
+            </FormField>
+
+            <fieldset className="grid gap-2">
+              <legend className="mb-1 text-sm font-medium">{t('applications.webhook.events')}</legend>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {WEBHOOK_EVENTS.map((event) => (
+                  <div key={event} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`app-webhook-${event}`}
+                      checked={webhookEvents.has(event)}
+                      onCheckedChange={(checked) =>
+                        setWebhookEvents((current) => {
+                          const next = new Set(current)
+                          if (checked === true) next.add(event)
+                          else next.delete(event)
+                          return next
+                        })
+                      }
+                    />
+                    <Label htmlFor={`app-webhook-${event}`} className="font-mono text-xs font-normal">
+                      {event}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </fieldset>
+
+            {isEdit ? (
+              <div className="grid gap-3 rounded-lg border p-4">
+                <p className="text-sm">
+                  {application.hasWebhookSecret ? t('applications.webhook.secretSet') : t('applications.webhook.secretMissing')}
+                </p>
+                {webhookSecret && (
+                  <div className="grid gap-1">
+                    <p className="text-muted-foreground text-xs">{t('applications.webhook.secretOnce')}</p>
+                    <Input readOnly value={webhookSecret} className="font-mono text-xs" onFocus={(event) => event.target.select()} />
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={() => generateSecret.mutate()} disabled={generateSecret.isPending}>
+                    {generateSecret.isPending && <Loader2 className="animate-spin" />}
+                    {application.hasWebhookSecret ? t('applications.webhook.rotate') : t('applications.webhook.generate')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => testWebhook.mutate()}
+                    disabled={testWebhook.isPending || !application.webhookUrl || !(application.hasWebhookSecret || webhookSecret)}
+                  >
+                    {t('applications.webhook.test')}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-xs">{t('applications.webhook.afterCreate')}</p>
+            )}
           </TabsContent>
         </Tabs>
       </form>

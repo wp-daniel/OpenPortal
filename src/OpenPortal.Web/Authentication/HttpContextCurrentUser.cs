@@ -68,6 +68,8 @@ internal sealed class HttpContextCurrentUser : ICurrentUser
 
     public Guid? PersonalAccessTokenId => GuidClaim(PortalClaimTypes.PersonalAccessTokenId);
 
+    public IReadOnlyList<string> AuthenticationMethods => SessionAuthentication.Methods(Principal);
+
     private Guid? GuidClaim(string type) =>
         Guid.TryParse(Principal?.FindFirstValue(type), out var value) ? value : null;
 }

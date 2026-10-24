@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using OpenPortal.Access.Domain.Applications;
 using OpenPortal.Web.Authentication;
+using OpenPortal.Web.Authorization;
+using OpenPortal.Web.Observability;
 using OpenPortal.Web.Security;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
@@ -43,6 +45,7 @@ namespace OpenPortal.Web.Oidc;
 /// </summary>
 [ApiExplorerSettings(IgnoreApi = true)]
 [IgnoreAntiforgeryToken]
+[AllowDuringTwoFactorSetup]
 public sealed class ConnectController : ControllerBase
 {
     /// <summary>The claim carrying group names (not in OpenIddict's constants; the name most applications expect).</summary>
@@ -57,6 +60,12 @@ public sealed class ConnectController : ControllerBase
     /// <summary>The authorization request parameter naming the organization (slug or id) to sign in for.</summary>
     public const string OrganizationParameter = "organization";
 
+    /// <summary>The <c>acr_values</c> an application sends to require a sign-in with two factors.</summary>
+    public const string MultiFactorAcr = "mfa";
+
+    /// <summary>OpenID Connect error for an authentication that cannot meet the requested <c>acr_values</c>.</summary>
+    public const string UnmetAuthenticationRequirements = "unmet_authentication_requirements";
+
     private readonly IAccessEvaluator _access;
     private readonly IUserLookupService _users;
     private readonly PortalAuthentication _authentication;
@@ -64,6 +73,9 @@ public sealed class ConnectController : ControllerBase
     private readonly IOpenIddictAuthorizationManager _authorizations;
     private readonly IAuditTrail _audit;
     private readonly ILegalDocumentService _legal;
+    private readonly ITwoFactorPolicy _twoFactor;
+    private readonly BackChannelLogoutNotifier _logout;
+    private readonly Microsoft.AspNetCore.Antiforgery.IAntiforgery _antiforgery;
 
     public ConnectController(
         IAccessEvaluator access,
@@ -72,8 +84,14 @@ public sealed class ConnectController : ControllerBase
         IOpenIddictApplicationManager applications,
         IOpenIddictAuthorizationManager authorizations,
         IAuditTrail audit,
-        ILegalDocumentService legal)
+        ILegalDocumentService legal,
+        ITwoFactorPolicy twoFactor,
+        BackChannelLogoutNotifier logout,
+        Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery)
     {
+        _twoFactor = twoFactor;
+        _logout = logout;
+        _antiforgery = antiforgery;
         _audit = audit;
         _legal = legal;
         _access = access;
@@ -162,6 +180,39 @@ public sealed class ConnectController : ControllerBase
             return Redirect($"{Request.PathBase}/legal/accept?returnUrl={Uri.EscapeDataString(ThisRequest())}");
         }
 
+        // An account the portal requires to have a second factor sets one up before it opens anything.
+        if (await _twoFactor.IsSetupRequiredAsync(user.Id, cancellationToken).ConfigureAwait(false))
+        {
+            if (request.HasPromptValue(PromptValues.None))
+            {
+                return Refuse(Errors.InteractionRequired, "The user must set up a second factor first.");
+            }
+
+            return Redirect($"{Request.PathBase}/account/security-setup?returnUrl={Uri.EscapeDataString(ThisRequest())}");
+        }
+
+        // The application asked for a two-factor sign-in (acr_values=mfa) and this session had only one.
+        var methods = SessionAuthentication.Methods(session.Principal);
+        if (request.GetAcrValues().Contains(MultiFactorAcr, StringComparer.Ordinal)
+            && !methods.Contains(AuthenticationMethods.MultiFactor, StringComparer.Ordinal))
+        {
+            await _audit.RecordAsync(
+                    AuditEvent.Failed(
+                        OidcAuditActions.SignIn,
+                        ApplicationSubject(request.ClientId!, null),
+                        new Dictionary<string, string?> { ["reason"] = "mfa_required" }),
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            if (request.HasPromptValue(PromptValues.None))
+            {
+                return Refuse(UnmetAuthenticationRequirements, "The application requires a sign-in with two factors.");
+            }
+
+            var clientName = Uri.EscapeDataString(request.ClientId ?? string.Empty);
+            return Redirect($"{Request.PathBase}/access-denied?reason=mfa&client={clientName}");
+        }
+
         var decision = await _access.EvaluateAsync(user.Id, request.ClientId!, cancellationToken).ConfigureAwait(false);
         if (!decision.Allowed)
         {
@@ -172,6 +223,8 @@ public sealed class ConnectController : ControllerBase
                         new Dictionary<string, string?> { ["reason"] = "access_denied" }),
                     cancellationToken)
                 .ConfigureAwait(false);
+
+            PortalTelemetry.ApplicationSignIns.Add(1, new KeyValuePair<string, object?>("outcome", "access_denied"));
 
             // A page of the portal rather than an error sent back to the application: the user is better off
             // being told plainly, and the application has nothing useful to do with "access_denied" anyway.
@@ -228,7 +281,7 @@ public sealed class ConnectController : ControllerBase
         // The application API scopes belong to the application's own token: a user's token never carries them,
         // even when the client is allowed to request them.
         var scopes = request.GetScopes().Where(scope => !ApplicationApiScopes.IsKnown(scope));
-        var identity = BuildIdentity(user, scopes, decision, organization.Organization);
+        var identity = BuildIdentity(user, scopes, decision, organization.Organization, methods);
 
         // A permanent authorization ties the refresh tokens to (user, client), which is what revocation
         // targets when access is withdrawn.
@@ -262,6 +315,8 @@ public sealed class ConnectController : ControllerBase
                     signInDetails.Count > 0 ? signInDetails : null),
                 cancellationToken)
             .ConfigureAwait(false);
+
+        PortalTelemetry.ApplicationSignIns.Add(1, new KeyValuePair<string, object?>("outcome", "success"));
 
         return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
@@ -327,8 +382,15 @@ public sealed class ConnectController : ControllerBase
 
         // Rebuilt from the current account and grants, so a renamed user, a changed email or a role given or
         // taken away reaches the application at its next refresh.
-        var identity = BuildIdentity(user, stored.Principal!.GetScopes(), decision, organization.Organization);
+        var identity = BuildIdentity(
+            user,
+            stored.Principal!.GetScopes(),
+            decision,
+            organization.Organization,
+            stored.Principal!.GetClaims(AuthenticationMethods.ClaimType));
         identity.SetAuthorizationId(stored.Principal!.GetAuthorizationId());
+
+        PortalTelemetry.TokensIssued.Add(1, new KeyValuePair<string, object?>("grant", request.GrantType));
 
         return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
@@ -390,15 +452,53 @@ public sealed class ConnectController : ControllerBase
         return Ok(claims);
     }
 
+    /// <summary>The form field the portal's confirmation page adds when the user agreed to sign out.</summary>
+    public const string ConfirmSignOutParameter = "confirm";
+
     /// <summary>
     /// Ends the portal session and returns to the application's registered post-logout URI (OpenIddict
     /// checks it against the client) or, without one, to the portal's sign-in page.
+    /// <para>
+    /// A request any site could make cannot end a session on its own (logout CSRF): it needs an
+    /// <c>id_token_hint</c> naming the signed-in user (OpenIddict has validated its signature), or the user's own
+    /// confirmation on the portal's <c>/sign-out</c> page, which posts back here with the antiforgery token.
+    /// The applications the user signed in to are told through back-channel logout.
+    /// </para>
     /// </summary>
     [HttpGet("~/connect/endsession")]
     [HttpPost("~/connect/endsession")]
     public async Task<IActionResult> EndSessionAsync(CancellationToken cancellationToken)
     {
-        await _authentication.SignOutAsync(cancellationToken).ConfigureAwait(false);
+        var session = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme).ConfigureAwait(false);
+        var userId = session.Succeeded ? session.Principal?.FindFirstValue(ClaimTypes.NameIdentifier) : null;
+
+        if (userId is not null)
+        {
+            var hint = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme).ConfigureAwait(false);
+            var hinted = string.Equals(hint.Principal?.GetClaim(Claims.Subject), userId, StringComparison.Ordinal);
+
+            var confirmed = HttpMethods.IsPost(Request.Method)
+                && Request.HasFormContentType
+                && string.Equals(Request.Form[ConfirmSignOutParameter], "true", StringComparison.Ordinal)
+                && await _antiforgery.IsRequestValidAsync(HttpContext).ConfigureAwait(false);
+
+            if (!hinted && !confirmed)
+            {
+                var parameters = (Request.HasFormContentType ? Request.Form.AsEnumerable() : Request.Query.AsEnumerable())
+                    .Where(pair => pair.Key != ConfirmSignOutParameter && pair.Key != "__RequestVerificationToken")
+                    .ToList();
+
+                return Redirect($"{Request.PathBase}/sign-out{QueryString.Create(parameters)}");
+            }
+
+            // A support session ends itself only; it never signs the account holder out of their applications.
+            if (Guid.TryParse(userId, out var id) && session.Principal?.FindFirst(PortalClaimTypes.ImpersonatorId) is null)
+            {
+                await _logout.NotifyAsync(id, cancellationToken).ConfigureAwait(false);
+            }
+
+            await _authentication.SignOutAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         return SignOut(
             new AuthenticationProperties { RedirectUri = $"{Request.PathBase}/sign-in" },
@@ -444,6 +544,8 @@ public sealed class ConnectController : ControllerBase
         identity.SetScopes(scopes);
         identity.SetDestinations(_ => [Destinations.AccessToken]);
 
+        PortalTelemetry.TokensIssued.Add(1, new KeyValuePair<string, object?>("grant", GrantTypes.ClientCredentials));
+
         return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
 
@@ -488,25 +590,30 @@ public sealed class ConnectController : ControllerBase
         return found;
     }
 
-    private Task RecordRefusalAsync(
+    private async Task RecordRefusalAsync(
         Guid userId,
         string? email,
         string clientId,
         string? applicationName,
         string reason,
-        CancellationToken cancellationToken) =>
-        _audit.RecordAsync(
-            new AuditEvent
-            {
-                Action = OidcAuditActions.TokenRefused,
-                Outcome = AuditOutcome.Failure,
+        CancellationToken cancellationToken)
+    {
+        PortalTelemetry.TokensRefused.Add(1, new KeyValuePair<string, object?>("reason", reason));
 
-                // Called by the application's server, not the user's browser, so the user is named explicitly.
-                Actor = new AuditSubject(AuditSubjectTypes.User, userId.ToString(), email),
-                Target = ApplicationSubject(clientId, applicationName),
-                Details = new Dictionary<string, string?> { ["reason"] = reason },
-            },
-            cancellationToken);
+        await _audit.RecordAsync(
+                new AuditEvent
+                {
+                    Action = OidcAuditActions.TokenRefused,
+                    Outcome = AuditOutcome.Failure,
+
+                    // Called by the application's server, not the user's browser, so the user is named explicitly.
+                    Actor = new AuditSubject(AuditSubjectTypes.User, userId.ToString(), email),
+                    Target = ApplicationSubject(clientId, applicationName),
+                    Details = new Dictionary<string, string?> { ["reason"] = reason },
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
 
     private static AuditSubject ApplicationSubject(string clientId, string? applicationName) =>
         new(AuditSubjectTypes.Application, clientId, applicationName);
@@ -515,7 +622,8 @@ public sealed class ConnectController : ControllerBase
         UserReferenceDto user,
         IEnumerable<string> scopes,
         AccessDecision decision,
-        OrganizationMembershipDto? organization)
+        OrganizationMembershipDto? organization,
+        IEnumerable<string> authenticationMethods)
     {
         var identity = new ClaimsIdentity(
             authenticationType: TokenValidationParameters.DefaultAuthenticationType,
@@ -542,6 +650,10 @@ public sealed class ConnectController : ControllerBase
                 .SetClaim(OrganizationRoleClaim, organization.Role);
         }
 
+        // How the user signed in to the portal (RFC 8176), so an application can tell a two-factor sign-in apart.
+        // Kept from the original sign-in on every refresh.
+        identity.SetClaims(AuthenticationMethods.ClaimType, [.. authenticationMethods.Distinct(StringComparer.Ordinal)]);
+
         identity.SetScopes(scopes);
         identity.SetDestinations(claim => DestinationsFor(claim, identity));
 
@@ -566,7 +678,7 @@ public sealed class ConnectController : ControllerBase
             _ => null,
         };
 
-        if (claim.Type == Claims.Subject || (scope is not null && identity.HasScope(scope)))
+        if (claim.Type is Claims.Subject or AuthenticationMethods.ClaimType || (scope is not null && identity.HasScope(scope)))
         {
             yield return Destinations.IdentityToken;
         }

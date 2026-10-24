@@ -30,6 +30,15 @@ public interface IAuthenticationService
     Task<Result> SignInWithTwoFactorAsync(TwoFactorLoginRequest request, CancellationToken cancellationToken);
 
     /// <summary>Terminates the current session and clears its authentication cookie.</summary>
+    /// <summary>
+    /// The <c>publicKey</c> options for <c>navigator.credentials.get()</c>, as JSON: a challenge for any passkey of
+    /// this portal (the browser lets the person pick one), so no address is needed.
+    /// </summary>
+    Task<Result<string>> PasskeyRequestOptionsAsync(CancellationToken cancellationToken);
+
+    /// <summary>Signs in with a passkey. A verified passkey is both factors at once: no code is asked for.</summary>
+    Task<Result> SignInWithPasskeyAsync(PasskeySignInRequest request, CancellationToken cancellationToken);
+
     Task SignOutAsync(CancellationToken cancellationToken);
 
     /// <summary>

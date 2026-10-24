@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Access.Application.Auditing;
+using OpenPortal.Access.Application.Contracts;
 using OpenPortal.Access.Domain;
 using OpenPortal.Access.Domain.Applications;
 using OpenPortal.Access.Domain.Grants;
@@ -61,7 +62,8 @@ internal sealed class UserGrantOperations
         Guid userId,
         IReadOnlyList<string>? roles,
         bool notifyUser,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ExpiryChange? expiry = null)
     {
         roles = NormaliseRoles(roles);
         if (roles is not null && !roles.All(application.HasRole))
@@ -87,10 +89,16 @@ internal sealed class UserGrantOperations
         }
 
         var rolesChanged = roles is not null && grant.SetRoles(roles);
+        var expiryChanged = expiry is not null && grant.SetExpiry(expiry.ExpiresAtUtc);
 
         if (!created && !rolesChanged)
         {
-            return Result<bool>.Success(false);
+            if (expiryChanged)
+            {
+                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            return Result<bool>.Success(expiryChanged);
         }
 
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

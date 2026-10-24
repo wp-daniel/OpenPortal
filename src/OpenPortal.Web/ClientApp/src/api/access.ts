@@ -26,6 +26,12 @@ export const applicationsApi = {
 
   regenerateSecret: (id: string) => api.post<ApplicationSecret>(`/api/admin/applications/${id}/secret`, {}),
 
+  /** A new webhook signing secret (`whsec_…`), shown once. */
+  generateWebhookSecret: (id: string) => api.post<{ secret: string }>(`/api/admin/applications/${id}/webhook/secret`, {}),
+
+  /** Queues a `webhook.test` event; the delivery shows in the delivery queue. */
+  testWebhook: (id: string) => api.post<void>(`/api/admin/applications/${id}/webhook/test`, {}),
+
   applyManifest: (id: string) => api.post<ApplicationSummary>(`/api/admin/applications/${id}/apply-manifest`, {}),
 
   disable: (id: string) => api.post<ApplicationSummary>(`/api/admin/applications/${id}/disable`, {}),
@@ -47,7 +53,10 @@ export const groupsApi = {
 
   remove: (id: string) => api.delete<void>(`/api/admin/groups/${id}`),
 
-  addMember: (id: string, userId: string) => api.put<GroupDetail>(`/api/admin/groups/${id}/members/${userId}`, {}),
+  addMember: (id: string, userId: string, expiresAtUtc: string | null = null) =>
+    api.put<GroupDetail>(`/api/admin/groups/${id}/members/${userId}`, { expiresAtUtc }),
+  addSubgroup: (id: string, childId: string) => api.put<GroupDetail>(`/api/admin/groups/${id}/subgroups/${childId}`, {}),
+  removeSubgroup: (id: string, childId: string) => api.delete<GroupDetail>(`/api/admin/groups/${id}/subgroups/${childId}`),
 
   removeMember: (id: string, userId: string) => api.delete<GroupDetail>(`/api/admin/groups/${id}/members/${userId}`),
 }
@@ -59,14 +68,20 @@ export const accessApi = {
   user: (userId: string, signal?: AbortSignal) => api.get<UserAccess>(`/api/admin/access/users/${userId}`, signal),
 
   /** Without `roles` an existing grant keeps its roles; with them, the grant carries exactly those. */
-  grantUser: (applicationId: string, userId: string, roles?: readonly string[]) =>
-    api.put<void>(`/api/admin/access/applications/${applicationId}/users/${userId}`, roles ? { roles } : {}),
+  grantUser: (applicationId: string, userId: string, roles?: readonly string[], expiresAtUtc?: string | null) =>
+    api.put<void>(`/api/admin/access/applications/${applicationId}/users/${userId}`, {
+      ...(roles ? { roles } : {}),
+      ...(expiresAtUtc ? { expiresAtUtc } : {}),
+    }),
 
   revokeUser: (applicationId: string, userId: string) =>
     api.delete<void>(`/api/admin/access/applications/${applicationId}/users/${userId}`),
 
-  grantGroup: (applicationId: string, groupId: string, roles?: readonly string[]) =>
-    api.put<void>(`/api/admin/access/applications/${applicationId}/groups/${groupId}`, roles ? { roles } : {}),
+  grantGroup: (applicationId: string, groupId: string, roles?: readonly string[], expiresAtUtc?: string | null) =>
+    api.put<void>(`/api/admin/access/applications/${applicationId}/groups/${groupId}`, {
+      ...(roles ? { roles } : {}),
+      ...(expiresAtUtc ? { expiresAtUtc } : {}),
+    }),
 
   revokeGroup: (applicationId: string, groupId: string) =>
     api.delete<void>(`/api/admin/access/applications/${applicationId}/groups/${groupId}`),

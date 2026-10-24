@@ -42,6 +42,7 @@ internal sealed class AccessAdminAuthorization : IAccessAdminAuthorization
             AccessOperation.ListOrganizations => [PortalPages.Organizations, PortalPages.Users],
             AccessOperation.ManageOrganizations => [PortalPages.Organizations],
             AccessOperation.ViewStatistics => [PortalPages.Statistics],
+            AccessOperation.ReviewAccess => [PortalPages.AccessReviews],
 
             // Granting pages is never delegated: whoever could would be able to grant themselves anything.
             AccessOperation.ManagePagePermissions => [],
@@ -187,4 +188,21 @@ internal sealed class PortalUserPageSource : IUserPageSource
             ? PortalPages.All.Select(page => page.Key).ToList()
             : await _evaluator.GetPagesAsync(userId, cancellationToken).ConfigureAwait(false);
     }
+}
+
+/// <summary>
+/// Answers the Notifications module's question for email delivery (SMTP settings, the delivery queue):
+/// administrators only, like the other portal settings, since the SMTP password is a credential.
+/// </summary>
+internal sealed class DeliveryAdministrationAuthorization : IDeliveryAdministrationAuthorization
+{
+    private readonly CurrentPagePermissions _permissions;
+
+    public DeliveryAdministrationAuthorization(CurrentPagePermissions permissions)
+    {
+        _permissions = permissions;
+    }
+
+    public Task<Result> EnsureCanManageAsync(CancellationToken cancellationToken) =>
+        Task.FromResult(_permissions.IsAdministrator ? Result.Success() : Result.Failure(OutboxErrors.ManageForbidden));
 }
