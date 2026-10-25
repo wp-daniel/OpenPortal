@@ -116,6 +116,15 @@ public sealed class CreateUserRequest : UserDetailsRequest
     public bool IsAdministrator { get; init; }
 }
 
+/// <summary>The address an administrator gives an account.</summary>
+public sealed class ChangeUserEmailRequest
+{
+    [Required(AllowEmptyStrings = false, ErrorMessage = "validation.email.required")]
+    [EmailAddress(ErrorMessage = "validation.email.invalid")]
+    [StringLength(256, ErrorMessage = "validation.email.max")]
+    public string Email { get; init; } = string.Empty;
+}
+
 /// <summary>A new ordinary account created on someone else's behalf, never an administrator.</summary>
 public sealed class ProvisionUserRequest : UserDetailsRequest
 {

@@ -25,6 +25,24 @@ internal sealed class IdentityUserLookupService : IUserLookupService
         return users.Count == 0 ? null : users[0];
     }
 
+    public async Task<UserClaimsProfileDto?> FindClaimsProfileAsync(Guid userId, CancellationToken cancellationToken) =>
+        await _userManager.Users
+            .AsNoTracking()
+            .Where(user => user.Id == userId)
+            .Select(user => new UserClaimsProfileDto(
+                user.FirstName,
+                user.LastName,
+                user.Language,
+                user.PhoneNumber,
+                user.PhoneNumberConfirmed,
+                user.AddressLine,
+                user.City,
+                user.PostalCode,
+                user.Country,
+                user.UpdatedAtUtc ?? user.CreatedAtUtc))
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
     public async Task<UserReferenceDto?> FindByEmailAsync(string email, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(email))

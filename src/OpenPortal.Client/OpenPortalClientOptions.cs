@@ -82,6 +82,19 @@ public sealed class OpenPortalClientOptions
     /// sign in for a given organization, add <c>organization=&lt;slug&gt;</c> to the challenge's parameters.
     /// </summary>
     public bool RequestOrganization { get; set; } = true;
+
+    /// <summary>Asks for the <c>phone</c> scope: <c>phone_number</c> and <c>phone_number_verified</c>, when the user has a number.</summary>
+    public bool RequestPhone { get; set; }
+
+    /// <summary>Asks for the <c>address</c> scope: the user's postal <c>address</c> (a JSON object), when they have one.</summary>
+    public bool RequestAddress { get; set; }
+
+    /// <summary>
+    /// Sends <c>max_age</c>: a user whose last sign-in to the portal is older than this many minutes proves who they are
+    /// again before coming back (0 asks every time). The identity token's <c>auth_time</c> says when they did. Null
+    /// (the default) accepts any portal session.
+    /// </summary>
+    public int? MaxAgeMinutes { get; set; }
 }
 
 /// <summary>A role the application checks, as it is announced to the portal.</summary>

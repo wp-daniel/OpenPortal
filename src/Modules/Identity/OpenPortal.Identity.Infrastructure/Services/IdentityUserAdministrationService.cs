@@ -617,6 +617,98 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         return await _erasure.EraseAsync(lookup.Value, actor: null, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<Result<UserSummaryDto>> ChangeEmailAsync(Guid userId, ChangeUserEmailRequest request, CancellationToken cancellationToken)
+    {
+        var guard = await _guard.EnsureCanAsync(UserAdministrationOperation.ManageUsers, cancellationToken).ConfigureAwait(false);
+        if (guard.IsFailure)
+        {
+            return Result<UserSummaryDto>.Failure(guard.Error);
+        }
+
+        ArgumentNullException.ThrowIfNull(request);
+
+        var lookup = await _userLookup.FindAsync(userId, cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
+        {
+            return Result<UserSummaryDto>.Failure(lookup.Error);
+        }
+
+        var user = lookup.Value;
+        var changeable = await _guard.EnsureMayChangeAsync(user).ConfigureAwait(false);
+        if (changeable.IsFailure)
+        {
+            return Result<UserSummaryDto>.Failure(changeable.Error);
+        }
+
+        var email = request.Email.Trim();
+        if (string.Equals(email, user.Email, StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<UserSummaryDto>.Failure(UserErrors.EmailUnchanged);
+        }
+
+        var owner = await _userManager.FindByEmailAsync(email).ConfigureAwait(false);
+        if (owner is not null && owner.Id != user.Id)
+        {
+            return Result<UserSummaryDto>.Failure(UserErrors.DuplicateEmail);
+        }
+
+        var previous = user.Email!;
+        user.ChangeEmail(email, _clock.UtcNow);
+
+        // The address is also the user name; rotating the stamp saves both, validated as unique.
+        await _userManager.UpdateNormalizedEmailAsync(user).ConfigureAwait(false);
+        await _userManager.UpdateNormalizedUserNameAsync(user).ConfigureAwait(false);
+        var saved = await _userManager.UpdateSecurityStampAsync(user).ConfigureAwait(false);
+        if (!saved.Succeeded)
+        {
+            return Result<UserSummaryDto>.Failure(saved.ToError(UserErrors.SaveFailed));
+        }
+
+        // The owner signs in again with the new address; an administrator changing their own keeps this session.
+        var self = _currentUser.UserId == user.Id;
+        await _sessions.EndAllAsync(user.Id, self ? _currentUser.SessionId : null, SessionEndReason.Revoked, cancellationToken).ConfigureAwait(false);
+
+        await _audit.RecordAsync(
+                AuditEvent.Succeeded(
+                    IdentityAuditActions.UserEmailChanged,
+                    user.ToAuditSubject(),
+                    new Dictionary<string, string?> { ["from"] = previous, ["to"] = email }),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        await _notifier.NotifyAsync(
+                new Notice
+                {
+                    Type = IdentityNotificationTypes.EmailChanged,
+                    Audience = NoticeAudience.Users(user.Id),
+                    Parameters = new Dictionary<string, string?> { ["email"] = email },
+                    Link = "/account?tab=security",
+                    Security = true,
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        // Both mailboxes hear of it: the old one so a change its owner did not expect stands out, the new one so its
+        // owner knows it now opens the account.
+        foreach (var recipient in new[] { previous, email })
+        {
+            await _messaging.SendAsync(
+                    new AccountMessage(
+                        AccountMessageKinds.EmailChanged,
+                        recipient,
+                        user.DisplayName,
+                        user.Language,
+                        "/account?tab=security",
+                        new Dictionary<string, string?> { ["name"] = user.FirstName, ["email"] = email }),
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        var roles = await _userManager.GetRolesAsync(user).ConfigureAwait(false);
+
+        return Result<UserSummaryDto>.Success(ToSummary(user, roles.ToList(), _clock.UtcNow));
+    }
+
     /// <summary>Tells the account's owner about a change to it, linking to their security settings.</summary>
     private Task NotifyAsync(Guid userId, string type, CancellationToken cancellationToken) =>
         _notifier.NotifyAsync(

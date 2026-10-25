@@ -26,6 +26,8 @@ public sealed partial class WebhookAuditTrail : IAuditTrail
         {
             [IdentityAuditActions.UserUpdated] = (WebhookEventTypes.UserUpdated, Audience.User),
             [IdentityAuditActions.ProfileUpdated] = (WebhookEventTypes.UserUpdated, Audience.User),
+            [IdentityAuditActions.EmailChanged] = (WebhookEventTypes.UserUpdated, Audience.User),
+            [IdentityAuditActions.UserEmailChanged] = (WebhookEventTypes.UserUpdated, Audience.User),
             [IdentityAuditActions.UserDeleted] = (WebhookEventTypes.UserDeleted, Audience.User),
             [AccessAuditActions.UserGranted] = (WebhookEventTypes.AccessGranted, Audience.Application),
             [AccessAuditActions.GroupGranted] = (WebhookEventTypes.AccessGranted, Audience.Application),

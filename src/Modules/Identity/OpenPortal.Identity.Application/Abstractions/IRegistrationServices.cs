@@ -109,6 +109,18 @@ public static class AccountMessageKinds
 
     /// <summary>Sent after the password changed, by its owner or through a reset link. Values: <c>name</c>.</summary>
     public const string PasswordChanged = "password_changed";
+
+    /// <summary>To the new address, with the link that makes it the sign-in address. Values: <c>name</c>, <c>email</c>.</summary>
+    public const string EmailChange = "email_change";
+
+    /// <summary>
+    /// To an address another account asked for while it already belongs to an account: nothing changed. Values:
+    /// <c>email</c>.
+    /// </summary>
+    public const string EmailChangeConflict = "email_change_conflict";
+
+    /// <summary>To the previous address (and, when an administrator made the change, the new one). Values: <c>name</c>, <c>email</c>.</summary>
+    public const string EmailChanged = "email_changed";
 }
 
 /// <summary>One email about an account.</summary>

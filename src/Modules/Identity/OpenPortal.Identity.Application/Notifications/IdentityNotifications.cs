@@ -18,6 +18,9 @@ public static class IdentityNotificationTypes
     /// <summary>To the user: an administrator set a new password on their account.</summary>
     public const string PasswordReset = "account.password_reset";
 
+    /// <summary>To the user: an administrator changed the address they sign in with (<c>email</c>).</summary>
+    public const string EmailChanged = "account.email_changed";
+
     /// <summary>To the user: an administrator turned their two-factor authentication off.</summary>
     public const string TwoFactorReset = "account.two_factor_reset";
 

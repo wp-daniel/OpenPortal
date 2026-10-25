@@ -26,6 +26,7 @@ import { AdminInvitationsPage } from '@/pages/AdminInvitationsPage'
 import { AdminOrganizationsPage } from '@/pages/AdminOrganizationsPage'
 import { AdminStatisticsPage } from '@/pages/AdminStatisticsPage'
 import { ConfirmEmailPage } from '@/pages/ConfirmEmailPage'
+import { ConfirmEmailChangePage } from '@/pages/ConfirmEmailChangePage'
 import { ForgotPasswordPage, ResetPasswordPage } from '@/pages/PasswordRecoveryPages'
 import { NotificationsPage } from '@/pages/NotificationsPage'
 import { RegisterPage } from '@/pages/RegisterPage'
@@ -120,6 +121,7 @@ const router = createBrowserRouter([
         element: <AuthLayout />,
         children: [
           { path: 'confirm-email', element: <ConfirmEmailPage /> },
+          { path: 'confirm-email-change', element: <ConfirmEmailChangePage /> },
           { path: 'reset-password', element: <ResetPasswordPage /> },
           { path: 'sign-out', element: <SignOutPage /> },
         ],

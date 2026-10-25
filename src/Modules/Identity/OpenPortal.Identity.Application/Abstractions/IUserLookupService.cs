@@ -15,6 +15,12 @@ public interface IUserLookupService
 {
     Task<UserReferenceDto?> FindAsync(Guid userId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The account's own details that OpenID Connect's standard claims carry (names, language, phone, address), for the
+    /// tokens of that same user; null for an unknown id.
+    /// </summary>
+    Task<UserClaimsProfileDto?> FindClaimsProfileAsync(Guid userId, CancellationToken cancellationToken);
+
     /// <summary>The account registered with <paramref name="email"/> (compared case-insensitively), if any.</summary>
     Task<UserReferenceDto?> FindByEmailAsync(string email, CancellationToken cancellationToken);
 

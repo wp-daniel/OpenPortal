@@ -223,6 +223,27 @@ public sealed class AdminUsersController : ControllerBase
             : ProblemResults.FromResult(HttpContext, reset);
     }
 
+    /// <summary>
+    /// Changes the address an account signs in with (counted as confirmed: the administrator vouches for it). Both
+    /// addresses are told and the account's sessions end.
+    /// </summary>
+    [RequirePortalPage(PortalPages.Users)]
+    [HttpPut("{userId:guid}/email")]
+    [ProducesResponseType<UserSummaryDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<UserSummaryDto>> ChangeEmailAsync(
+        Guid userId,
+        [FromBody] ChangeUserEmailRequest request,
+        CancellationToken cancellationToken)
+    {
+        var changed = await _users.ChangeEmailAsync(userId, request, cancellationToken).ConfigureAwait(false);
+
+        return changed.IsSuccess ? Ok(changed.Value) : ProblemResults.FromResult(HttpContext, changed);
+    }
+
     /// <summary>Turns two-factor authentication off for an account that lost its authenticator, ending its sessions.</summary>
     [RequirePortalPage(PortalPages.Users)]
     [HttpDelete("{userId:guid}/two-factor")]

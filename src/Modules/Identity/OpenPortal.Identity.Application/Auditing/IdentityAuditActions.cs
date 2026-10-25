@@ -71,6 +71,18 @@ public static class IdentityAuditActions
     /// <summary>A self-registered account confirmed its address.</summary>
     public const string EmailConfirmed = "account.email_confirmed";
 
+    /// <summary>
+    /// The owner asked to sign in with another address (details: <c>email</c>). A failure is a wrong password, or an
+    /// address another account uses (<c>reason</c>; the caller is not told).
+    /// </summary>
+    public const string EmailChangeRequested = "account.email_change_requested";
+
+    /// <summary>The owner confirmed the new address through its link (details: <c>from</c>, <c>to</c>).</summary>
+    public const string EmailChanged = "account.email_changed";
+
+    /// <summary>An administrator changed an account's address (details: <c>from</c>, <c>to</c>).</summary>
+    public const string UserEmailChanged = "user.email_changed";
+
     /// <summary>Someone asked for a password reset link (recorded whether or not the address has an account).</summary>
     public const string PasswordResetRequested = "account.password_reset_requested";
 

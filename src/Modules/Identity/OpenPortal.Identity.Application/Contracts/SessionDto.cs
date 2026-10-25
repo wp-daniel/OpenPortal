@@ -32,7 +32,8 @@ public sealed record SessionUserDto(
     DateTimeOffset? DeletionScheduledAtUtc,
     SessionImpersonatorDto? Impersonator,
     bool TwoFactorSetupRequired = false,
-    IReadOnlyList<string>? AuthenticationMethods = null);
+    IReadOnlyList<string>? AuthenticationMethods = null,
+    DateTimeOffset? AuthenticatedAtUtc = null);
 
 /// <summary>The administrator behind a support session.</summary>
 public sealed record SessionImpersonatorDto(Guid Id, string? Email, DateTimeOffset StartedAtUtc, DateTimeOffset EndsAtUtc);

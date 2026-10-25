@@ -572,6 +572,13 @@ namespace OpenPortal.Web.Persistence.Migrations.Identity
                     b.Property<bool>("PendingApproval")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("PendingEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("PendingEmailRequestedAtUtc")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("PhoneNumber")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");

@@ -30,7 +30,8 @@ person, group or organization by name.
 
 - **Users** (Identity & access → Users): search, filter by status (active, disabled, pending approval, inactive for
   90 days), edit details, reset a second factor or passkeys, see and end a person's **sessions**, unlink external
-  accounts, start a **support session** (you act as the person for up to an hour, with a reason; everything is
+  accounts, change the sign-in **email** (for someone whose old mailbox is gone: both addresses are told and the
+  account is signed out; people with a working mailbox change it themselves under Account → Security), start a **support session** (you act as the person for up to an hour, with a reason; everything is
   audited in your name), delete. Select several rows for bulk actions; export or import CSV from the toolbar
   (import always offers a dry run first).
 - **Invitations**: an invitation is a single-use link that creates the account already in the chosen groups and

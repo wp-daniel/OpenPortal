@@ -1991,7 +1991,7 @@
   <data name="consent.allow" xml:space="preserve"><value>Allow {app}</value></data>
   <data name="consent.invalid" xml:space="preserve"><value>This request is no longer valid. Go back to the application and sign in again.</value></data>
   <data name="consent.scope.openid" xml:space="preserve"><value>Your identity on the portal</value></data>
-  <data name="consent.scope.profile" xml:space="preserve"><value>Your name</value></data>
+  <data name="consent.scope.profile" xml:space="preserve"><value>Your name, language and when your profile changed</value></data>
   <data name="consent.scope.email" xml:space="preserve"><value>Your email address</value></data>
   <data name="consent.scope.offline_access" xml:space="preserve"><value>Staying signed in when you are away</value></data>
   <data name="consent.scope.roles" xml:space="preserve"><value>Your roles in the application</value></data>
@@ -2093,4 +2093,58 @@
   <data name="command.groups" xml:space="preserve"><value>Groups</value></data>
   <data name="command.organizations" xml:space="preserve"><value>Organizations</value></data>
   <data name="command.hint" xml:space="preserve"><value>Enter opens · Ctrl/Cmd+K toggles</value></data>
+  <data name="error.identity.email_unchanged" xml:space="preserve"><value>This is already the account's email address.</value></data>
+  <data name="error.identity.email_change_unavailable" xml:space="preserve"><value>Changing the address needs email delivery, which is not configured; ask an administrator.</value></data>
+  <data name="error.identity.email_change_invalid" xml:space="preserve"><value>The confirmation link is not valid, was used already, was replaced by a newer one or has expired.</value></data>
+  <data name="error.identity.recent_sign_in_required" xml:space="preserve"><value>For this you must have signed in within the last few minutes: sign out and sign in again, then retry.</value></data>
+  <data name="audit.action.account.email_change_requested" xml:space="preserve"><value>Asked to change the email address</value></data>
+  <data name="audit.action.account.email_changed" xml:space="preserve"><value>Changed the email address</value></data>
+  <data name="audit.action.user.email_changed" xml:space="preserve"><value>Changed an account's email address</value></data>
+  <data name="notification.account.email_changed.title" xml:space="preserve"><value>Sign-in address changed by an administrator</value></data>
+  <data name="notification.account.email_changed.body" xml:space="preserve"><value>An administrator changed the address you sign in with to {email}.</value></data>
+  <data name="email.email_change.subject" xml:space="preserve"><value>Confirm your new OpenPortal sign-in address</value></data>
+  <data name="email.email_change.greeting" xml:space="preserve"><value>Hello {name},</value></data>
+  <data name="email.email_change.body" xml:space="preserve"><value>You asked to sign in to your account with this address, {email}. Open the link below to confirm it; until then your account keeps its current address. If it was not you, ignore this email.</value></data>
+  <data name="email.email_change.action" xml:space="preserve"><value>Confirm the new address</value></data>
+  <data name="email.email_change_conflict.subject" xml:space="preserve"><value>Someone tried to use your OpenPortal address</value></data>
+  <data name="email.email_change_conflict.greeting" xml:space="preserve"><value>Hello {name},</value></data>
+  <data name="email.email_change_conflict.body" xml:space="preserve"><value>Another account asked to use {email}, which already signs in to your account. Nothing changed: your account keeps this address. If you have a second account and meant to move it here, sign in to this one instead.</value></data>
+  <data name="email.email_change_conflict.action" xml:space="preserve"><value>Review your account security</value></data>
+  <data name="email.email_changed.subject" xml:space="preserve"><value>Your OpenPortal sign-in address was changed</value></data>
+  <data name="email.email_changed.greeting" xml:space="preserve"><value>Hello {name},</value></data>
+  <data name="email.email_changed.body" xml:space="preserve"><value>Your account now signs in with {email}, and its other sessions were signed out. If you did not expect this, tell your administrator at once.</value></data>
+  <data name="email.email_changed.action" xml:space="preserve"><value>Review your account security</value></data>
+  <data name="consent.scope.phone" xml:space="preserve"><value>Your phone number</value></data>
+  <data name="consent.scope.address" xml:space="preserve"><value>Your postal address</value></data>
+  <data name="emailChange.title" xml:space="preserve"><value>Email address</value></data>
+  <data name="emailChange.description" xml:space="preserve"><value>The address you sign in with and where the portal writes to you.</value></data>
+  <data name="emailChange.open" xml:space="preserve"><value>Change address</value></data>
+  <data name="emailChange.unavailable" xml:space="preserve"><value>This portal cannot send email, so an administrator changes the address for you.</value></data>
+  <data name="emailChange.pending" xml:space="preserve"><value>Waiting for confirmation: open the link sent to {email}.</value></data>
+  <data name="emailChange.cancel" xml:space="preserve"><value>Cancel the change</value></data>
+  <data name="emailChange.cancelled" xml:space="preserve"><value>The change was cancelled; the link no longer works.</value></data>
+  <data name="emailChange.dialogTitle" xml:space="preserve"><value>Change your email address</value></data>
+  <data name="emailChange.dialogDescription" xml:space="preserve"><value>We send a link to the new address. Your account keeps its current address until you open it.</value></data>
+  <data name="emailChange.newEmail" xml:space="preserve"><value>New email address</value></data>
+  <data name="emailChange.recentSignInHint" xml:space="preserve"><value>Your account has no password, so you must have signed in within the last 15 minutes.</value></data>
+  <data name="emailChange.send" xml:space="preserve"><value>Send the link</value></data>
+  <data name="emailChange.sent" xml:space="preserve"><value>Link sent to {email}</value></data>
+  <data name="emailChange.sentDetail" xml:space="preserve"><value>Open it to finish; your address stays as it is until then.</value></data>
+  <data name="emailChange.failed" xml:space="preserve"><value>Could not ask for the change</value></data>
+  <data name="emailChange.confirming" xml:space="preserve"><value>Confirming the new address…</value></data>
+  <data name="emailChange.done.title" xml:space="preserve"><value>Address changed</value></data>
+  <data name="emailChange.done.description" xml:space="preserve"><value>From now on you sign in with {email}. Your other sessions were signed out.</value></data>
+  <data name="emailChange.invalid.title" xml:space="preserve"><value>This link does not work</value></data>
+  <data name="emailChange.invalid.description" xml:space="preserve"><value>It was used already, replaced by a newer request, cancelled or has expired. Ask for the change again from your account.</value></data>
+  <data name="emailChange.invalid.taken" xml:space="preserve"><value>Another account started using this address in the meantime, so it cannot be yours.</value></data>
+  <data name="emailChange.toAccount" xml:space="preserve"><value>Go to your account</value></data>
+  <data name="users.emailChange.open" xml:space="preserve"><value>Change email</value></data>
+  <data name="users.emailChange.title" xml:space="preserve"><value>Change the email of {name}</value></data>
+  <data name="users.emailChange.description" xml:space="preserve"><value>The account signs in with {email} today.</value></data>
+  <data name="users.emailChange.notice" xml:space="preserve"><value>For an owner who cannot confirm a new address themselves (the old mailbox is gone): you vouch for it, so it counts as confirmed. Both addresses are told and the account is signed out everywhere.</value></data>
+  <data name="users.emailChange.confirm" xml:space="preserve"><value>Change the email</value></data>
+  <data name="users.emailChange.done" xml:space="preserve"><value>Email changed</value></data>
+  <data name="users.emailChange.failed" xml:space="preserve"><value>Could not change the email</value></data>
+  <data name="signIn.reauth.title" xml:space="preserve"><value>Confirm it is you</value></data>
+  <data name="signIn.reauth.description" xml:space="preserve"><value>An application asks you to sign in again before it continues.</value></data>
 </root>

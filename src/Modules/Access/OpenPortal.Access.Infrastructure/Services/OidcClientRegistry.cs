@@ -264,8 +264,8 @@ internal sealed class OidcClientRegistry
     }
 
     /// <summary>
-    /// Authorization code with PKCE plus refresh tokens, and the profile, email, roles, groups and organization
-    /// scopes. Which groups an application actually receives, and whether it hears about organizations, is decided
+    /// Authorization code with PKCE plus refresh tokens, and the profile, email, phone, address, roles, groups and
+    /// organization scopes. Which groups an application actually receives, and whether it hears about organizations, is decided
     /// by its own settings, not by the scope.
     /// </summary>
     private static readonly string[] UserFlowPermissions =
@@ -279,6 +279,8 @@ internal sealed class OidcClientRegistry
         Permissions.ResponseTypes.Code,
         Permissions.Scopes.Email,
         Permissions.Scopes.Profile,
+        Permissions.Scopes.Phone,
+        Permissions.Scopes.Address,
         Permissions.Scopes.Roles,
         Permissions.Prefixes.Scope + PortalScopes.Groups,
         Permissions.Prefixes.Scope + PortalScopes.Organization,

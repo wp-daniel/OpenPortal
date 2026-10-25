@@ -18,7 +18,7 @@ import { serverReturnUrl } from '@/lib/returnUrl'
 const CARD = 'bg-card/80 shadow-lg backdrop-blur'
 
 /** The scopes the portal describes; anything else is shown as it is. */
-const KNOWN_SCOPES = ['openid', 'profile', 'email', 'offline_access', 'roles', 'groups', 'organization'] as const
+const KNOWN_SCOPES = ['openid', 'profile', 'email', 'phone', 'address', 'offline_access', 'roles', 'groups', 'organization'] as const
 
 /** What an application asks to receive, one line per scope. */
 function ScopeList({ scopes }: { scopes: readonly string[] }) {

@@ -48,6 +48,8 @@ export interface SessionUser {
   readonly twoFactorSetupRequired: boolean
   /** How this session was established (RFC 8176: `pwd`, `mfa`, `hwk`…). */
   readonly authenticationMethods: readonly string[]
+  /** When the person last proved who they are in this session (unchanged by refreshed sign-ins); null when unknown. */
+  readonly authenticatedAtUtc: string | null
 }
 
 export interface SessionImpersonator {
@@ -135,6 +137,8 @@ export interface AccountProfile extends UserDetails {
   readonly roles: readonly string[]
   readonly language: string | null
   readonly avatarUpdatedAtUtc: string | null
+  /** The address a change was asked for, until the link sent to it is opened. */
+  readonly pendingEmail: string | null
 }
 
 /** Personal, work and address details, shared by every request that creates or edits an account. */
@@ -156,6 +160,19 @@ export type UpdateProfileRequest = UserDetails
 export interface ChangePasswordRequest {
   readonly currentPassword: string
   readonly newPassword: string
+}
+
+/** Asks to sign in with another address; the password is needed when the account has one. */
+export interface ChangeEmailRequest {
+  readonly newEmail: string
+  readonly currentPassword?: string
+}
+
+/** The outcome of opening the link sent to the new address. */
+export interface EmailChangeConfirmed {
+  readonly email: string
+  /** The link was opened in that account's own session, which stays signed in. */
+  readonly signedIn: boolean
 }
 
 export interface AntiforgeryToken {

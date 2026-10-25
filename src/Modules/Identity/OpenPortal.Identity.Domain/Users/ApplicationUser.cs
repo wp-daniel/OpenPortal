@@ -184,6 +184,53 @@ public sealed class ApplicationUser : IdentityUser<Guid>
         return true;
     }
 
+    /// <summary>
+    /// The address the owner asked to sign in with instead of <see cref="IdentityUser{TKey}.Email"/>, until they open
+    /// the confirmation link sent to it; null when no change waits.
+    /// </summary>
+    public string? PendingEmail { get; private set; }
+
+    /// <summary>When <see cref="PendingEmail"/> was asked for.</summary>
+    public DateTimeOffset? PendingEmailRequestedAtUtc { get; private set; }
+
+    /// <summary>Remembers the address waiting for its confirmation (asking again replaces it).</summary>
+    public void RequestEmailChange(string email, DateTimeOffset now)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(email);
+
+        PendingEmail = email.Trim();
+        PendingEmailRequestedAtUtc = now;
+    }
+
+    /// <summary>Forgets the address waiting for its confirmation. Returns false when none was waiting.</summary>
+    public bool CancelEmailChange()
+    {
+        if (PendingEmail is null)
+        {
+            return false;
+        }
+
+        PendingEmail = null;
+        PendingEmailRequestedAtUtc = null;
+        return true;
+    }
+
+    /// <summary>
+    /// Makes <paramref name="email"/> the address the account signs in with (it is also the user name) and counts it
+    /// as confirmed: either its owner opened a link sent to it, or an administrator vouched for it. The caller
+    /// updates the normalised values and the security stamp.
+    /// </summary>
+    public void ChangeEmail(string email, DateTimeOffset now)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(email);
+
+        Email = email.Trim();
+        UserName = Email;
+        EmailConfirmed = true;
+        CancelEmailChange();
+        UpdatedAtUtc = now;
+    }
+
     /// <summary>Records that the picture was replaced (a timestamp) or removed (<see langword="null"/>).</summary>
     public void MarkAvatarChanged(DateTimeOffset? changedAtUtc)
     {

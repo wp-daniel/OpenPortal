@@ -415,7 +415,8 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
                 Impersonator: impersonator,
                 TwoFactorSetupRequired: impersonator is null
                     && await _policy.IsSetupRequiredAsync(user.Id, cancellationToken).ConfigureAwait(false),
-                AuthenticationMethods: _currentUser.AuthenticationMethods),
+                AuthenticationMethods: _currentUser.AuthenticationMethods,
+                AuthenticatedAtUtc: _currentUser.AuthenticatedAtUtc),
             PasswordPolicy: PasswordPolicy,
             Registration: registration,
             Legal: legal,

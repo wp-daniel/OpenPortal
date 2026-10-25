@@ -581,6 +581,13 @@ namespace OpenPortal.Migrations.PostgreSql.Identity
                     b.Property<bool>("PendingApproval")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("PendingEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset?>("PendingEmailRequestedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("PhoneNumber")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");

@@ -1,6 +1,7 @@
 import { api, invalidateAntiforgeryToken, withQuery } from './client'
 import type {
   CreateInvitationRequest,
+  EmailChangeConfirmed,
   Invitation,
   InvitationIssued,
   InvitationPreview,
@@ -23,6 +24,15 @@ export const registrationApi = {
 
   confirmEmail: (userId: string, token: string) =>
     api.post<RegistrationResult>('/api/auth/confirm-email', { userId, token }),
+
+  /** Opens the link sent to a new address. The account's own session is re-issued, so the token goes. */
+  async confirmEmailChange(userId: string, token: string): Promise<EmailChangeConfirmed> {
+    try {
+      return await api.post<EmailChangeConfirmed>('/api/auth/email-change/confirm', { userId, token })
+    } finally {
+      invalidateAntiforgeryToken()
+    }
+  },
 
   /** Always succeeds, whatever the address. */
   resendConfirmation: (email: string) => api.post<void>('/api/auth/confirm-email/resend', { email }),

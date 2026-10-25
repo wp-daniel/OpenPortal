@@ -87,6 +87,7 @@ internal sealed class IdentityImpersonationService : IImpersonationService
                     new Claim(PortalClaimTypes.ImpersonatorId, adminId.ToString()),
                     new Claim(PortalClaimTypes.ImpersonatorEmail, adminEmail ?? string.Empty),
                     new Claim(PortalClaimTypes.ImpersonationStarted, now.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture)),
+                    .. AuthenticationTimeClaim(),
                 ])
             .ConfigureAwait(false);
 
@@ -139,7 +140,7 @@ internal sealed class IdentityImpersonationService : IImpersonationService
             && await _signInManager.CanSignInAsync(admin).ConfigureAwait(false)
             && !await _userManager.IsLockedOutAsync(admin).ConfigureAwait(false))
         {
-            await _signInManager.SignInAsync(admin, isPersistent: false).ConfigureAwait(false);
+            await _signInManager.SignInWithClaimsAsync(admin, isPersistent: false, AuthenticationTimeClaim()).ConfigureAwait(false);
         }
         else
         {
@@ -153,4 +154,13 @@ internal sealed class IdentityImpersonationService : IImpersonationService
 
         return Result.Success();
     }
+
+    /// <summary>
+    /// The administrator's own authentication time, carried into the support session and back: switching sessions is
+    /// not a new sign-in, so it must not make the administrator look freshly authenticated.
+    /// </summary>
+    private Claim[] AuthenticationTimeClaim() =>
+        _currentUser.AuthenticatedAtUtc is { } at
+            ? [new Claim(PortalClaimTypes.AuthenticationTime, at.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture))]
+            : [];
 }

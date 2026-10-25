@@ -7,6 +7,7 @@ import { ApiError } from '@/api/client'
 import type { AccountProfile, PasswordPolicy, SessionUser } from '@/api/types'
 import { MyAccessRequestsSection, MyOrganizationsSection } from '@/components/AccountAccessSections'
 import { AvatarUpload } from '@/components/AvatarUpload'
+import { EmailSection } from '@/components/EmailSection'
 import { FormField } from '@/components/FormField'
 import { PageHeader } from '@/components/PageHeader'
 import { PrivacySection } from '@/components/PrivacySection'
@@ -44,8 +45,8 @@ import {
 /**
  * The signed-in account's own settings.
  *
- * Email is shown read-only: it is the sign-in identifier, so changing it needs a confirmation flow that does
- * not exist here. Offering the field would let an account lock itself out.
+ * Email is not a profile field: it is the sign-in identifier, so it changes in Security through a link sent to the
+ * new address ({@link EmailSection}), never by typing over it.
  */
 export function AccountPage() {
   const { user, session } = useSession()
@@ -120,6 +121,7 @@ export function AccountPage() {
         </TabsContent>
 
         <TabsContent value="security" className="space-y-6 pt-4">
+          <EmailSection />
           <PasswordSection policy={session.passwordPolicy} />
           <TwoFactorSection />
           <PasskeysSection />

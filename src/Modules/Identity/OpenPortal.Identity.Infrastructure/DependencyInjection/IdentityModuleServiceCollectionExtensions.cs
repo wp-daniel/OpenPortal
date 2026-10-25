@@ -190,6 +190,7 @@ public static class IdentityModuleServiceCollectionExtensions
         PortalClaimTypes.ImpersonationStarted,
         AuthenticationMethods.ClaimType,
         ClaimTypes.AuthenticationMethod,
+        PortalClaimTypes.AuthenticationTime,
     ];
 
     private static void ApplyIdentityOptions(IdentityOptions identity, IdentityModuleOptions module)

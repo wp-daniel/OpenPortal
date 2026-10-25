@@ -36,6 +36,12 @@ public interface ICurrentUser
 
     /// <summary>The portal session (cookie) the request came with; null for a token or an anonymous caller.</summary>
     string? SessionId { get; }
+
+    /// <summary>
+    /// When the person last proved who they are in this session (password, passkey, external provider), unchanged by
+    /// refreshed sign-ins; null for a token, an anonymous caller or a session older than this value.
+    /// </summary>
+    DateTimeOffset? AuthenticatedAtUtc { get; }
 }
 
 /// <summary>Where the session store leaves the id of the session a request authenticated with.</summary>
@@ -61,6 +67,12 @@ public static class PortalClaimTypes
 
     /// <summary>One claim per scope the personal access token holds.</summary>
     public const string PersonalAccessTokenScope = "portal_pat_scope";
+
+    /// <summary>
+    /// When the person authenticated, as Unix seconds: written at sign-in and kept when the session is re-issued
+    /// (a refreshed sign-in, the security stamp check), so it is what OpenID Connect calls <c>auth_time</c>.
+    /// </summary>
+    public const string AuthenticationTime = "portal_auth_time";
 }
 
 /// <summary>

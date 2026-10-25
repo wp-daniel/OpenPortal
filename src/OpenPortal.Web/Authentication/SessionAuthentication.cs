@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Identity.Domain.Settings;
@@ -37,6 +38,15 @@ public static class SessionAuthentication
 
         return methods;
     }
+
+    /// <summary>
+    /// When the person authenticated in this session (OpenID Connect's <c>auth_time</c>); null for a session opened
+    /// before the portal recorded it, which counts as too old wherever freshness matters.
+    /// </summary>
+    public static DateTimeOffset? AuthenticatedAt(ClaimsPrincipal? principal) =>
+        long.TryParse(principal?.FindFirstValue(PortalClaimTypes.AuthenticationTime), NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds)
+            ? DateTimeOffset.FromUnixTimeSeconds(seconds)
+            : null;
 
     /// <summary>Whether the session was established with more than one factor.</summary>
     public static bool IsMultiFactor(ClaimsPrincipal? principal) =>

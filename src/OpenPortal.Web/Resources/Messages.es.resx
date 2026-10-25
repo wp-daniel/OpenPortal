@@ -1991,7 +1991,7 @@
   <data name="consent.allow" xml:space="preserve"><value>Permitir a {app}</value></data>
   <data name="consent.invalid" xml:space="preserve"><value>Esta solicitud ya no es válida. Vuelve a la aplicación e inicia sesión de nuevo.</value></data>
   <data name="consent.scope.openid" xml:space="preserve"><value>Tu identidad en el portal</value></data>
-  <data name="consent.scope.profile" xml:space="preserve"><value>Tu nombre</value></data>
+  <data name="consent.scope.profile" xml:space="preserve"><value>Tu nombre, tu idioma y cuándo cambió tu perfil</value></data>
   <data name="consent.scope.email" xml:space="preserve"><value>Tu dirección de correo</value></data>
   <data name="consent.scope.offline_access" xml:space="preserve"><value>Mantener la sesión cuando no estás</value></data>
   <data name="consent.scope.roles" xml:space="preserve"><value>Tus roles en la aplicación</value></data>
@@ -2093,4 +2093,58 @@
   <data name="command.groups" xml:space="preserve"><value>Grupos</value></data>
   <data name="command.organizations" xml:space="preserve"><value>Organizaciones</value></data>
   <data name="command.hint" xml:space="preserve"><value>Intro abre · Ctrl/Cmd+K abre y cierra</value></data>
+  <data name="error.identity.email_unchanged" xml:space="preserve"><value>Esta ya es la dirección de correo de la cuenta.</value></data>
+  <data name="error.identity.email_change_unavailable" xml:space="preserve"><value>Para cambiar la dirección hace falta el envío de correo, que no está configurado; pídeselo a un administrador.</value></data>
+  <data name="error.identity.email_change_invalid" xml:space="preserve"><value>El enlace de confirmación no es válido, ya se usó, fue sustituido por uno más reciente o ha caducado.</value></data>
+  <data name="error.identity.recent_sign_in_required" xml:space="preserve"><value>Para esto debes haber iniciado sesión en los últimos minutos: cierra la sesión, vuelve a entrar e inténtalo de nuevo.</value></data>
+  <data name="audit.action.account.email_change_requested" xml:space="preserve"><value>Solicitó cambiar la dirección de correo</value></data>
+  <data name="audit.action.account.email_changed" xml:space="preserve"><value>Cambió la dirección de correo</value></data>
+  <data name="audit.action.user.email_changed" xml:space="preserve"><value>Cambió la dirección de correo de una cuenta</value></data>
+  <data name="notification.account.email_changed.title" xml:space="preserve"><value>Dirección de acceso cambiada por un administrador</value></data>
+  <data name="notification.account.email_changed.body" xml:space="preserve"><value>Un administrador cambió la dirección con la que inicias sesión a {email}.</value></data>
+  <data name="email.email_change.subject" xml:space="preserve"><value>Confirma tu nueva dirección de acceso a OpenPortal</value></data>
+  <data name="email.email_change.greeting" xml:space="preserve"><value>Hola {name}:</value></data>
+  <data name="email.email_change.body" xml:space="preserve"><value>Pediste iniciar sesión en tu cuenta con esta dirección, {email}. Abre el enlace de abajo para confirmarla; hasta entonces tu cuenta conserva su dirección actual. Si no fuiste tú, ignora este correo.</value></data>
+  <data name="email.email_change.action" xml:space="preserve"><value>Confirmar la nueva dirección</value></data>
+  <data name="email.email_change_conflict.subject" xml:space="preserve"><value>Alguien intentó usar tu dirección de OpenPortal</value></data>
+  <data name="email.email_change_conflict.greeting" xml:space="preserve"><value>Hola {name}:</value></data>
+  <data name="email.email_change_conflict.body" xml:space="preserve"><value>Otra cuenta pidió usar {email}, que ya es la dirección de acceso de tu cuenta. No cambió nada: tu cuenta conserva esta dirección. Si tienes una segunda cuenta y querías trasladarla aquí, inicia sesión en esta.</value></data>
+  <data name="email.email_change_conflict.action" xml:space="preserve"><value>Revisa la seguridad de tu cuenta</value></data>
+  <data name="email.email_changed.subject" xml:space="preserve"><value>Se cambió tu dirección de acceso a OpenPortal</value></data>
+  <data name="email.email_changed.greeting" xml:space="preserve"><value>Hola {name}:</value></data>
+  <data name="email.email_changed.body" xml:space="preserve"><value>Tu cuenta ahora inicia sesión con {email} y sus otras sesiones se cerraron. Si no lo esperabas, avisa enseguida a tu administrador.</value></data>
+  <data name="email.email_changed.action" xml:space="preserve"><value>Revisa la seguridad de tu cuenta</value></data>
+  <data name="consent.scope.phone" xml:space="preserve"><value>Tu número de teléfono</value></data>
+  <data name="consent.scope.address" xml:space="preserve"><value>Tu dirección postal</value></data>
+  <data name="emailChange.title" xml:space="preserve"><value>Dirección de correo</value></data>
+  <data name="emailChange.description" xml:space="preserve"><value>La dirección con la que inicias sesión y a la que te escribe el portal.</value></data>
+  <data name="emailChange.open" xml:space="preserve"><value>Cambiar dirección</value></data>
+  <data name="emailChange.unavailable" xml:space="preserve"><value>Este portal no puede enviar correo, así que un administrador cambia la dirección por ti.</value></data>
+  <data name="emailChange.pending" xml:space="preserve"><value>Pendiente de confirmación: abre el enlace enviado a {email}.</value></data>
+  <data name="emailChange.cancel" xml:space="preserve"><value>Cancelar el cambio</value></data>
+  <data name="emailChange.cancelled" xml:space="preserve"><value>Se canceló el cambio; el enlace ya no funciona.</value></data>
+  <data name="emailChange.dialogTitle" xml:space="preserve"><value>Cambia tu dirección de correo</value></data>
+  <data name="emailChange.dialogDescription" xml:space="preserve"><value>Enviamos un enlace a la nueva dirección. Tu cuenta conserva la actual hasta que lo abras.</value></data>
+  <data name="emailChange.newEmail" xml:space="preserve"><value>Nueva dirección de correo</value></data>
+  <data name="emailChange.recentSignInHint" xml:space="preserve"><value>Tu cuenta no tiene contraseña, así que debes haber iniciado sesión en los últimos 15 minutos.</value></data>
+  <data name="emailChange.send" xml:space="preserve"><value>Enviar el enlace</value></data>
+  <data name="emailChange.sent" xml:space="preserve"><value>Enlace enviado a {email}</value></data>
+  <data name="emailChange.sentDetail" xml:space="preserve"><value>Ábrelo para terminar; hasta entonces tu dirección no cambia.</value></data>
+  <data name="emailChange.failed" xml:space="preserve"><value>No se pudo solicitar el cambio</value></data>
+  <data name="emailChange.confirming" xml:space="preserve"><value>Confirmando la nueva dirección…</value></data>
+  <data name="emailChange.done.title" xml:space="preserve"><value>Dirección cambiada</value></data>
+  <data name="emailChange.done.description" xml:space="preserve"><value>A partir de ahora inicias sesión con {email}. Tus otras sesiones se cerraron.</value></data>
+  <data name="emailChange.invalid.title" xml:space="preserve"><value>Este enlace no funciona</value></data>
+  <data name="emailChange.invalid.description" xml:space="preserve"><value>Ya se usó, fue sustituido por una solicitud más reciente, se canceló o ha caducado. Vuelve a solicitar el cambio desde tu cuenta.</value></data>
+  <data name="emailChange.invalid.taken" xml:space="preserve"><value>Mientras tanto otra cuenta empezó a usar esta dirección, así que no puede ser la tuya.</value></data>
+  <data name="emailChange.toAccount" xml:space="preserve"><value>Ir a tu cuenta</value></data>
+  <data name="users.emailChange.open" xml:space="preserve"><value>Cambiar correo</value></data>
+  <data name="users.emailChange.title" xml:space="preserve"><value>Cambiar el correo de {name}</value></data>
+  <data name="users.emailChange.description" xml:space="preserve"><value>Hoy la cuenta inicia sesión con {email}.</value></data>
+  <data name="users.emailChange.notice" xml:space="preserve"><value>Para quien no puede confirmar por sí mismo una nueva dirección (el buzón antiguo ya no existe): tú respondes por ella, así que cuenta como confirmada. Se avisa a ambas direcciones y la cuenta se cierra en todas partes.</value></data>
+  <data name="users.emailChange.confirm" xml:space="preserve"><value>Cambiar el correo</value></data>
+  <data name="users.emailChange.done" xml:space="preserve"><value>Correo cambiado</value></data>
+  <data name="users.emailChange.failed" xml:space="preserve"><value>No se pudo cambiar el correo</value></data>
+  <data name="signIn.reauth.title" xml:space="preserve"><value>Confirma que eres tú</value></data>
+  <data name="signIn.reauth.description" xml:space="preserve"><value>Una aplicación te pide que vuelvas a iniciar sesión antes de continuar.</value></data>
 </root>

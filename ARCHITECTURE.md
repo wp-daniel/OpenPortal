@@ -468,6 +468,26 @@ and an account created externally can set a password later.
   months before the end it creates a successor valid a week later, publishes it in the JWKS at once and signs with
   it once it is valid. Loading happens at startup, so an instance must be restarted (any time in that week) to
   pick up a new key.
+- **Standard claims** (`Oidc/StandardClaims`): names, language and `updated_at` with `profile`, `email_verified`
+  with `email`, the phone with `phone`, the postal address with `address`, in the identity token and from userinfo.
+  Each exists only when its scope was granted, so the access token carries no more than the application asked for.
+- **Authentication time.** The session cookie records when the person proved who they are
+  (`PortalClaimTypes.AuthenticationTime`, written in `PortalSignInManager.SignInWithClaimsAsync`). Re-issuing the
+  session (a password change, the security stamp check, entering or leaving a support session) keeps it, because
+  none of those is a new authentication. It reaches applications as `auth_time` and stays the sign-in's on refresh.
+- **Asking for a new sign-in** (`prompt=login`, `max_age`): the portal does not sign the person out, since any site
+  can open an authorization URL; it sends them to `/sign-in?reauth=1`, where `PublicOnlyRoute` keeps the form up
+  until the session's authentication time changes, then returns to the request without `prompt` and without
+  `max_age=0` (which would loop). A session without a recorded time counts as too old.
+
+**Changing the sign-in address** (Identity). The address is also the user name and the key external providers link
+by, so it never changes on the owner's word alone: the new address waits in `ApplicationUser.PendingEmail` until the
+link sent to it is opened (Identity's change-email token, bound to that address and to the security stamp, so a newer
+request or a password change voids it). Asking needs the password, or for an account without one a sign-in of the
+last minutes, so an unattended session cannot move the account to an address its finder controls. The answer is the
+same when the address belongs to someone else (whose owner is told instead). Confirming rotates the stamp, ends the
+other sessions and tells the old address; an administrator can make the change directly for an owner whose mailbox is
+gone, and both addresses are told.
 
 ---
 

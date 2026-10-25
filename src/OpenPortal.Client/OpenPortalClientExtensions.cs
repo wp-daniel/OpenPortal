@@ -90,6 +90,21 @@ public static class OpenPortalClientExtensions
                     oidc.Scope.Add("organization");
                 }
 
+                if (options.RequestPhone)
+                {
+                    oidc.Scope.Add("phone");
+                }
+
+                if (options.RequestAddress)
+                {
+                    oidc.Scope.Add("address");
+                }
+
+                if (options.MaxAgeMinutes is { } maxAge)
+                {
+                    oidc.MaxAge = TimeSpan.FromMinutes(Math.Max(0, maxAge));
+                }
+
                 // The identity token already carries the profile, roles and groups; the claim names stay as the
                 // portal sends them ("sub", "name", "email", "role", "groups") instead of being rewritten to long
                 // WS-Federation URIs, and "role" is the role claim, so User.IsInRole works.

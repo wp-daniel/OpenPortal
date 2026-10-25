@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
@@ -24,6 +25,7 @@ using PortalScopes = OpenPortal.Access.Application.Contracts.PortalScopes;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Identity.Application.Contracts;
 using OpenPortal.SharedKernel.Auditing;
+using OpenPortal.SharedKernel.Time;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 using PortalAuthentication = OpenPortal.Identity.Application.Abstractions.IAuthenticationService;
 
@@ -90,6 +92,7 @@ public sealed class ConnectController : ControllerBase
     private readonly BackChannelLogoutNotifier _logout;
     private readonly Microsoft.AspNetCore.Antiforgery.IAntiforgery _antiforgery;
     private readonly IOrganizationAutoJoin _autoJoin;
+    private readonly IClock _clock;
 
     public ConnectController(
         IAccessEvaluator access,
@@ -102,8 +105,10 @@ public sealed class ConnectController : ControllerBase
         ITwoFactorPolicy twoFactor,
         BackChannelLogoutNotifier logout,
         Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery,
-        IOrganizationAutoJoin autoJoin)
+        IOrganizationAutoJoin autoJoin,
+        IClock clock)
     {
+        _clock = clock;
         _autoJoin = autoJoin;
         _twoFactor = twoFactor;
         _logout = logout;
@@ -123,15 +128,28 @@ public sealed class ConnectController : ControllerBase
             ? decision with { Roles = decision.Roles.Union(roles, StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList() }
             : decision;
 
-    /// <summary>This authorization request again, without a prompt (so coming back does not ask to sign in anew).</summary>
-    private string ThisRequest()
-    {
-        var parameters = (Request.HasFormContentType ? Request.Form.AsEnumerable() : Request.Query.AsEnumerable())
-            .Where(pair => pair.Key != Parameters.Prompt)
+    /// <summary>
+    /// The parameters of this authorization request, to come back to it after a page of the portal, without a prompt
+    /// and without <c>max_age=0</c> (both mean "sign in anew", which coming back must not ask again), nor
+    /// <paramref name="excluded"/>.
+    /// </summary>
+    private List<KeyValuePair<string, StringValues>> ReplayedParameters(params string[] excluded) =>
+        (Request.HasFormContentType ? Request.Form.AsEnumerable() : Request.Query.AsEnumerable())
+            .Where(pair => pair.Key != Parameters.Prompt
+                && !(pair.Key == Parameters.MaxAge && pair.Value == "0")
+                && !excluded.Contains(pair.Key, StringComparer.Ordinal))
             .ToList();
 
-        return Request.PathBase + Request.Path + QueryString.Create(parameters);
-    }
+    /// <summary>This authorization request again, without what asked to sign in anew.</summary>
+    private string ThisRequest() => Request.PathBase + Request.Path + QueryString.Create(ReplayedParameters());
+
+    /// <summary>
+    /// Whether the application asked for an authentication more recent than this session's (<c>max_age</c>, in
+    /// seconds; 0 is <c>prompt=login</c>). A session whose authentication time is unknown is too old.
+    /// </summary>
+    private bool IsTooOld(OpenIddictRequest request, DateTimeOffset? authenticatedAt) =>
+        request.MaxAge is { } maxAge
+        && (maxAge == 0 || authenticatedAt is not { } at || _clock.UtcNow - at > TimeSpan.FromSeconds(maxAge));
 
     [HttpGet("~/connect/authorize")]
     [HttpPost("~/connect/authorize")]
@@ -141,8 +159,9 @@ public sealed class ConnectController : ControllerBase
             ?? throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
 
         var session = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme).ConfigureAwait(false);
+        var authenticatedAt = SessionAuthentication.AuthenticatedAt(session.Principal);
 
-        if (!session.Succeeded || request.HasPromptValue(PromptValues.Login))
+        if (!session.Succeeded)
         {
             if (request.HasPromptValue(PromptValues.None))
             {
@@ -151,13 +170,19 @@ public sealed class ConnectController : ControllerBase
 
             // Back to this same request once the user has signed in. Only the query string is replayed: a
             // POSTed authorization request is rare, and its parameters would not survive the redirect anyway.
-            var parameters = Request.HasFormContentType
-                ? Request.Form.Where(pair => pair.Key != Parameters.Prompt).ToList()
-                : Request.Query.Where(pair => pair.Key != Parameters.Prompt).ToList();
+            return Challenge(new AuthenticationProperties { RedirectUri = ThisRequest() }, IdentityConstants.ApplicationScheme);
+        }
 
-            return Challenge(
-                new AuthenticationProperties { RedirectUri = Request.PathBase + Request.Path + QueryString.Create(parameters) },
-                IdentityConstants.ApplicationScheme);
+        // The application wants the person to prove who they are again (prompt=login, or a sign-in older than its
+        // max_age). The session is kept until they do: a link any site can open must not sign anyone out.
+        if (request.HasPromptValue(PromptValues.Login) || IsTooOld(request, authenticatedAt))
+        {
+            if (request.HasPromptValue(PromptValues.None))
+            {
+                return Refuse(Errors.LoginRequired, "The application asked for a new sign-in.");
+            }
+
+            return Redirect($"{Request.PathBase}/sign-in?reauth=1&returnUrl={Uri.EscapeDataString(ThisRequest())}");
         }
 
         var user = await FindUserAsync(session.Principal, cancellationToken).ConfigureAwait(false);
@@ -276,9 +301,7 @@ public sealed class ConnectController : ControllerBase
                 }
 
                 // The portal asks which organization, then comes back here with organization=<slug>.
-                var back = (Request.HasFormContentType ? Request.Form.AsEnumerable() : Request.Query.AsEnumerable())
-                    .Where(pair => pair.Key != Parameters.Prompt && pair.Key != OrganizationParameter)
-                    .ToList();
+                var back = ReplayedParameters(OrganizationParameter);
                 var returnUrl = Uri.EscapeDataString(Request.PathBase + Request.Path + QueryString.Create(back));
                 var name = Uri.EscapeDataString(decision.ApplicationName ?? request.ClientId ?? string.Empty);
                 return Redirect($"{Request.PathBase}/select-organization?app={name}&returnUrl={returnUrl}");
@@ -328,7 +351,8 @@ public sealed class ConnectController : ControllerBase
         // The application API scopes belong to the application's own token: a user's token never carries them,
         // even when the client is allowed to request them.
         var scopes = request.GetScopes().Where(scope => !ApplicationApiScopes.IsKnown(scope));
-        var identity = BuildIdentity(user, scopes, decision, organization.Organization, methods);
+        var profile = await _users.FindClaimsProfileAsync(user.Id, cancellationToken).ConfigureAwait(false);
+        var identity = BuildIdentity(user, profile, scopes, decision, organization.Organization, methods, authenticatedAt);
 
         // A permanent authorization ties the refresh tokens to (user, client), which is what revocation
         // targets when access is withdrawn.
@@ -370,9 +394,7 @@ public sealed class ConnectController : ControllerBase
                     return Refuse(Errors.ConsentRequired, "The user must allow the application first.");
                 }
 
-                var back = (Request.HasFormContentType ? Request.Form.AsEnumerable() : Request.Query.AsEnumerable())
-                    .Where(pair => pair.Key is not (Parameters.Prompt or ConsentParameter or "__RequestVerificationToken"))
-                    .ToList();
+                var back = ReplayedParameters(ConsentParameter, "__RequestVerificationToken");
                 var returnUrl = Uri.EscapeDataString(Request.PathBase + Request.Path + QueryString.Create(back));
                 var name = Uri.EscapeDataString(decision.ApplicationName ?? request.ClientId ?? string.Empty);
 
@@ -487,12 +509,19 @@ public sealed class ConnectController : ControllerBase
 
         // Rebuilt from the current account and grants, so a renamed user, a changed email or a role given or
         // taken away reaches the application at its next refresh.
+        // The authentication time stays the original sign-in's: a refresh is not a new authentication.
+        var profile = await _users.FindClaimsProfileAsync(user.Id, cancellationToken).ConfigureAwait(false);
         var identity = BuildIdentity(
             user,
+            profile,
             stored.Principal!.GetScopes(),
             decision,
             organization.Organization,
-            stored.Principal!.GetClaims(AuthenticationMethods.ClaimType));
+            stored.Principal!.GetClaims(AuthenticationMethods.ClaimType),
+            stored.Principal!.GetClaim(Claims.AuthenticationTime) is { } authTime
+                && long.TryParse(authTime, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds)
+                    ? DateTimeOffset.FromUnixTimeSeconds(seconds)
+                    : null);
         identity.SetAuthorizationId(stored.Principal!.GetAuthorizationId());
 
         PortalTelemetry.TokensIssued.Add(1, new KeyValuePair<string, object?>("grant", request.GrantType));
@@ -609,7 +638,8 @@ public sealed class ConnectController : ControllerBase
         }
 
         decision = WithOrganizationRoles(decision, organization);
-        var identity = BuildIdentity(user, scopes, decision, organization.Organization, methods);
+        var profile = await _users.FindClaimsProfileAsync(user.Id, cancellationToken).ConfigureAwait(false);
+        var identity = BuildIdentity(user, profile, scopes, decision, organization.Organization, methods, SessionAuthentication.AuthenticatedAt(session.Principal));
 
         var client = await _applications.FindByClientIdAsync(clientId, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException("The client of a pending device request cannot be found.");
@@ -673,6 +703,13 @@ public sealed class ConnectController : ControllerBase
         {
             claims[Claims.Name] = user.DisplayName;
             claims[Claims.PreferredUsername] = user.Email;
+        }
+
+        // Read now, not from the token: a name or a phone changed since the sign-in shows at once.
+        var profile = await _users.FindClaimsProfileAsync(user.Id, cancellationToken).ConfigureAwait(false);
+        foreach (var entry in StandardClaims.For(user, profile, User.HasScope))
+        {
+            claims[entry.Type] = entry.Value;
         }
 
         // Roles and groups as they were when the access token was issued (minutes ago at most): the token
@@ -866,20 +903,34 @@ public sealed class ConnectController : ControllerBase
 
     private static ClaimsIdentity BuildIdentity(
         UserReferenceDto user,
+        UserClaimsProfileDto? profile,
         IEnumerable<string> scopes,
         AccessDecision decision,
         OrganizationMembershipDto? organization,
-        IEnumerable<string> authenticationMethods)
+        IEnumerable<string> authenticationMethods,
+        DateTimeOffset? authenticatedAt)
     {
         var identity = new ClaimsIdentity(
             authenticationType: TokenValidationParameters.DefaultAuthenticationType,
             nameType: Claims.Name,
             roleType: Claims.Role);
 
+        var granted = scopes.ToHashSet(StringComparer.Ordinal);
+
         identity.SetClaim(Claims.Subject, user.Id.ToString())
             .SetClaim(Claims.Email, user.Email)
             .SetClaim(Claims.Name, user.DisplayName)
             .SetClaim(Claims.PreferredUsername, user.Email);
+
+        // Names, language, a verified address, phone and postal address: each only with the scope that releases it.
+        foreach (var entry in StandardClaims.For(user, profile, granted.Contains))
+        {
+            StandardClaims.AddTo(identity, entry);
+        }
+
+        // When the person last proved who they are to the portal, so an application that asked for max_age (or that
+        // decides on its own) can check it. Unknown for a session opened before the portal recorded it.
+        identity.SetClaim(Claims.AuthenticationTime, authenticatedAt?.ToUnixTimeSeconds());
 
         // The application's roles for this user, and the groups its setting lets it see. Several values make
         // a JSON array in the token, one value a string; ASP.NET Core reads both as separate claims.
@@ -900,7 +951,7 @@ public sealed class ConnectController : ControllerBase
         // Kept from the original sign-in on every refresh.
         identity.SetClaims(AuthenticationMethods.ClaimType, [.. authenticationMethods.Distinct(StringComparer.Ordinal)]);
 
-        identity.SetScopes(scopes);
+        identity.SetScopes(granted);
         identity.SetDestinations(claim => DestinationsFor(claim, identity));
 
         return identity;
@@ -908,7 +959,8 @@ public sealed class ConnectController : ControllerBase
 
     /// <summary>
     /// Every claim goes into the access token, which only the portal's userinfo endpoint reads. Profile, email,
-    /// role and group claims also go into the identity token when the application asked for that scope.
+    /// role and group claims also go into the identity token when the application asked for that scope; the standard
+    /// claims exist only when their scope was granted, and the authentication time always goes.
     /// </summary>
     private static IEnumerable<string> DestinationsFor(Claim claim, ClaimsIdentity identity)
     {
@@ -924,7 +976,9 @@ public sealed class ConnectController : ControllerBase
             _ => null,
         };
 
-        if (claim.Type is Claims.Subject or AuthenticationMethods.ClaimType || (scope is not null && identity.HasScope(scope)))
+        if (claim.Type is Claims.Subject or AuthenticationMethods.ClaimType or Claims.AuthenticationTime
+            || StandardClaims.Types.Contains(claim.Type, StringComparer.Ordinal)
+            || (scope is not null && identity.HasScope(scope)))
         {
             yield return Destinations.IdentityToken;
         }

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Download, Fingerprint, Headset, History, KeyRound, KeySquare, Link2, MonitorSmartphone, Upload, Loader2, MoreHorizontal, Pencil, Plus, ShieldCheck, ShieldOff, Smartphone, Trash2, UserCheck } from 'lucide-react'
+import { Download, Fingerprint, Headset, History, KeyRound, KeySquare, Link2, Mail, MonitorSmartphone, Upload, Loader2, MoreHorizontal, Pencil, Plus, ShieldCheck, ShieldOff, Smartphone, Trash2, UserCheck } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
@@ -15,6 +15,7 @@ import { UserImportDialog } from '@/components/users/UserImportDialog'
 import { UserTokensDialog } from '@/components/users/UserTokensDialog'
 import { UserExternalLoginsDialog } from '@/components/users/UserExternalLoginsDialog'
 import { UserSessionsDialog } from '@/components/users/UserSessionsDialog'
+import { UserEmailDialog } from '@/components/users/UserEmailDialog'
 import { PageHeader } from '@/components/PageHeader'
 import { Section } from '@/components/Section'
 import { ErrorPanel, LoadingState } from '@/components/StatePanels'
@@ -101,6 +102,7 @@ export function AdminUsersPage() {
   const [tokensOf, setTokensOf] = useState<UserSummary | null>(null)
   const [loginsOf, setLoginsOf] = useState<UserSummary | null>(null)
   const [sessionsOf, setSessionsOf] = useState<UserSummary | null>(null)
+  const [emailOf, setEmailOf] = useState<UserSummary | null>(null)
   const [importing, setImporting] = useState(false)
   const [selected, setSelected] = useState<readonly string[]>([])
   const queryClient = useQueryClient()
@@ -428,6 +430,14 @@ export function AdminUsersPage() {
                                   {t('tokens.open')}
                                 </DropdownMenuItem>
                               )}
+                              <DropdownMenuItem
+                                disabled={locked}
+                                title={locked ? t('users.administratorOnly') : undefined}
+                                onSelect={() => setEmailOf(user)}
+                              >
+                                <Mail />
+                                {t('users.emailChange.open')}
+                              </DropdownMenuItem>
                               <DropdownMenuItem onSelect={() => setSessionsOf(user)}>
                                 <MonitorSmartphone />
                                 {t('sessions.open')}
@@ -508,6 +518,7 @@ export function AdminUsersPage() {
       <UserTokensDialog user={tokensOf} onClose={() => setTokensOf(null)} />
       <UserExternalLoginsDialog user={loginsOf} onClose={() => setLoginsOf(null)} />
       <UserSessionsDialog user={sessionsOf} onClose={() => setSessionsOf(null)} />
+      <UserEmailDialog user={emailOf} onClose={() => setEmailOf(null)} onChanged={() => void refresh()} />
       <UserImportDialog
         open={importing}
         onClose={() => setImporting(false)}

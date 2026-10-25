@@ -73,6 +73,9 @@ internal sealed class HttpContextCurrentUser : ICurrentUser
     public string? SessionId =>
         PersonalAccessTokenId is null ? _httpContextAccessor.HttpContext?.Items[SessionItems.CurrentSessionId] as string : null;
 
+    public DateTimeOffset? AuthenticatedAtUtc =>
+        PersonalAccessTokenId is null ? SessionAuthentication.AuthenticatedAt(Principal) : null;
+
     private Guid? GuidClaim(string type) =>
         Guid.TryParse(Principal?.FindFirstValue(type), out var value) ? value : null;
 }

@@ -32,4 +32,20 @@ public interface IAccountService
     /// Refused with <c>identity.password_already_set</c> otherwise: changing one needs the current password.
     /// </summary>
     Task<Result> SetPasswordAsync(SetPasswordRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Sends a confirmation link to the address the caller wants to sign in with; the account keeps its address until
+    /// the link is opened (<see cref="ConfirmEmailChangeAsync"/>). The answer is the same whether or not another account
+    /// uses that address, so it cannot be used to find accounts: that account's owner is told instead.
+    /// </summary>
+    Task<Result<AccountProfileDto>> RequestEmailChangeAsync(ChangeEmailRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Forgets the address waiting for confirmation; its link stops working.</summary>
+    Task<Result<AccountProfileDto>> CancelEmailChangeAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Applies the change the link was sent for. Anonymous: the link may be opened in another browser. The old address
+    /// is told, the security stamp rotates and the account's other sessions end.
+    /// </summary>
+    Task<Result<EmailChangeConfirmedDto>> ConfirmEmailChangeAsync(ConfirmEmailChangeRequest request, CancellationToken cancellationToken);
 }

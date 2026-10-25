@@ -30,14 +30,17 @@ public sealed class RegistrationController : ControllerBase
     private readonly IAuthenticationService _authentication;
     private readonly IAccessProvisioningService _provisioning;
     private readonly IPasswordRecoveryService _recovery;
+    private readonly IAccountService _account;
 
     public RegistrationController(
         IRegistrationService registration,
         IInvitationService invitations,
         IAuthenticationService authentication,
         IAccessProvisioningService provisioning,
-        IPasswordRecoveryService recovery)
+        IPasswordRecoveryService recovery,
+        IAccountService account)
     {
+        _account = account;
         _recovery = recovery;
         _registration = registration;
         _invitations = invitations;
@@ -74,6 +77,24 @@ public sealed class RegistrationController : ControllerBase
         CancellationToken cancellationToken)
     {
         var confirmed = await _registration.ConfirmEmailAsync(request, cancellationToken).ConfigureAwait(false);
+
+        return confirmed.IsSuccess ? Ok(confirmed.Value) : ProblemResults.FromResult(HttpContext, confirmed);
+    }
+
+    /// <summary>
+    /// Makes the address a change was asked for the account's sign-in address (the link sent to that address). Works
+    /// signed in or not, since the link may be opened in another browser; that account's own session stays signed in.
+    /// </summary>
+    [HttpPost("email-change/confirm")]
+    [EnableRateLimiting(RateLimitPolicies.SignIn)]
+    [ProducesResponseType<EmailChangeConfirmedDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<EmailChangeConfirmedDto>> ConfirmEmailChangeAsync(
+        [FromBody] ConfirmEmailChangeRequest request,
+        CancellationToken cancellationToken)
+    {
+        var confirmed = await _account.ConfirmEmailChangeAsync(request, cancellationToken).ConfigureAwait(false);
 
         return confirmed.IsSuccess ? Ok(confirmed.Value) : ProblemResults.FromResult(HttpContext, confirmed);
     }

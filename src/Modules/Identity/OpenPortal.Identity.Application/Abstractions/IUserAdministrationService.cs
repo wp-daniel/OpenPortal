@@ -61,6 +61,13 @@ public interface IUserAdministrationService
     Task<Result> ResetTwoFactorAsync(Guid userId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Changes the address an account signs in with, for an owner who cannot confirm a new one themselves (the old
+    /// mailbox is gone). The administrator vouches for the address, so it counts as confirmed. Both addresses are
+    /// told, the security stamp rotates and the account's sessions end.
+    /// </summary>
+    Task<Result<UserSummaryDto>> ChangeEmailAsync(Guid userId, ChangeUserEmailRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Lets a self-registered account that waited for approval sign in, and tells its owner. Rejecting one is
     /// deleting it.
     /// </summary>

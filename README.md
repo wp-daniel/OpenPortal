@@ -47,6 +47,8 @@ OpenIddict, on SQLite by default, organised as a modular monolith whose boundari
   end anyone's, an optional idle timeout signs out inactive sessions, and a sign-in from a new device is notified
 - Two-factor authentication (authenticator app, recovery codes) and passkeys, with a policy that can require them
 - Password recovery by email
+- Changing the sign-in address: a link goes to the new address and nothing changes until it is opened (the old
+  address is told); an administrator can change it for someone whose old mailbox is gone
 - User administration with server-side search and filters: names, phone, job title, company, department, address
 - Profile pictures, cropped and scaled in the browser, validated by content on the server
 - A password policy defined once on the server and published to the client, so forms never disagree with it
@@ -78,6 +80,10 @@ OpenIddict, on SQLite by default, organised as a modular monolith whose boundari
   application's access to their account
 - Client secret rotation with an overlap during which the previous secret still works, and token signing keys that
   roll over by themselves (a successor is published before it signs)
+- The standard OpenID Connect claims, each behind its scope: `given_name`, `family_name`, `locale`, `updated_at`
+  (`profile`), `email_verified` (`email`), `phone_number` (`phone`), `address` (`address`), plus `auth_time`; an
+  application can ask for a fresh sign-in with `max_age` or `prompt=login` (the session is kept until the person signs
+  in again)
 - Per-application access for users and for groups; withdrawing access revokes tokens and is re-checked on every refresh
 - Applications announce themselves and wait for approval; a NuGet package (`OpenPortal.Client`) does the wiring
 - A launchpad on the dashboard with the applications each user may open
@@ -191,7 +197,10 @@ the portal decides who may:
    carry `org_id`, `org_slug`, `org_name` and `org_role` (`User.GetOpenPortalOrganization()` in `OpenPortal.Client`);
    a member of several organizations picks one at sign-in (or the application sends `organization=<slug>`), and
    leaving the organization ends the session at the next refresh. Key the application's data by `org_id`.
-7. Optionally let users ask for the application (**Access** tab, *users can request access*): it appears on their
+7. Profile data and freshness: the identity token carries `given_name`, `family_name`, `locale`, `email_verified`
+   and `auth_time`; set `OpenPortal:RequestPhone` / `RequestAddress` for `phone_number` and `address`, and
+   `OpenPortal:MaxAgeMinutes` to make users who signed in to the portal longer ago prove who they are again.
+8. Optionally let users ask for the application (**Access** tab, *users can request access*): it appears on their
    dashboard and on the access-denied page, and requests wait under **Access requests**.
 
 A user without access is stopped at the portal. Withdrawing access revokes the application's tokens, and the

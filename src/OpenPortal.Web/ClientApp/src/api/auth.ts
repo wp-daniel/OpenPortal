@@ -9,6 +9,7 @@ import type {
   PersonalAccessToken,
   PersonalAccessTokenScope,
   AccountProfile,
+  ChangeEmailRequest,
   ChangePasswordRequest,
   Passkey,
   RecoveryCodes,
@@ -91,6 +92,10 @@ export const accountApi = {
   changePassword: (body: ChangePasswordRequest) => api.post<void>('/api/account/change-password', body),
   /** For an account without a password (created through Google or Microsoft). */
   setPassword: (newPassword: string) => api.post<void>('/api/account/set-password', { newPassword }),
+  /** Sends a link to the new address; nothing changes until it is opened. */
+  requestEmailChange: (body: ChangeEmailRequest) => api.post<AccountProfile>('/api/account/email', body),
+  /** Forgets the address waiting for confirmation. */
+  cancelEmailChange: () => api.delete<AccountProfile>('/api/account/email'),
 
   externalLogins: (signal?: AbortSignal) => api.get<AccountExternalLogins>('/api/account/external-logins', signal),
 

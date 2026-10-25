@@ -87,14 +87,17 @@ export function SignInPage() {
 }
 
 function PasswordStep({ onTwoFactorRequired }: { onTwoFactorRequired: (rememberMe: boolean) => void }) {
-  const [fields, setFields] = useState<Fields>({ email: '', password: '', rememberMe: false })
+  const { session, user } = useSession()
+  const location = useLocation()
+  // An application asked for a new sign-in while the person is signed in (see PublicOnlyRoute): the same form, with
+  // their address filled in.
+  const reauth = user !== null && new URLSearchParams(location.search).get('reauth') === '1'
+  const [fields, setFields] = useState<Fields>({ email: reauth ? (user?.email ?? '') : '', password: '', rememberMe: false })
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof Fields, string>>>({})
   const queryClient = useQueryClient()
   const { t } = useI18n()
-  const { session } = useSession()
   const schema = useMemo(() => makeSchema(t), [t])
   const [unconfirmed, setUnconfirmed] = useState<string | null>(null)
-  const location = useLocation()
 
   // Where an external sign-in lands: back to the application that started it, or to the page that sent here.
   const returnUrl = serverReturnUrl(location.search) ?? (location.state as { from?: string } | null)?.from ?? null
@@ -187,8 +190,8 @@ function PasswordStep({ onTwoFactorRequired }: { onTwoFactorRequired: (rememberM
 
   return (
     <Section
-      title={t('signIn.title')}
-      description={t('signIn.description')}
+      title={reauth ? t('signIn.reauth.title') : t('signIn.title')}
+      description={reauth ? t('signIn.reauth.description') : t('signIn.description')}
       className="bg-card/80 shadow-lg backdrop-blur"
     >
       <form onSubmit={submit} noValidate className="grid gap-5">

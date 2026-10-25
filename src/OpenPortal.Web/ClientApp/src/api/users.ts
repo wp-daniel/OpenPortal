@@ -37,6 +37,9 @@ export const userAdminApi = {
   resetPassword: (userId: string, newPassword: string) =>
     api.post<void>(`/api/admin/users/${userId}/reset-password`, { newPassword }),
 
+  /** Gives the account another sign-in address (counted as confirmed); both addresses are told and its sessions end. */
+  changeEmail: (userId: string, email: string) => api.put<UserSummary>(`/api/admin/users/${userId}/email`, { email }),
+
   /** Turns two-factor off for an account that lost its authenticator; its sessions end. */
   resetTwoFactor: (userId: string) => api.delete<void>(`/api/admin/users/${userId}/two-factor`),
   /** Removes every passkey of an account that lost its devices; its sessions end. */

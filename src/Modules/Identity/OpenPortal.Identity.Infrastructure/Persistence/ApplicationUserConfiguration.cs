@@ -39,6 +39,9 @@ internal sealed class ApplicationUserConfiguration : IEntityTypeConfiguration<Ap
         builder.Property(user => user.Language)
             .HasMaxLength(ApplicationUser.LanguageMaxLength);
 
+        // Identity's own Email column is 256 long; the address waiting to replace it matches.
+        builder.Property(user => user.PendingEmail).HasMaxLength(256);
+
         builder.Property(user => user.CreatedAtUtc)
             .IsRequired();
 

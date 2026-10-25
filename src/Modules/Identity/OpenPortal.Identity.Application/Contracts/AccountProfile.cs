@@ -23,12 +23,13 @@ public sealed record AccountProfileDto(
     string? City,
     string? PostalCode,
     string? Country,
-    DateTimeOffset? AvatarUpdatedAtUtc);
+    DateTimeOffset? AvatarUpdatedAtUtc,
+    string? PendingEmail = null);
 
 /// <summary>Mutable fields of the signed-in account's profile.</summary>
 /// <para>
-/// Email is intentionally absent. The email address is the login identifier, so changing it requires a
-/// confirmation flow; exposing the field here without that flow would let an account lock itself out.
+/// Email is intentionally absent. The email address is the login identifier, so changing it goes through
+/// <see cref="ChangeEmailRequest"/> and a link sent to the new address; a typo here would lock the account out.
 /// </para>
 public sealed class UpdateProfileRequest : UserDetailsRequest
 {
@@ -64,3 +65,34 @@ public sealed class UpdateLanguageRequest
     [StringLength(ApplicationUser.LanguageMaxLength, ErrorMessage = "validation.language.length")]
     public string? Language { get; init; }
 }
+
+/// <summary>
+/// Asks to sign in with another address. Nothing changes until the link sent to that address is opened. The password
+/// is required when the account has one; an account without one must have signed in recently instead.
+/// </summary>
+public sealed class ChangeEmailRequest
+{
+    [Required(AllowEmptyStrings = false, ErrorMessage = "validation.email.required")]
+    [EmailAddress(ErrorMessage = "validation.email.invalid")]
+    [StringLength(256, ErrorMessage = "validation.email.max")]
+    public string NewEmail { get; init; } = string.Empty;
+
+    [StringLength(256, ErrorMessage = "validation.currentPassword.max")]
+    public string? CurrentPassword { get; init; }
+}
+
+/// <summary>The link sent to the new address: whose account, and the token proving the address was reached.</summary>
+public sealed class ConfirmEmailChangeRequest
+{
+    [Required(ErrorMessage = "validation.token.required")]
+    public Guid UserId { get; init; }
+
+    [Required(AllowEmptyStrings = false, ErrorMessage = "validation.token.required")]
+    [StringLength(2048, ErrorMessage = "validation.token.required")]
+    public string Token { get; init; } = string.Empty;
+}
+
+/// <summary>The address the account signs in with from now on.</summary>
+/// <param name="Email">The new address.</param>
+/// <param name="SignedIn">Whether the link was opened in that account's own session, which stays signed in.</param>
+public sealed record EmailChangeConfirmedDto(string Email, bool SignedIn);

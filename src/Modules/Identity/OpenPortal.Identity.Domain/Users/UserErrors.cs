@@ -178,6 +178,18 @@ public static class UserErrors
     public static Error CurrentPasswordIncorrect { get; } =
         Error.Validation(Prefix + "current_password_incorrect", "The current password is not correct.");
 
+    public static Error EmailUnchanged { get; } =
+        Error.Validation(Prefix + "email_unchanged", "This is already the account's email address.");
+
+    public static Error EmailChangeUnavailable { get; } =
+        Error.Conflict(Prefix + "email_change_unavailable", "Changing the address needs email delivery, which is not configured; ask an administrator.");
+
+    public static Error EmailChangeInvalid { get; } =
+        Error.Validation(Prefix + "email_change_invalid", "The confirmation link is not valid, was used already, was replaced by a newer one or has expired.");
+
+    public static Error RecentSignInRequired { get; } =
+        Error.Forbidden(Prefix + "recent_sign_in_required", "Sign in again to do this: the session was opened too long ago.");
+
     public static Error DisplayNameTooLong { get; } =
         Error.Validation(Prefix + "display_name_too_long", $"The full name (first and last name) must not exceed {ApplicationUser.DisplayNameMaxLength} characters.");
 

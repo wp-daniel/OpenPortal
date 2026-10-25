@@ -71,6 +71,7 @@ internal sealed class IdentityPersonalData : IPersonalDataSource
                 user.Id,
                 user.Email,
                 user.EmailConfirmed,
+                user.PendingEmail,
                 user.FirstName,
                 user.LastName,
                 user.DisplayName,

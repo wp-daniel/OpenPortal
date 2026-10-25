@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate, Outlet, useLocation, useMatches } from 'react-router-dom'
 import type { RouteHandle } from '@/components/AppBreadcrumbs'
 import { ErrorPanel, LoadingState } from '@/components/StatePanels'
@@ -102,11 +102,25 @@ export function AccountGate() {
   return <Outlet />
 }
 
-/** The sign-in page is for anonymous visitors only; a signed-in user is sent where they were going. */
+/**
+ * The sign-in page is for anonymous visitors only; a signed-in user is sent where they were going. The exception is
+ * `?reauth=1`: an application asked the portal for a new sign-in (`prompt=login`, `max_age`), so the form stays until
+ * the person has signed in again, which shows as a new authentication time in the session.
+ */
 export function PublicOnlyRoute() {
   const { session, isPending } = useSession()
   const location = useLocation()
   const { t } = useI18n()
+  const returnUrl = serverReturnUrl(location.search)
+  const reauth = returnUrl !== null && new URLSearchParams(location.search).get('reauth') === '1'
+  const authenticatedAt = session.user?.authenticatedAtUtc ?? null
+
+  // The authentication time the page opened with (noted while rendering, once the session is known); a different one
+  // means the person just signed in again.
+  const [openedWith, setOpenedWith] = useState<string | null | undefined>(undefined)
+  if (reauth && session.isAuthenticated && openedWith === undefined) {
+    setOpenedWith(authenticatedAt)
+  }
 
   if (isPending) {
     return (
@@ -117,8 +131,11 @@ export function PublicOnlyRoute() {
   }
 
   if (session.isAuthenticated) {
+    if (reauth && (openedWith === undefined || openedWith === authenticatedAt)) {
+      return <Outlet />
+    }
+
     // Another application sent the user here through the portal's OpenID Connect endpoint: go back there.
-    const returnUrl = serverReturnUrl(location.search)
     if (returnUrl) {
       return <ServerRedirect to={returnUrl} />
     }

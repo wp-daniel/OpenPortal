@@ -177,6 +177,37 @@ public sealed class AccountController : ControllerBase
             : ProblemResults.FromResult(HttpContext, changed);
     }
 
+    /// <summary>
+    /// Asks to sign in with another address: a link goes to it, and nothing changes until it is opened. Needs the
+    /// password (or, for an account without one, a recent sign-in).
+    /// </summary>
+    [InteractiveSessionOnly]
+    [HttpPost("email")]
+    [EnableRateLimiting(RateLimitPolicies.SignIn)]
+    [ProducesResponseType<AccountProfileDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<AccountProfileDto>> RequestEmailChangeAsync(
+        [FromBody] ChangeEmailRequest request,
+        CancellationToken cancellationToken)
+    {
+        var requested = await _account.RequestEmailChangeAsync(request, cancellationToken).ConfigureAwait(false);
+
+        return requested.IsSuccess ? Ok(requested.Value) : ProblemResults.FromResult(HttpContext, requested);
+    }
+
+    /// <summary>Forgets the address waiting for confirmation; the link sent to it stops working.</summary>
+    [InteractiveSessionOnly]
+    [HttpDelete("email")]
+    [ProducesResponseType<AccountProfileDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<AccountProfileDto>> CancelEmailChangeAsync(CancellationToken cancellationToken)
+    {
+        var cancelled = await _account.CancelEmailChangeAsync(cancellationToken).ConfigureAwait(false);
+
+        return cancelled.IsSuccess ? Ok(cancelled.Value) : ProblemResults.FromResult(HttpContext, cancelled);
+    }
+
     /// <summary>Gives a password to an account that has none (created by signing in with Google or Microsoft).</summary>
     [InteractiveSessionOnly]
     [HttpPost("set-password")]

@@ -104,6 +104,8 @@ public static class OidcServerSetup
                         Scopes.OpenId,
                         Scopes.Email,
                         Scopes.Profile,
+                        Scopes.Phone,
+                        Scopes.Address,
                         Scopes.OfflineAccess,
                         PortalScopes.Roles,
                         PortalScopes.Groups,
@@ -113,13 +115,17 @@ public static class OidcServerSetup
 
                 // Advertised in the discovery document, so a client library knows what to expect.
                 server.RegisterClaims(
+                [
                     Claims.Subject,
                     Claims.Name,
                     Claims.PreferredUsername,
                     Claims.Email,
                     Claims.Role,
                     ConnectController.GroupsClaim,
-                    Claims.AuthenticationMethodReference);
+                    Claims.AuthenticationMethodReference,
+                    Claims.AuthenticationTime,
+                    .. StandardClaims.Types,
+                ]);
 
                 // Tells applications that the portal posts logout tokens to the back-channel logout URI registered
                 // for them (OpenID Connect Back-Channel Logout 1.0). The tokens name the user (sub), not a session.
