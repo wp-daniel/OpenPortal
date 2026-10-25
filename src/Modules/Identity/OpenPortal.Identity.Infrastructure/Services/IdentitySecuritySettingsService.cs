@@ -43,6 +43,7 @@ internal sealed class IdentitySecuritySettingsService : ISecuritySettingsService
     private readonly IAuditTrail _audit;
     private readonly UserLookup _userLookup;
     private readonly IdentityTwoFactorPolicy _policy;
+    private readonly UserSessionTicketStore _sessions;
 
     public IdentitySecuritySettingsService(
         IdentityDbContext dbContext,
@@ -51,8 +52,10 @@ internal sealed class IdentitySecuritySettingsService : ISecuritySettingsService
         IClock clock,
         IAuditTrail audit,
         UserLookup userLookup,
-        IdentityTwoFactorPolicy policy)
+        IdentityTwoFactorPolicy policy,
+        UserSessionTicketStore sessions)
     {
+        _sessions = sessions;
         _userLookup = userLookup;
         _policy = policy;
         _dbContext = dbContext;
@@ -97,7 +100,8 @@ internal sealed class IdentitySecuritySettingsService : ISecuritySettingsService
             _clock.UtcNow,
             request.PersonalAccessTokensEnabled,
             request.PasskeysEnabled,
-            TwoFactorRequirements.FromContract(request.TwoFactorRequirement));
+            TwoFactorRequirements.FromContract(request.TwoFactorRequirement),
+            request.IdleTimeoutMinutes);
         if (changed.IsFailure)
         {
             return Result<SecuritySettingsDto>.Failure(changed.Error);
@@ -121,6 +125,7 @@ internal sealed class IdentitySecuritySettingsService : ISecuritySettingsService
             }
 
             await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            _sessions.ForgetIdleSetting();
 
             await _audit.RecordAsync(
                     AuditEvent.Succeeded(
@@ -132,6 +137,7 @@ internal sealed class IdentitySecuritySettingsService : ISecuritySettingsService
                             ["personalAccessTokens"] = settings.PersonalAccessTokensEnabled ? "on" : "off",
                             ["passkeys"] = settings.PasskeysEnabled ? "on" : "off",
                             ["requirement"] = TwoFactorRequirements.ToContract(settings.TwoFactorRequirement),
+                            ["idleTimeoutMinutes"] = settings.IdleTimeoutMinutes.ToString(System.Globalization.CultureInfo.InvariantCulture),
                         }),
                     cancellationToken)
                 .ConfigureAwait(false);
@@ -147,5 +153,6 @@ internal sealed class IdentitySecuritySettingsService : ISecuritySettingsService
             settings.PersonalAccessTokensEnabled,
             settings.UpdatedAtUtc,
             settings.PasskeysEnabled,
-            TwoFactorRequirements.ToContract(settings.TwoFactorRequirement));
+            TwoFactorRequirements.ToContract(settings.TwoFactorRequirement),
+            settings.IdleTimeoutMinutes);
 }

@@ -5,11 +5,14 @@ import { z } from 'zod'
 import { organizationKeys, organizationsApi } from '@/api/organizations'
 import type { OrganizationDetail, OrganizationRole, OrganizationSummary } from '@/api/types'
 import { UserPicker, type PickedPrincipal } from '@/components/access/PrincipalPicker'
+import { MemberApplicationRoles, OrganizationDomains } from '@/components/organizations/OrganizationTenancy'
 import { FormField } from '@/components/FormField'
 import { PageHeader } from '@/components/PageHeader'
 import { Section } from '@/components/Section'
 import { EmptyState, ErrorPanel, LoadingState } from '@/components/StatePanels'
+import { ListPager } from '@/components/ListPager'
 import { TableToolbar } from '@/components/TableToolbar'
+import { useDebounced } from '@/hooks/useDebounced'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,7 +34,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { notify } from '@/hooks/useToast'
@@ -39,11 +44,13 @@ import { formatDate } from '@/i18n/store'
 import { useI18n } from '@/i18n/useI18n'
 import { describeError, traceIdOf } from '@/lib/errors'
 import { reportFormError, serverFieldErrors, zodFieldErrors } from '@/lib/forms'
-import { matchesSearch } from '@/lib/tableFilter'
 
 const ROLES: readonly OrganizationRole[] = ['member', 'admin']
+const PAGE_SIZE = 25
 
-type DialogState = { readonly mode: 'create' } | { readonly mode: 'edit'; readonly id: string; readonly tab: 'details' | 'members' }
+type EditorTab = 'details' | 'members' | 'domains'
+
+type DialogState = { readonly mode: 'create' } | { readonly mode: 'edit'; readonly id: string; readonly tab: EditorTab }
 
 /** Refreshes every organization query (list, details, the signed-in user's own memberships). */
 function useOrganizationRefresh() {
@@ -65,20 +72,24 @@ export function AdminOrganizationsPage() {
   const refresh = useOrganizationRefresh()
   const [dialog, setDialog] = useState<DialogState | null>(null)
   const [deleting, setDeleting] = useState<OrganizationSummary | null>(null)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(() => new URLSearchParams(window.location.search).get('search') ?? '')
+  const [page, setPage] = useState(1)
+  const term = useDebounced(search.trim())
 
+  // Searched and paged on the server: a multi-tenant portal can hold thousands of organizations.
   const organizations = useQuery({
-    queryKey: organizationKeys.all,
-    queryFn: ({ signal }) => organizationsApi.list(signal),
+    queryKey: [...organizationKeys.all, 'page', term, page],
+    queryFn: ({ signal }) => organizationsApi.slice({ search: term, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }, signal),
+    placeholderData: (previous) => previous,
   })
 
-  const visible = useMemo(
-    () =>
-      (organizations.data ?? []).filter((organization) =>
-        matchesSearch(search, organization.name, organization.slug, organization.description),
-      ),
-    [organizations.data, search],
-  )
+  const visible = organizations.data?.items ?? []
+  const nothingAtAll = organizations.data !== undefined && organizations.data.totalCount === 0 && term === ''
+
+  function changeSearch(value: string) {
+    setSearch(value)
+    setPage(1)
+  }
 
   const remove = useMutation({
     mutationFn: (organization: OrganizationSummary) => organizationsApi.remove(organization.id),
@@ -112,7 +123,7 @@ export function AdminOrganizationsPage() {
         )}
         {organizations.isPending && <LoadingState />}
 
-        {organizations.data?.length === 0 && (
+        {nothingAtAll && (
           <EmptyState title={t('organizations.empty.title')} description={t('organizations.empty.description')}>
             <Button variant="outline" onClick={() => setDialog({ mode: 'create' })}>
               <Plus />
@@ -121,15 +132,15 @@ export function AdminOrganizationsPage() {
           </EmptyState>
         )}
 
-        {organizations.data && organizations.data.length > 0 && (
+        {organizations.data && !nothingAtAll && (
           <>
             <TableToolbar
               search={search}
-              onSearchChange={setSearch}
+              onSearchChange={changeSearch}
               searchPlaceholder={t('organizations.search')}
               filtersActive={search !== ''}
-              onReset={() => setSearch('')}
-              resultCount={visible.length}
+              onReset={() => changeSearch('')}
+              resultCount={organizations.data.totalCount}
             />
             {visible.length === 0 ? (
               <p className="text-muted-foreground py-6 text-center text-sm">{t('table.noResults')}</p>
@@ -193,6 +204,13 @@ export function AdminOrganizationsPage() {
                     ))}
                   </TableBody>
                 </Table>
+                <ListPager
+                  page={page}
+                  pageSize={PAGE_SIZE}
+                  totalCount={organizations.data.totalCount}
+                  onPageChange={setPage}
+                  label={t('organizations.title')}
+                />
               </div>
             )}
           </>
@@ -247,11 +265,18 @@ function OrganizationEditor({
   onClose,
 }: {
   id: string
-  initialTab: 'details' | 'members'
+  initialTab: EditorTab
   onClose: () => void
 }) {
   const { t } = useI18n()
-  const [tab, setTab] = useState(initialTab)
+  const queryClient = useQueryClient()
+  const refresh = useOrganizationRefresh()
+  const [tab, setTab] = useState<EditorTab>(initialTab)
+
+  const applied = async (saved: OrganizationDetail) => {
+    queryClient.setQueryData(organizationKeys.detail(id), saved)
+    await refresh()
+  }
 
   const organization = useQuery({
     queryKey: organizationKeys.detail(id),
@@ -284,7 +309,7 @@ function OrganizationEditor({
         <DialogDescription>{organization.data.description ?? t('organizations.form.editDescription')}</DialogDescription>
       </DialogHeader>
 
-      <Tabs value={tab} onValueChange={(value) => setTab(value as 'details' | 'members')}>
+      <Tabs value={tab} onValueChange={(value) => setTab(value as EditorTab)}>
         <TabsList variant="line">
           <TabsTrigger value="details">{t('organizations.tab.details')}</TabsTrigger>
           <TabsTrigger value="members">
@@ -293,6 +318,7 @@ function OrganizationEditor({
               {organization.data.members.length}
             </Badge>
           </TabsTrigger>
+          <TabsTrigger value="domains">{t('organizations.tab.domains')}</TabsTrigger>
         </TabsList>
         <Separator className="-mt-2" />
 
@@ -301,11 +327,20 @@ function OrganizationEditor({
         </TabsContent>
 
         <TabsContent value="members" className="pt-4">
-          <OrganizationMembers organization={organization.data} />
+          <OrganizationMembers organization={organization.data} onChanged={(saved) => void applied(saved)} />
+        </TabsContent>
+
+        <TabsContent value="domains" className="pt-4">
+          <OrganizationDomains
+            organization={organization.data}
+            tenancy={organizationsApi}
+            canVouch
+            onChanged={(saved) => void applied(saved)}
+          />
         </TabsContent>
       </Tabs>
 
-      {tab === 'members' && (
+      {tab !== 'details' && (
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             {t('common.close')}
@@ -334,6 +369,7 @@ function OrganizationDetailsForm({
   const [slug, setSlug] = useState(organization?.slug ?? '')
   const [slugTouched, setSlugTouched] = useState(false)
   const [description, setDescription] = useState(organization?.description ?? '')
+  const [requireMultiFactor, setRequireMultiFactor] = useState(organization?.requireMultiFactor ?? false)
   const [errors, setErrors] = useState<Partial<Record<'name' | 'slug' | 'description', string>>>({})
 
   const schema = useMemo(
@@ -356,7 +392,7 @@ function OrganizationDetailsForm({
       const text = description.trim() === '' ? null : description.trim()
 
       return organization
-        ? organizationsApi.update(organization.id, { name: name.trim(), description: text })
+        ? organizationsApi.update(organization.id, { name: name.trim(), description: text, requireMultiFactor })
         : organizationsApi.create({ name: name.trim(), slug: slug.trim(), description: text })
     },
     meta: { handlesErrors: true },
@@ -435,6 +471,16 @@ function OrganizationDetailsForm({
         <FormField label={t('organizations.form.description')} htmlFor="organization-description" error={errors.description}>
           <Input value={description} onChange={(event) => setDescription(event.target.value)} />
         </FormField>
+
+        {organization && (
+          <div className="flex items-start justify-between gap-6 rounded-lg border p-4">
+            <div className="grid gap-1">
+              <Label htmlFor="organization-mfa">{t('organizations.form.requireMfa')}</Label>
+              <p className="text-muted-foreground text-sm">{t('organizations.form.requireMfaHint')}</p>
+            </div>
+            <Switch id="organization-mfa" checked={requireMultiFactor} onCheckedChange={setRequireMultiFactor} />
+          </div>
+        )}
       </form>
 
       <DialogFooter className={embedded ? 'mt-6' : undefined}>
@@ -451,7 +497,13 @@ function OrganizationDetailsForm({
 }
 
 /** Members with their role: add with the user picker, change the role, remove. Each change applies at once. */
-function OrganizationMembers({ organization }: { organization: OrganizationDetail }) {
+function OrganizationMembers({
+  organization,
+  onChanged,
+}: {
+  organization: OrganizationDetail
+  onChanged: (organization: OrganizationDetail) => void
+}) {
   const { t } = useI18n()
   const refresh = useOrganizationRefresh()
   const [picked, setPicked] = useState<PickedPrincipal | null>(null)
@@ -500,6 +552,7 @@ function OrganizationMembers({ organization }: { organization: OrganizationDetai
                 <span className="truncate text-sm">{member.isKnown ? member.displayName : t('access.unknownUser')}</span>
                 <span className="text-muted-foreground truncate font-mono text-xs">{member.email}</span>
               </div>
+              <MemberApplicationRoles organization={organization} member={member} tenancy={organizationsApi} onChanged={onChanged} />
               <RolePicker
                 value={member.role}
                 disabled={setMember.isPending}

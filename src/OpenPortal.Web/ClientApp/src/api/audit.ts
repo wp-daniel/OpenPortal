@@ -23,4 +23,4 @@ export const auditApi = {
 }
 
 /** The action categories, as the server prefixes the action codes (`user.created` is in `user`). */
-export const AUDIT_CATEGORIES = ['auth', 'account', 'user', 'group', 'access', 'pages', 'application', 'organization', 'oidc', 'content', 'settings', 'announcement', 'legal'] as const
+export const AUDIT_CATEGORIES = ['auth', 'account', 'user', 'group', 'access', 'pages', 'application', 'organization', 'oidc', 'settings', 'announcement', 'legal'] as const

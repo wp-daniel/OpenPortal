@@ -11,7 +11,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Modules\Access\OpenPortal.Access.Infrastructure\OpenPortal.Access.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Audit\OpenPortal.Audit.Infrastructure\OpenPortal.Audit.Infrastructure.csproj" />
-    <ProjectReference Include="..\Modules\Content\OpenPortal.Content.Infrastructure\OpenPortal.Content.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Identity\OpenPortal.Identity.Infrastructure\OpenPortal.Identity.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Notifications\OpenPortal.Notifications.Infrastructure\OpenPortal.Notifications.Infrastructure.csproj" />
     <!-- PostgreSQL's migrations (and its provider) ship with the host; SQLite's live in this project. -->
@@ -19,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Microsoft.AspNetCore.SpaProxy" />
     <PackageReference Include="Scalar.AspNetCore" />

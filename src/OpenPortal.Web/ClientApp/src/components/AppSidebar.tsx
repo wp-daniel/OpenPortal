@@ -4,7 +4,6 @@ import {
   Bell,
   ChevronRight,
   ChevronsUpDown,
-  FileText,
   Headset,
   History,
   LayoutDashboard,
@@ -79,7 +78,7 @@ interface NavBranch {
   readonly children: readonly NavLeaf[]
 }
 
-const portalLinks: readonly NavEntry[] = [
+export const portalLinks: readonly NavEntry[] = [
   { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard, end: true },
   { to: '/notifications', labelKey: 'nav.notifications', icon: Bell, badge: 'notifications' },
   { to: '/account', labelKey: 'nav.account', icon: UserRound },
@@ -114,6 +113,7 @@ const adminBranches: readonly NavBranch[] = [
       { to: '/admin/audit', labelKey: 'nav.audit', page: 'audit' },
       { to: '/admin/legal', labelKey: 'nav.legal', page: 'legal' },
       { to: '/admin/settings', labelKey: 'nav.settings' },
+      { to: '/admin/system', labelKey: 'nav.system' },
     ],
   },
   {
@@ -121,18 +121,10 @@ const adminBranches: readonly NavBranch[] = [
     icon: Megaphone,
     children: [{ to: '/admin/announcements', labelKey: 'nav.announcements', page: 'announcements' }],
   },
-  {
-    labelKey: 'nav.content',
-    icon: FileText,
-    children: [
-      { to: '/admin/content/profile', labelKey: 'nav.profile', page: 'content.profile' },
-      { to: '/admin/content/projects', labelKey: 'nav.projects', page: 'content.projects' },
-    ],
-  },
 ]
 
 /** The administration branches with only the links the user may open; branches left empty disappear. */
-function useAdminBranches(): readonly NavBranch[] {
+export function useAdminBranches(): readonly NavBranch[] {
   const { isAdministrator, canOpen } = useSession()
 
   return adminBranches

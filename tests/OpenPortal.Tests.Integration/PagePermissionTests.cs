@@ -168,7 +168,7 @@ public sealed class PagePermissionTests(OpenPortalFactory factory) : IClassFixtu
     {
         using var admin = await AdminAsync();
         var groupId = await CreateGroupAsync(admin);
-        await GrantAsync(admin, PortalPages.ContentProjects, groupId);
+        await GrantAsync(admin, PortalPages.Statistics, groupId);
 
         using (var response = await admin.GetAsync("/api/admin/page-permissions"))
         {
@@ -179,13 +179,13 @@ public sealed class PagePermissionTests(OpenPortalFactory factory) : IClassFixtu
                 .ShouldBe(PortalPages.All.Select(page => page.Key));
             matrix.GetProperty("grants").EnumerateArray()
                 .ShouldContain(grant => grant.GetProperty("groupId").GetGuid() == groupId
-                    && grant.GetProperty("pageKey").GetString() == PortalPages.ContentProjects);
+                    && grant.GetProperty("pageKey").GetString() == PortalPages.Statistics);
         }
 
         using (var group = await admin.GetAsync($"/api/admin/groups/{groupId}"))
         {
             (await group.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("pages").EnumerateArray()
-                .Select(page => page.GetString()).ShouldBe([PortalPages.ContentProjects]);
+                .Select(page => page.GetString()).ShouldBe([PortalPages.Statistics]);
         }
 
         using (var unknownPage = await admin.PutAsync($"/api/admin/page-permissions/no-such-page/groups/{groupId}", new { }))
@@ -207,12 +207,12 @@ public sealed class PagePermissionTests(OpenPortalFactory factory) : IClassFixtu
 
         using (var set = await admin.PutAsync(
                    $"/api/admin/page-permissions/groups/{groupId}",
-                   new { pages = new[] { PortalPages.ContentProfile, PortalPages.ContentProjects } }))
+                   new { pages = new[] { PortalPages.Audit, PortalPages.Statistics } }))
         {
             set.StatusCode.ShouldBe(HttpStatusCode.NoContent, await set.Content.ReadAsStringAsync());
         }
 
-        (await GroupPagesAsync(admin, groupId)).ShouldBe([PortalPages.ContentProfile, PortalPages.ContentProjects]);
+        (await GroupPagesAsync(admin, groupId)).ShouldBe([PortalPages.Audit, PortalPages.Statistics]);
 
         using (var unknown = await admin.PutAsync(
                    $"/api/admin/page-permissions/groups/{groupId}",
@@ -221,7 +221,7 @@ public sealed class PagePermissionTests(OpenPortalFactory factory) : IClassFixtu
             unknown.StatusCode.ShouldBe(HttpStatusCode.NotFound);
         }
 
-        (await GroupPagesAsync(admin, groupId)).ShouldBe([PortalPages.ContentProfile, PortalPages.ContentProjects]);
+        (await GroupPagesAsync(admin, groupId)).ShouldBe([PortalPages.Audit, PortalPages.Statistics]);
 
         using (var clear = await admin.PutAsync($"/api/admin/page-permissions/groups/{groupId}", new { pages = Array.Empty<string>() }))
         {

@@ -29,6 +29,26 @@ public interface INotificationService
     Task<Result<int>> DeleteReadAsync(CancellationToken cancellationToken);
 }
 
+/// <summary>The signed-in user's choice of email for their notifications (<see cref="INotificationContext"/>).</summary>
+public interface INotificationPreferenceService
+{
+    Task<Result<NotificationPreferencesDto>> GetMineAsync(CancellationToken cancellationToken);
+
+    Task<Result<NotificationPreferencesDto>> UpdateMineAsync(UpdateNotificationPreferencesRequest request, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// Emails notifications. Implemented by the host, which knows the recipient's address and language, writes the texts
+/// (the same <c>notification.&lt;type&gt;.*</c> the client shows) and queues the email.
+/// </summary>
+public interface INotificationMailer
+{
+    Task<bool> CanSendAsync(CancellationToken cancellationToken);
+
+    /// <summary>One notification (<paramref name="digest"/> false), or the day's unread ones in one email.</summary>
+    Task SendAsync(Guid recipientId, IReadOnlyList<NotificationMailItem> items, bool digest, CancellationToken cancellationToken);
+}
+
 /// <summary>
 /// Housekeeping the host performs on behalf of other modules. Performs no caller check: the host calls it after
 /// an operation that was authorized already (an account was deleted), so it must not be put behind an endpoint.

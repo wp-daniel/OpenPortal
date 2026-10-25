@@ -176,4 +176,19 @@ public sealed class AccountController : ControllerBase
             ? NoContent()
             : ProblemResults.FromResult(HttpContext, changed);
     }
+
+    /// <summary>Gives a password to an account that has none (created by signing in with Google or Microsoft).</summary>
+    [InteractiveSessionOnly]
+    [HttpPost("set-password")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> SetPasswordAsync(
+        [FromBody] SetPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var set = await _account.SetPasswordAsync(request, cancellationToken).ConfigureAwait(false);
+
+        return set.IsSuccess ? NoContent() : ProblemResults.FromResult(HttpContext, set);
+    }
 }

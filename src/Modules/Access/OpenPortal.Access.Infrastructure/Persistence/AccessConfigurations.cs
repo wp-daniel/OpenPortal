@@ -325,6 +325,62 @@ internal sealed class OrganizationMemberConfiguration : IEntityTypeConfiguration
     }
 }
 
+/// <summary>A member's roles in one application within one organization; they go with the membership and the application.</summary>
+internal sealed class OrganizationMemberRoleConfiguration : IEntityTypeConfiguration<OrganizationMemberRole>
+{
+    public void Configure(EntityTypeBuilder<OrganizationMemberRole> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("OrganizationMemberRoles");
+
+        builder.HasKey(role => new { role.OrganizationId, role.UserId, role.ApplicationId, role.Role });
+        builder.Property(role => role.Role).HasMaxLength(ApplicationRole.KeyMaxLength);
+
+        builder.HasOne<OrganizationMember>()
+            .WithMany()
+            .HasForeignKey(role => new { role.OrganizationId, role.UserId })
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne<PortalApplication>()
+            .WithMany()
+            .HasForeignKey(role => role.ApplicationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // The token endpoint asks for one user's roles in one application.
+        builder.HasIndex(role => new { role.UserId, role.ApplicationId })
+            .HasDatabaseName("IX_OrganizationMemberRoles_UserId_ApplicationId");
+    }
+}
+
+internal sealed class OrganizationDomainConfiguration : IEntityTypeConfiguration<OrganizationDomain>
+{
+    public void Configure(EntityTypeBuilder<OrganizationDomain> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("OrganizationDomains");
+
+        builder.HasKey(domain => domain.Id);
+        builder.Property(domain => domain.Domain).IsRequired().HasMaxLength(OrganizationDomain.DomainMaxLength);
+        builder.Property(domain => domain.VerificationToken).IsRequired().HasMaxLength(OrganizationDomain.TokenLength);
+        builder.Property(domain => domain.VerifiedBy).HasMaxLength(16);
+        builder.Property(domain => domain.AutoJoinRole).IsRequired().HasConversion<string>().HasMaxLength(16);
+        builder.Ignore(domain => domain.IsVerified);
+        builder.Ignore(domain => domain.RecordValue);
+
+        builder.HasOne<Organization>()
+            .WithMany()
+            .HasForeignKey(domain => domain.OrganizationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // One organization per domain: two could not both prove they own it.
+        builder.HasIndex(domain => domain.Domain)
+            .IsUnique()
+            .HasDatabaseName("IX_OrganizationDomains_Domain");
+    }
+}
+
 internal sealed class AccessRequestConfiguration : IEntityTypeConfiguration<AccessRequest>
 {
     public void Configure(EntityTypeBuilder<AccessRequest> builder)

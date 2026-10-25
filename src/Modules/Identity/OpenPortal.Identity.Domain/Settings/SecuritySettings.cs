@@ -63,7 +63,18 @@ public sealed class SecuritySettings
     /// </summary>
     public TwoFactorRequirement TwoFactorRequirement { get; private set; }
 
+    /// <summary>
+    /// Minutes without any request after which a session ends (0: off). Background calls (the notification count) do
+    /// not count as activity.
+    /// </summary>
+    public int IdleTimeoutMinutes { get; private set; }
+
     public DateTimeOffset? UpdatedAtUtc { get; private set; }
+
+    public const int MaxIdleTimeoutMinutes = 1440;
+
+    /// <summary>The shortest idle timeout: the client warns two minutes ahead, and activity is recorded once a minute.</summary>
+    public const int MinIdleTimeoutMinutes = 5;
 
     public static SecuritySettings Defaults() => new();
 
@@ -85,8 +96,14 @@ public sealed class SecuritySettings
         DateTimeOffset now,
         bool personalAccessTokensEnabled = false,
         bool passkeysEnabled = true,
-        TwoFactorRequirement requirement = TwoFactorRequirement.None)
+        TwoFactorRequirement requirement = TwoFactorRequirement.None,
+        int idleTimeoutMinutes = 0)
     {
+        if (idleTimeoutMinutes != 0 && idleTimeoutMinutes is < MinIdleTimeoutMinutes or > MaxIdleTimeoutMinutes)
+        {
+            return Result<bool>.Failure(UserErrors.IdleTimeoutInvalid);
+        }
+
         var issuer = twoFactorIssuer?.Trim();
 
         if (string.IsNullOrEmpty(issuer) || issuer.Length > IssuerMaxLength || issuer.Contains(':', StringComparison.Ordinal))
@@ -109,7 +126,8 @@ public sealed class SecuritySettings
             && string.Equals(TwoFactorIssuer, issuer, StringComparison.Ordinal)
             && PersonalAccessTokensEnabled == personalAccessTokensEnabled
             && PasskeysEnabled == passkeysEnabled
-            && TwoFactorRequirement == requirement)
+            && TwoFactorRequirement == requirement
+            && IdleTimeoutMinutes == idleTimeoutMinutes)
         {
             return Result<bool>.Success(false);
         }
@@ -119,6 +137,7 @@ public sealed class SecuritySettings
         PersonalAccessTokensEnabled = personalAccessTokensEnabled;
         PasskeysEnabled = passkeysEnabled;
         TwoFactorRequirement = requirement;
+        IdleTimeoutMinutes = idleTimeoutMinutes;
         UpdatedAtUtc = now;
 
         return Result<bool>.Success(true);

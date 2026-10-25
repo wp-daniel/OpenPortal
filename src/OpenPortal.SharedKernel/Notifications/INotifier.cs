@@ -47,6 +47,12 @@ public sealed record Notice
     /// accepting it.
     /// </summary>
     public bool IncludeCaller { get; init; }
+
+    /// <summary>
+    /// About the safety of the recipient's account (a new sign-in, a reset password, a support session): emailed at once
+    /// to everyone who has not turned email off, whatever else they chose to receive.
+    /// </summary>
+    public bool Security { get; init; }
 }
 
 /// <summary>

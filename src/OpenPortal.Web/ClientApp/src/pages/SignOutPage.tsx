@@ -1,7 +1,7 @@
 import { LogOut } from 'lucide-react'
 import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { antiforgeryToken } from '@/api/client'
+import { postForm } from '@/lib/formPost'
 import { Section } from '@/components/Section'
 import { Button } from '@/components/ui/button'
 import { useSession } from '@/hooks/useSession'
@@ -24,24 +24,10 @@ export function SignOutPage() {
   async function confirm() {
     setBusy(true)
 
-    const form = document.createElement('form')
-    form.method = 'POST'
-    form.action = '/connect/endsession'
-
     const fields = new URLSearchParams(location.search)
     fields.set('confirm', 'true')
-    fields.set('__RequestVerificationToken', await antiforgeryToken())
 
-    for (const [name, value] of fields) {
-      const input = document.createElement('input')
-      input.type = 'hidden'
-      input.name = name
-      input.value = value
-      form.appendChild(input)
-    }
-
-    document.body.appendChild(form)
-    form.submit()
+    await postForm('/connect/endsession', fields)
   }
 
   return (

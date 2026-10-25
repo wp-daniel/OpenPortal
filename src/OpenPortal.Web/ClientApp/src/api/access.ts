@@ -1,4 +1,4 @@
-import { api } from './client'
+import { api, withQuery } from './client'
 import type {
   AccessTree,
   ApplicationSecret,
@@ -24,7 +24,9 @@ export const applicationsApi = {
 
   approve: (id: string) => api.post<ApplicationSecret>(`/api/admin/applications/${id}/approve`, {}),
 
-  regenerateSecret: (id: string) => api.post<ApplicationSecret>(`/api/admin/applications/${id}/secret`, {}),
+  /** A new client secret; the old one keeps working for `keepPreviousHours` (0: stops at once). */
+  regenerateSecret: (id: string, keepPreviousHours = 0) =>
+    api.post<ApplicationSecret>(`/api/admin/applications/${id}/secret`, { keepPreviousHours }),
 
   /** A new webhook signing secret (`whsec_…`), shown once. */
   generateWebhookSecret: (id: string) => api.post<{ secret: string }>(`/api/admin/applications/${id}/webhook/secret`, {}),
@@ -44,6 +46,10 @@ export const applicationsApi = {
 /** User groups (administrators and holders of the matching page). */
 export const groupsApi = {
   list: (signal?: AbortSignal) => api.get<GroupSummary[]>('/api/admin/groups', signal),
+
+  /** Groups whose name matches, a page at a time. */
+  slice: (params: { search?: string; skip: number; take: number }, signal?: AbortSignal) =>
+    api.getSlice<GroupSummary>(withQuery('/api/admin/groups', params), signal),
 
   get: (id: string, signal?: AbortSignal) => api.get<GroupDetail>(`/api/admin/groups/${id}`, signal),
 

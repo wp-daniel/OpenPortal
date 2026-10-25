@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Audit.Application.Abstractions;
-using OpenPortal.Content.Application.Abstractions;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Notifications.Application.Abstractions;
 using OpenPortal.SharedKernel.Auditing;
@@ -30,8 +29,14 @@ public sealed class CompositionTests(OpenPortalFactory factory) : IClassFixture<
         typeof(ISecuritySettingsService),
         typeof(IUserAdministrationService),
         typeof(IUserAvatarService),
-        typeof(IPublicContentService),
-        typeof(IContentManagementService),
+        typeof(IExternalLoginSettingsService),
+        typeof(IExternalLoginService),
+        typeof(IExternalLoginProviders),
+        typeof(ISessionService),
+        typeof(IOrganizationAutoJoin),
+        typeof(IAuthorizedApplicationService),
+        typeof(IDomainOwnershipVerifier),
+        typeof(IOrganizationInvitationAuthorization),
         typeof(ILanguageCatalog),
         typeof(IUserLookupService),
         typeof(IRegistrationService),
@@ -58,7 +63,6 @@ public sealed class CompositionTests(OpenPortalFactory factory) : IClassFixture<
         typeof(IPortalPageCatalog),
         typeof(IUserAdministrationAuthorization),
         typeof(IUserPageSource),
-        typeof(IContentEditAuthorization),
         typeof(IAuditTrail),
         typeof(IAuditLogService),
         typeof(IAuditStatisticsService),
@@ -68,6 +72,8 @@ public sealed class CompositionTests(OpenPortalFactory factory) : IClassFixture<
         typeof(INotificationService),
         typeof(INotificationMaintenance),
         typeof(INotificationContext),
+        typeof(INotificationPreferenceService),
+        typeof(INotificationMailer),
         typeof(IAccountErasure),
         typeof(IAccessUserMaintenance),
         typeof(IAnnouncementService),
@@ -114,8 +120,8 @@ public sealed class CompositionTests(OpenPortalFactory factory) : IClassFixture<
         await using var first = factory.Services.CreateAsyncScope();
         await using var second = factory.Services.CreateAsyncScope();
 
-        var a = first.ServiceProvider.GetRequiredService<IPublicContentService>();
-        var b = second.ServiceProvider.GetRequiredService<IPublicContentService>();
+        var a = first.ServiceProvider.GetRequiredService<IUserAdministrationService>();
+        var b = second.ServiceProvider.GetRequiredService<IUserAdministrationService>();
 
         a.ShouldNotBeSameAs(b);
     }

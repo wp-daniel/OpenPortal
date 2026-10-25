@@ -175,6 +175,7 @@ internal static class RegistrationMapping
         AccountOrigin.Registered => AccountOrigins.Registered,
         AccountOrigin.Invited => AccountOrigins.Invited,
         AccountOrigin.Provisioned => AccountOrigins.Provisioned,
+        AccountOrigin.External => AccountOrigins.External,
         _ => throw new ArgumentOutOfRangeException(nameof(origin), origin, null),
     };
 }

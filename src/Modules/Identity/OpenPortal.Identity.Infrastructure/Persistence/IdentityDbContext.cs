@@ -43,6 +43,10 @@ public sealed class IdentityDbContext : IdentityDbContext<ApplicationUser, Ident
 
     public DbSet<PersonalAccessToken> PersonalAccessTokens => Set<PersonalAccessToken>();
 
+    public DbSet<ExternalLoginProvider> ExternalLoginProviders => Set<ExternalLoginProvider>();
+
+    public DbSet<UserSession> UserSessions => Set<UserSession>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -58,6 +62,8 @@ public sealed class IdentityDbContext : IdentityDbContext<ApplicationUser, Ident
         builder.ApplyConfiguration(new LegalDocumentConfiguration());
         builder.ApplyConfiguration(new LegalAcceptanceConfiguration());
         builder.ApplyConfiguration(new PersonalAccessTokenConfiguration());
+        builder.ApplyConfiguration(new ExternalLoginProviderConfiguration());
+        builder.ApplyConfiguration(new UserSessionConfiguration());
 
         builder.Entity<IdentityRole<Guid>>().ToTable("Roles");
         builder.Entity<IdentityUserRole<Guid>>().ToTable("UserRoles");

@@ -26,4 +26,10 @@ public interface IAccountService
     /// security stamp, which invalidates every other session belonging to the account.
     /// </summary>
     Task<Result> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Gives the signed-in account a password when it has none (it was created through an external provider).
+    /// Refused with <c>identity.password_already_set</c> otherwise: changing one needs the current password.
+    /// </summary>
+    Task<Result> SetPasswordAsync(SetPasswordRequest request, CancellationToken cancellationToken);
 }

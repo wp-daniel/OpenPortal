@@ -17,6 +17,7 @@ using OpenIddict.Server.AspNetCore;
 using OpenIddict.Validation.AspNetCore;
 using OpenPortal.Access.Application.Abstractions;
 using AccessDecision = OpenPortal.Access.Application.Contracts.AccessDecision;
+using OrganizationDecision = OpenPortal.Access.Application.Contracts.OrganizationDecision;
 using OrganizationMembershipDto = OpenPortal.Access.Application.Contracts.OrganizationMembershipDto;
 using OrganizationOutcome = OpenPortal.Access.Application.Contracts.OrganizationOutcome;
 using PortalScopes = OpenPortal.Access.Application.Contracts.PortalScopes;
@@ -60,6 +61,18 @@ public sealed class ConnectController : ControllerBase
     /// <summary>The authorization request parameter naming the organization (slug or id) to sign in for.</summary>
     public const string OrganizationParameter = "organization";
 
+    /// <summary>The form field the device page posts back: <c>approve</c> or <c>deny</c>.</summary>
+    public const string DeviceDecisionParameter = "decision";
+
+    public const string DeviceApproved = "approve";
+
+    /// <summary>The form field the consent page posts back with the person's answer.</summary>
+    public const string ConsentParameter = "consent";
+
+    public const string ConsentGranted = "granted";
+
+    public const string ConsentDenied = "denied";
+
     /// <summary>The <c>acr_values</c> an application sends to require a sign-in with two factors.</summary>
     public const string MultiFactorAcr = "mfa";
 
@@ -76,6 +89,7 @@ public sealed class ConnectController : ControllerBase
     private readonly ITwoFactorPolicy _twoFactor;
     private readonly BackChannelLogoutNotifier _logout;
     private readonly Microsoft.AspNetCore.Antiforgery.IAntiforgery _antiforgery;
+    private readonly IOrganizationAutoJoin _autoJoin;
 
     public ConnectController(
         IAccessEvaluator access,
@@ -87,8 +101,10 @@ public sealed class ConnectController : ControllerBase
         ILegalDocumentService legal,
         ITwoFactorPolicy twoFactor,
         BackChannelLogoutNotifier logout,
-        Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery)
+        Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery,
+        IOrganizationAutoJoin autoJoin)
     {
+        _autoJoin = autoJoin;
         _twoFactor = twoFactor;
         _logout = logout;
         _antiforgery = antiforgery;
@@ -100,6 +116,12 @@ public sealed class ConnectController : ControllerBase
         _applications = applications;
         _authorizations = authorizations;
     }
+
+    /// <summary>The user's roles in the application: their grants', plus what they hold in it within the chosen organization.</summary>
+    private static AccessDecision WithOrganizationRoles(AccessDecision decision, OrganizationDecision organization) =>
+        organization.Roles is { Count: > 0 } roles
+            ? decision with { Roles = decision.Roles.Union(roles, StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList() }
+            : decision;
 
     /// <summary>This authorization request again, without a prompt (so coming back does not ask to sign in anew).</summary>
     private string ThisRequest()
@@ -234,6 +256,9 @@ public sealed class ConnectController : ControllerBase
             return Redirect($"{Request.PathBase}/access-denied?app={app}&client={clientId}");
         }
 
+        // Someone whose confirmed address is at a domain an organization verified (and opened) joins it first.
+        await _autoJoin.JoinByEmailDomainAsync(user.Id, cancellationToken).ConfigureAwait(false);
+
         var organization = await _access.EvaluateOrganizationAsync(
                 user.Id,
                 request.ClientId!,
@@ -275,6 +300,28 @@ public sealed class ConnectController : ControllerBase
                 return Redirect($"{Request.PathBase}/access-denied?app={denied}&reason=organization");
         }
 
+        // The organization signs its members in with two factors only, whatever the application asked for.
+        if (organization.RequireMultiFactor && !methods.Contains(AuthenticationMethods.MultiFactor, StringComparer.Ordinal))
+        {
+            await _audit.RecordAsync(
+                    AuditEvent.Failed(
+                        OidcAuditActions.SignIn,
+                        ApplicationSubject(request.ClientId!, decision.ApplicationName),
+                        new Dictionary<string, string?> { ["reason"] = "organization_mfa_required", ["organization"] = organization.Organization?.Slug }),
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            if (request.HasPromptValue(PromptValues.None))
+            {
+                return Refuse(UnmetAuthenticationRequirements, "The organization requires a sign-in with two factors.");
+            }
+
+            var clientName = Uri.EscapeDataString(request.ClientId ?? string.Empty);
+            return Redirect($"{Request.PathBase}/access-denied?reason=mfa&client={clientName}");
+        }
+
+        decision = WithOrganizationRoles(decision, organization);
+
         var client = await _applications.FindByClientIdAsync(request.ClientId!, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException("The client was validated by OpenIddict but cannot be found.");
 
@@ -286,7 +333,54 @@ public sealed class ConnectController : ControllerBase
         // A permanent authorization ties the refresh tokens to (user, client), which is what revocation
         // targets when access is withdrawn.
         var clientKey = await _applications.GetIdAsync(client, cancellationToken).ConfigureAwait(false);
-        var authorization = await FindAuthorizationAsync(user.Id, clientKey!, identity.GetScopes(), cancellationToken).ConfigureAwait(false)
+        var existing = await FindAuthorizationAsync(user.Id, clientKey!, identity.GetScopes(), cancellationToken).ConfigureAwait(false);
+
+        // A third party's application asks the person first: once (a lasting authorization remembers the answer), or
+        // again when it says prompt=consent. The portal's consent page posts the request back with the answer.
+        if (decision.RequireConsent && (existing is null || request.HasPromptValue(PromptValues.Consent)))
+        {
+            var answer = HttpMethods.IsPost(Request.Method) && Request.HasFormContentType
+                && await _antiforgery.IsRequestValidAsync(HttpContext).ConfigureAwait(false)
+                    ? (string?)Request.Form[ConsentParameter]
+                    : null;
+
+            if (answer == ConsentDenied)
+            {
+                await _audit.RecordAsync(
+                        AuditEvent.Failed(
+                            OidcAuditActions.SignIn,
+                            ApplicationSubject(request.ClientId!, decision.ApplicationName),
+                            new Dictionary<string, string?> { ["reason"] = "consent_denied" }),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+                return Forbid(
+                    new AuthenticationProperties(new Dictionary<string, string?>
+                    {
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.AccessDenied,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The user did not allow the application.",
+                    }),
+                    OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            }
+
+            if (answer != ConsentGranted)
+            {
+                if (request.HasPromptValue(PromptValues.None))
+                {
+                    return Refuse(Errors.ConsentRequired, "The user must allow the application first.");
+                }
+
+                var back = (Request.HasFormContentType ? Request.Form.AsEnumerable() : Request.Query.AsEnumerable())
+                    .Where(pair => pair.Key is not (Parameters.Prompt or ConsentParameter or "__RequestVerificationToken"))
+                    .ToList();
+                var returnUrl = Uri.EscapeDataString(Request.PathBase + Request.Path + QueryString.Create(back));
+                var name = Uri.EscapeDataString(decision.ApplicationName ?? request.ClientId ?? string.Empty);
+
+                return Redirect($"{Request.PathBase}/consent?app={name}&returnUrl={returnUrl}");
+            }
+        }
+
+        var authorization = existing
             ?? await _authorizations.CreateAsync(
                 identity,
                 user.Id.ToString(),
@@ -334,7 +428,7 @@ public sealed class ConnectController : ControllerBase
             return await IssueApplicationTokenAsync(request, cancellationToken).ConfigureAwait(false);
         }
 
-        if (!request.IsAuthorizationCodeGrantType() && !request.IsRefreshTokenGrantType())
+        if (!request.IsAuthorizationCodeGrantType() && !request.IsRefreshTokenGrantType() && !request.IsDeviceCodeGrantType())
         {
             // OpenIddict rejects every other grant type before this action runs.
             throw new InvalidOperationException("The specified grant type is not supported.");
@@ -380,6 +474,17 @@ public sealed class ConnectController : ControllerBase
             return Refuse(Errors.InvalidGrant, "The user no longer belongs to the organization this session was for.");
         }
 
+        // An organization that started requiring two factors ends the sessions opened with one.
+        if (organization.RequireMultiFactor
+            && !stored.Principal!.GetClaims(AuthenticationMethods.ClaimType).Contains(AuthenticationMethods.MultiFactor, StringComparer.Ordinal))
+        {
+            await RecordRefusalAsync(userId, user.Email, request.ClientId!, decision.ApplicationName, "organization_mfa_required", cancellationToken).ConfigureAwait(false);
+
+            return Refuse(Errors.InvalidGrant, "The organization now requires a sign-in with two factors.");
+        }
+
+        decision = WithOrganizationRoles(decision, organization);
+
         // Rebuilt from the current account and grants, so a renamed user, a changed email or a role given or
         // taken away reaches the application at its next refresh.
         var identity = BuildIdentity(
@@ -393,6 +498,147 @@ public sealed class ConnectController : ControllerBase
         PortalTelemetry.TokensIssued.Add(1, new KeyValuePair<string, object?>("grant", request.GrantType));
 
         return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+    }
+
+    /// <summary>
+    /// The device flow's verification (RFC 8628): the person signed in to the portal approves the code a tool showed
+    /// them. The SPA's <c>/device</c> page asks for the code, shows what the application wants, and posts the answer here
+    /// with the antiforgery token. The same rules as a browser sign-in apply (access, the terms in force, a required
+    /// second factor, the organization).
+    /// </summary>
+    [HttpGet("~/connect/verify")]
+    [HttpPost("~/connect/verify")]
+    public async Task<IActionResult> VerifyAsync(CancellationToken cancellationToken)
+    {
+        var request = HttpContext.GetOpenIddictServerRequest()
+            ?? throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
+
+        var userCode = request.UserCode;
+        var here = $"{Request.PathBase}/connect/verify" + (string.IsNullOrEmpty(userCode) ? string.Empty : $"?user_code={Uri.EscapeDataString(userCode)}");
+
+        var session = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme).ConfigureAwait(false);
+        var user = session.Succeeded ? await FindUserAsync(session.Principal, cancellationToken).ConfigureAwait(false) : null;
+        if (user is null || !user.IsActive)
+        {
+            return Challenge(new AuthenticationProperties { RedirectUri = here }, IdentityConstants.ApplicationScheme);
+        }
+
+        if (string.IsNullOrEmpty(userCode))
+        {
+            return Redirect($"{Request.PathBase}/device");
+        }
+
+        // OpenIddict has looked the code up: the principal is the pending device request, or none for a wrong or used code.
+        var device = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme).ConfigureAwait(false);
+        var clientId = device.Principal?.GetClaim(Claims.ClientId);
+        if (device.Principal is null || string.IsNullOrEmpty(clientId))
+        {
+            return Redirect($"{Request.PathBase}/device?error=invalid_code");
+        }
+
+        if (session.Principal?.FindFirst(PortalClaimTypes.ImpersonatorId) is not null)
+        {
+            return Redirect($"{Request.PathBase}/access-denied?reason=impersonation");
+        }
+
+        if (user.DeletionScheduled)
+        {
+            return Redirect($"{Request.PathBase}/access-denied?reason=deletion");
+        }
+
+        if ((await _legal.PendingAsync(user.Id, cancellationToken).ConfigureAwait(false)).Count > 0)
+        {
+            return Redirect($"{Request.PathBase}/legal/accept?returnUrl={Uri.EscapeDataString(here)}");
+        }
+
+        if (await _twoFactor.IsSetupRequiredAsync(user.Id, cancellationToken).ConfigureAwait(false))
+        {
+            return Redirect($"{Request.PathBase}/account/security-setup?returnUrl={Uri.EscapeDataString(here)}");
+        }
+
+        var decision = await _access.EvaluateAsync(user.Id, clientId, cancellationToken).ConfigureAwait(false);
+        if (!decision.Allowed)
+        {
+            var app = Uri.EscapeDataString(decision.ApplicationName ?? clientId);
+            return Redirect($"{Request.PathBase}/access-denied?app={app}&client={Uri.EscapeDataString(clientId)}");
+        }
+
+        var answer = HttpMethods.IsPost(Request.Method) && Request.HasFormContentType
+            && await _antiforgery.IsRequestValidAsync(HttpContext).ConfigureAwait(false)
+                ? (string?)Request.Form[DeviceDecisionParameter]
+                : null;
+
+        var scopes = device.Principal.GetScopes().Where(scope => !ApplicationApiScopes.IsKnown(scope)).ToList();
+
+        if (answer is null)
+        {
+            var name = Uri.EscapeDataString(decision.ApplicationName ?? clientId);
+            return Redirect($"{Request.PathBase}/device?user_code={Uri.EscapeDataString(userCode)}&app={name}&scope={Uri.EscapeDataString(string.Join(' ', scopes))}");
+        }
+
+        if (answer != DeviceApproved)
+        {
+            await _audit.RecordAsync(
+                    AuditEvent.Failed(OidcAuditActions.SignIn, ApplicationSubject(clientId, decision.ApplicationName), new Dictionary<string, string?> { ["reason"] = "device_denied" }),
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            return Forbid(new AuthenticationProperties { RedirectUri = $"{Request.PathBase}/device?status=denied" }, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+        }
+
+        // Nobody can be asked to pick an organization here: the page sends the one chosen, or the user has just one.
+        await _autoJoin.JoinByEmailDomainAsync(user.Id, cancellationToken).ConfigureAwait(false);
+        var organization = await _access.EvaluateOrganizationAsync(
+                user.Id,
+                clientId,
+                (string?)Request.Form[OrganizationParameter],
+                interactive: false,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (organization.Outcome is OrganizationOutcome.Missing or OrganizationOutcome.NotMember or OrganizationOutcome.ChoiceNeeded)
+        {
+            var denied = Uri.EscapeDataString(decision.ApplicationName ?? clientId);
+            return Redirect($"{Request.PathBase}/access-denied?app={denied}&reason=organization");
+        }
+
+        var methods = SessionAuthentication.Methods(session.Principal);
+        if (organization.RequireMultiFactor && !methods.Contains(AuthenticationMethods.MultiFactor, StringComparer.Ordinal))
+        {
+            return Redirect($"{Request.PathBase}/access-denied?reason=mfa&client={Uri.EscapeDataString(clientId)}");
+        }
+
+        decision = WithOrganizationRoles(decision, organization);
+        var identity = BuildIdentity(user, scopes, decision, organization.Organization, methods);
+
+        var client = await _applications.FindByClientIdAsync(clientId, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException("The client of a pending device request cannot be found.");
+        var clientKey = await _applications.GetIdAsync(client, cancellationToken).ConfigureAwait(false);
+        var authorization = await FindAuthorizationAsync(user.Id, clientKey!, identity.GetScopes(), cancellationToken).ConfigureAwait(false)
+            ?? await _authorizations.CreateAsync(
+                identity,
+                user.Id.ToString(),
+                clientKey!,
+                AuthorizationTypes.Permanent,
+                identity.GetScopes(),
+                cancellationToken).ConfigureAwait(false);
+
+        identity.SetAuthorizationId(await _authorizations.GetIdAsync(authorization, cancellationToken).ConfigureAwait(false));
+
+        await _audit.RecordAsync(
+                AuditEvent.Succeeded(
+                    OidcAuditActions.SignIn,
+                    ApplicationSubject(clientId, decision.ApplicationName),
+                    new Dictionary<string, string?> { ["method"] = "device", ["organization"] = organization.Organization?.Slug }),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        PortalTelemetry.ApplicationSignIns.Add(1, new KeyValuePair<string, object?>("outcome", "success"));
+
+        return SignIn(
+            new ClaimsPrincipal(identity),
+            new AuthenticationProperties { RedirectUri = $"{Request.PathBase}/device?status=approved" },
+            OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
 
     [HttpGet("~/connect/userinfo")]

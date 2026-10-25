@@ -81,7 +81,26 @@ portal session, never opens these endpoints.
 - **Public clients** (single-page or mobile apps) are chosen when the application is created: PKCE, no secret, no
   application API.
 
-## 5. Webhooks
+## 5. Consent, devices, secrets and organizations
+
+- **Consent.** Switch on *Ask users for consent* in the application dialog and the first sign-in shows the user
+  what the application receives; the answer is remembered. Users withdraw it under **Account → Security →
+  Authorized applications**, which also revokes the application's tokens for them.
+- **Device flow** (TVs, command-line tools): switch on *Allow the device flow*, then `POST /connect/device` with your
+  `client_id` (and secret for a confidential client) returns a `user_code` and `verification_uri` (the portal's
+  `/device` page). Poll `/connect/token` with `grant_type=urn:ietf:params:oauth:grant-type:device_code` until the
+  user confirms. The same access, organization and legal checks apply as for a browser sign-in.
+- **Rotating the secret.** Regenerating the client secret can keep the previous one valid for a while (up to 30
+  days): deploy the new secret, then let the old one lapse.
+- **Signing keys** roll over by themselves; validate tokens against the JWKS (`jwks_uri` in the discovery
+  document) and refresh it when an unknown `kid` arrives, as the standard handlers do.
+- **Organizations.** Besides `org_id`, `org_slug`, `org_name` and `org_role`, an application that uses
+  organizations receives in `role` the roles the member holds *within the chosen organization* (set by the
+  organization's admins), merged with those of their grants. An organization may require a second factor: a user
+  who signed in with a password alone is sent to verify one before the application gets a code, and refreshing
+  fails once the requirement is no longer met.
+
+## 6. Webhooks
 
 Instead of polling, an application can be told when something that concerns it changes. In the dialog's
 **Webhook** tab set the URL (HTTPS), pick the events and generate the signing secret (`whsec_…`, shown once).

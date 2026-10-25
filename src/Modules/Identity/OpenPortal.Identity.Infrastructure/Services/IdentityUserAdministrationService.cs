@@ -29,6 +29,8 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
     private readonly IdentityAccountErasure _erasure;
     private readonly PersonalAccessTokenStore _tokens;
 
+    private readonly UserSessions _sessions;
+
     public IdentityUserAdministrationService(
         UserManager<ApplicationUser> userManager,
         IdentityDbContext dbContext,
@@ -40,8 +42,10 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         INotifier notifier,
         IAccountMessaging messaging,
         IdentityAccountErasure erasure,
-        PersonalAccessTokenStore tokens)
+        PersonalAccessTokenStore tokens,
+        UserSessions sessions)
     {
+        _sessions = sessions;
         _tokens = tokens;
         _erasure = erasure;
         _notifier = notifier;
@@ -228,6 +232,7 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
         }
 
         await _tokens.RevokeAllAsync(userId, cancellationToken).ConfigureAwait(false);
+        await _sessions.EndAllAsync(userId, keep: null, SessionEndReason.Revoked, cancellationToken).ConfigureAwait(false);
 
         await _audit.RecordAsync(AuditEvent.Succeeded(IdentityAuditActions.SessionsRevoked, lookup.Value.ToAuditSubject()), cancellationToken)
             .ConfigureAwait(false);
@@ -615,7 +620,7 @@ internal sealed class IdentityUserAdministrationService : IUserAdministrationSer
     /// <summary>Tells the account's owner about a change to it, linking to their security settings.</summary>
     private Task NotifyAsync(Guid userId, string type, CancellationToken cancellationToken) =>
         _notifier.NotifyAsync(
-            new Notice { Type = type, Audience = NoticeAudience.Users(userId), Link = "/account?tab=security" },
+            new Notice { Type = type, Audience = NoticeAudience.Users(userId), Link = "/account?tab=security", Security = true },
             cancellationToken);
 
     /// <summary>

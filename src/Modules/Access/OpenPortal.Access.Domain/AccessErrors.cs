@@ -258,6 +258,32 @@ public static class AccessErrors
     public static Error OrganizationModeInvalid { get; } =
         Error.Validation(Prefix + "organization_mode_invalid", "The organization setting must be none, optional or required.");
 
+    public static Error SecretOverlapInvalid { get; } =
+        Error.Validation(Prefix + "secret_overlap_invalid", "The old secret can keep working for 0 to 720 hours.");
+
+    public static Error OrganizationDomainInvalid { get; } =
+        Error.Validation(Prefix + "organization_domain_invalid", "Enter a domain such as acme.com.");
+
+    public static Error OrganizationDomainInUse { get; } =
+        Error.Conflict(Prefix + "organization_domain_in_use", "This domain is already claimed by an organization.");
+
+    public static Error OrganizationDomainNotFound { get; } =
+        Error.NotFound(Prefix + "organization_domain_not_found", "The organization has no such domain.");
+
+    public static Error OrganizationDomainUnverified { get; } =
+        Error.Conflict(Prefix + "organization_domain_unverified", "Verify the domain before letting people join by it.");
+
+    public static Error OrganizationDomainCheckFailed { get; } =
+        Error.Conflict(
+            Prefix + "organization_domain_check_failed",
+            "The domain's DNS has no TXT record with the verification value yet. DNS changes can take a while to appear.");
+
+    public static Error OrganizationApplicationInvalid { get; } =
+        Error.Validation(Prefix + "organization_application_invalid", "The application does not work per organization.");
+
+    public static Error OrganizationMemberNotFound { get; } =
+        Error.NotFound(Prefix + "organization_member_not_found", "The user is not a member of the organization.");
+
     public static Error SignInRequired { get; } =
         Error.Unauthorized(Prefix + "sign_in_required", "This operation needs a signed-in user.");
 

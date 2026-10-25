@@ -1,3 +1,4 @@
+using OpenPortal.SharedKernel.Jobs;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.SharedKernel.Time;
 using OpenPortal.Web.Users;
@@ -10,6 +11,11 @@ namespace OpenPortal.Web.Privacy;
 /// </summary>
 public sealed partial class AccountDeletionService : BackgroundService
 {
+    /// <summary>The job's name in the job list (Administration → System).</summary>
+    public const string JobName = "privacy.account_deletion";
+
+    private readonly IJobRegistry _jobs;
+
     private static readonly TimeSpan FirstRunDelay = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan Interval = TimeSpan.FromHours(1);
 
@@ -17,8 +23,10 @@ public sealed partial class AccountDeletionService : BackgroundService
     private readonly IClock _clock;
     private readonly ILogger<AccountDeletionService> _logger;
 
-    public AccountDeletionService(IServiceScopeFactory scopes, IClock clock, ILogger<AccountDeletionService> logger)
+    public AccountDeletionService(IServiceScopeFactory scopes, IClock clock, ILogger<AccountDeletionService> logger, IJobRegistry jobs)
     {
+        _jobs = jobs;
+        jobs.Register(JobName, Interval, SweepAsync);
         _scopes = scopes;
         _clock = clock;
         _logger = logger;
@@ -60,7 +68,7 @@ public sealed partial class AccountDeletionService : BackgroundService
             {
                 try
                 {
-                    var deleted = await SweepAsync(stoppingToken).ConfigureAwait(false);
+                    var deleted = await _jobs.RunAsync(JobName, stoppingToken).ConfigureAwait(false);
                     if (deleted > 0)
                     {
                         LogSwept(deleted);

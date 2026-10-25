@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using OpenPortal.Content.Infrastructure.Persistence;
+using OpenPortal.Access.Infrastructure.Persistence;
 using OpenPortal.Identity.Infrastructure.Persistence;
 using OpenPortal.Web;
 
@@ -281,10 +281,10 @@ public sealed class ApiTests : IClassFixture<OpenPortalFactory>
         client.Http.DefaultRequestHeaders.Remove(AntiforgeryDefaults.HeaderName);
 
         using var session = await client.GetAsync("/api/auth/session");
-        using var content = await client.GetAsync("/api/content");
+        using var languages = await client.GetAsync("/api/i18n/languages");
 
         session.StatusCode.ShouldBe(HttpStatusCode.OK);
-        content.StatusCode.ShouldBe(HttpStatusCode.OK);
+        languages.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
     // -----------------------------------------------------------------------
@@ -536,282 +536,6 @@ public sealed class ApiTests : IClassFixture<OpenPortalFactory>
     }
 
     // -----------------------------------------------------------------------
-    // Content: public and management surfaces.
-    // -----------------------------------------------------------------------
-
-    [Fact]
-    public async Task Public_content_is_readable_anonymously()
-    {
-        using var client = await ApiClient.CreateAsync(_factory);
-
-        using var response = await client.GetAsync("/api/content");
-
-        response.StatusCode.ShouldBe(
-            HttpStatusCode.OK,
-            $"A brand-new install has no profile and no projects, and must still answer. Body: {await response.Content.ReadAsStringAsync()}");
-    }
-
-    [Fact]
-    public async Task Management_content_rejects_an_anonymous_caller()
-    {
-        using var client = await ApiClient.CreateAsync(_factory);
-
-        using var response = await client.GetAsync("/api/manage/content/profile");
-
-        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
-    }
-
-    [Fact]
-    public async Task Administrator_can_publish_a_profile_and_it_becomes_public()
-    {
-        var admin = await _factory.CreateUserAsync("publisher@example.com", Passwords.Valid, "Administrator");
-        using var client = await ApiClient.CreateAsync(_factory);
-        await client.SignInAsync(admin.Email, admin.Password);
-
-        using (var response = await client.PutAsync("/api/manage/content/profile", new
-        {
-            displayName = "Published Person",
-            headline = "Now visible",
-            socialLinks = new[]
-            {
-                new { platform = "GitHub", url = "https://github.com/example", label = (string?)null },
-            },
-        }))
-        {
-            response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        }
-
-        using var anonymous = await ApiClient.CreateAsync(_factory);
-        using var publicResponse = await anonymous.GetAsync("/api/content");
-        var payload = await publicResponse.Content.ReadFromJsonAsync<JsonElement>();
-
-        payload.GetProperty("profile").GetProperty("displayName").GetString().ShouldBe("Published Person");
-        payload.GetProperty("profile").GetProperty("socialLinks").GetArrayLength().ShouldBe(1);
-    }
-
-    [Fact]
-    public async Task Administrator_can_create_a_project_and_publish_it()
-    {
-        var admin = await _factory.CreateUserAsync("author@example.com", Passwords.Valid, "Administrator");
-        using var client = await ApiClient.CreateAsync(_factory);
-        await client.SignInAsync(admin.Email, admin.Password);
-
-        using var create = await client.PutAsync("/api/manage/content/projects", new
-        {
-            name = "Analytical Engine",
-            slug = "analytical-engine",
-            summary = "Tabulating polynomials.",
-            description = "A long-form description.",
-            url = "https://example.com/engine",
-            repositoryUrl = "https://github.com/example/engine",
-            technologies = new[] { "C#", ".NET" },
-            isPublished = true,
-        });
-
-        create.StatusCode.ShouldBe(
-            HttpStatusCode.OK,
-            $"Body: {await create.Content.ReadAsStringAsync()}");
-        var project = await create.Content.ReadFromJsonAsync<JsonElement>();
-
-        var slug = project.GetProperty("slug").GetString();
-        // The slug is normalised on the way in, so a mixed-case submission comes back lower-cased.
-        slug.ShouldBe("analytical-engine");
-
-        using var anonymous = await ApiClient.CreateAsync(_factory);
-        using var bySlug = await anonymous.GetAsync($"/api/content/projects/{slug}");
-
-        bySlug.StatusCode.ShouldBe(HttpStatusCode.OK);
-        var fetched = await bySlug.Content.ReadFromJsonAsync<JsonElement>();
-
-        fetched.GetProperty("name").GetString().ShouldBe("Analytical Engine");
-        fetched.GetProperty("technologies").EnumerateArray()
-            .Select(item => item.GetProperty("name").GetString())
-            .ToArray()
-            .ShouldBe(["C#", ".NET"], ignoreOrder: true);
-    }
-
-    [Fact]
-    public async Task Unpublished_project_is_not_served_by_the_public_api()
-    {
-        var admin = await _factory.CreateUserAsync("drafts@example.com", Passwords.Valid, "Administrator");
-        using var client = await ApiClient.CreateAsync(_factory);
-        await client.SignInAsync(admin.Email, admin.Password);
-
-        using var create = await client.PutAsync("/api/manage/content/projects", new
-        {
-            name = "Unfinished Work",
-            slug = "unfinished-work",
-            technologies = Array.Empty<string>(),
-            isPublished = false,
-        });
-
-        create.StatusCode.ShouldBe(
-            HttpStatusCode.OK,
-            $"Body: {await create.Content.ReadAsStringAsync()}");
-        var slug = (await create.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("slug").GetString();
-
-        using var anonymous = await ApiClient.CreateAsync(_factory);
-        using var response = await anonymous.GetAsync($"/api/content/projects/{slug}");
-
-        // Drafts exist in the database but must not be reachable by anyone who is not an editor.
-        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
-    }
-
-    [Fact]
-    public async Task Duplicate_slug_is_rejected_as_a_conflict()
-    {
-        var admin = await _factory.CreateUserAsync("dupes@example.com", Passwords.Valid, "Administrator");
-        using var client = await ApiClient.CreateAsync(_factory);
-        await client.SignInAsync(admin.Email, admin.Password);
-
-        using var first = await client.PutAsync("/api/manage/content/projects", new { name = "Twin", slug = "twin", technologies = Array.Empty<string>(), isPublished = true });
-        first.StatusCode.ShouldBe(HttpStatusCode.OK);
-
-        using var second = await client.PutAsync("/api/manage/content/projects", new { name = "Twin", slug = "twin", technologies = Array.Empty<string>(), isPublished = true });
-
-        second.StatusCode.ShouldBe(HttpStatusCode.Conflict);
-        second.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
-    }
-
-    [Fact]
-    public async Task Non_administrator_cannot_reach_management_content()
-    {
-        var user = await _factory.CreateUserAsync("nosy@example.com", Passwords.Valid, "User");
-        using var client = await ApiClient.CreateAsync(_factory);
-        await client.SignInAsync(user.Email, user.Password);
-
-        using var response = await client.GetAsync("/api/manage/content/projects");
-
-        response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
-    }
-
-    // -----------------------------------------------------------------------
-    // The management projection.
-    // -----------------------------------------------------------------------
-
-    [Fact]
-    public async Task Management_project_listing_reports_the_fields_an_editor_needs()
-    {
-        // The editor cannot publish, reorder or delete a project without its row id, its published flag and
-        // its position, and it must be able to see unpublished projects at all. The public projection carries
-        // none of those, so this asserts the management payload really is a different shape.
-        var admin = await _factory.CreateUserAsync("listing@example.com", Passwords.Valid, "Administrator");
-        using var client = await ApiClient.CreateAsync(_factory);
-        await client.SignInAsync(admin.Email, admin.Password);
-
-        using var create = await client.PutAsync("/api/manage/content/projects", new
-        {
-            name = "Draft Engine",
-            slug = "draft-engine",
-            summary = "Still being written.",
-            isPublished = false,
-            position = 7,
-            technologies = new[] { "F#" },
-        });
-
-        create.StatusCode.ShouldBe(
-            HttpStatusCode.OK,
-            $"Body: {await create.Content.ReadAsStringAsync()}");
-
-        using var list = await client.GetAsync("/api/manage/content/projects");
-        list.StatusCode.ShouldBe(HttpStatusCode.OK);
-
-        var body = await list.Content.ReadFromJsonAsync<JsonElement>();
-        var project = body.EnumerateArray()
-            .Single(item => item.GetProperty("slug").GetString() == "draft-engine");
-
-        project.GetProperty("id").GetGuid().ShouldNotBe(Guid.Empty);
-        project.GetProperty("isPublished").GetBoolean().ShouldBeFalse();
-        project.GetProperty("position").GetInt32().ShouldBe(7);
-        project.GetProperty("updatedAtUtc").GetDateTimeOffset().ShouldBeGreaterThan(DateTimeOffset.UnixEpoch);
-        project.GetProperty("technologies").EnumerateArray()
-            .Select(item => item.GetProperty("name").GetString())
-            .ShouldBe(["F#"]);
-    }
-
-    [Fact]
-    public async Task Public_project_payload_does_not_leak_editor_fields()
-    {
-        // The separation is only worth anything if the public shape stays free of them. Publishing an id and
-        // a draft flag to anonymous readers would let anyone enumerate draft work.
-        var admin = await _factory.CreateUserAsync("leakage@example.com", Passwords.Valid, "Administrator");
-        using var client = await ApiClient.CreateAsync(_factory);
-        await client.SignInAsync(admin.Email, admin.Password);
-
-        using var create = await client.PutAsync("/api/manage/content/projects", new
-        {
-            name = "Quiet Machine",
-            slug = "quiet-machine",
-            isPublished = true,
-            technologies = Array.Empty<string>(),
-        });
-
-        create.StatusCode.ShouldBe(HttpStatusCode.OK);
-
-        using var anonymous = await ApiClient.CreateAsync(_factory);
-        using var response = await anonymous.GetAsync("/api/content/projects/quiet-machine");
-
-        response.StatusCode.ShouldBe(HttpStatusCode.OK);
-
-        var project = await response.Content.ReadFromJsonAsync<JsonElement>();
-
-        project.TryGetProperty("id", out _).ShouldBeFalse("the public payload must not carry the row id.");
-        project.TryGetProperty("isPublished", out _).ShouldBeFalse("a published reader does not need the flag.");
-        project.TryGetProperty("position", out _).ShouldBeFalse("display order is not reader-facing.");
-    }
-
-    [Fact]
-    public async Task Management_project_round_trip_supports_publish_and_delete()
-    {
-        // Exercises the full editing loop the UI performs: create, list to recover the id, publish by id, then
-        // delete by id. Before the management projection carried the id this sequence was impossible to drive
-        // from a client at all.
-        var admin = await _factory.CreateUserAsync("lifecycle@example.com", Passwords.Valid, "Administrator");
-        using var client = await ApiClient.CreateAsync(_factory);
-        await client.SignInAsync(admin.Email, admin.Password);
-
-        using var create = await client.PutAsync("/api/manage/content/projects", new
-        {
-            name = "Loom Engine",
-            slug = "loom-engine",
-            isPublished = false,
-            technologies = Array.Empty<string>(),
-        });
-
-        create.StatusCode.ShouldBe(HttpStatusCode.OK);
-
-        using var list = await client.GetAsync("/api/manage/content/projects");
-        var id = (await list.Content.ReadFromJsonAsync<JsonElement>())
-            .EnumerateArray()
-            .Single(item => item.GetProperty("slug").GetString() == "loom-engine")
-            .GetProperty("id")
-            .GetGuid();
-
-        using var publish = await client.PostAsync($"/api/manage/content/projects/{id}/published", new
-        {
-            isPublished = true,
-        });
-
-        publish.StatusCode.ShouldBe(HttpStatusCode.OK);
-
-        var published = await publish.Content.ReadFromJsonAsync<JsonElement>();
-        published.GetProperty("isPublished").GetBoolean().ShouldBeTrue();
-
-        using var anonymous = await ApiClient.CreateAsync(_factory);
-        using var publicRead = await anonymous.GetAsync("/api/content/projects/loom-engine");
-
-        publicRead.StatusCode.ShouldBe(HttpStatusCode.OK);
-
-        using var delete = await client.DeleteAsync($"/api/manage/content/projects/{id}");
-
-        delete.StatusCode.ShouldBe(HttpStatusCode.NoContent);
-
-        using var goneRead = await anonymous.GetAsync("/api/content/projects/loom-engine");
-
-        goneRead.StatusCode.ShouldBe(HttpStatusCode.NotFound);
-    }
-
-    // -----------------------------------------------------------------------
     // Cross-cutting behaviour.
     // -----------------------------------------------------------------------
 
@@ -885,10 +609,10 @@ public sealed class ApiTests : IClassFixture<OpenPortalFactory>
         using var scope = _factory.Services.CreateScope();
         var provider = scope.ServiceProvider;
 
-        // Identity and Content each own a DbContext. If either were unmigrated the first query against it
-        // would fail with "no such table", so touching both proves the migration set is complete.
+        // Every module owns a DbContext. If one were unmigrated the first query against it would fail with
+        // "no such table", so touching each proves the migration set is complete.
         provider.GetRequiredService<IdentityDbContext>().Database.CanConnect().ShouldBeTrue();
-        provider.GetRequiredService<ContentDbContext>().Database.CanConnect().ShouldBeTrue();
+        provider.GetRequiredService<AccessDbContext>().Database.CanConnect().ShouldBeTrue();
 
         (await provider.GetRequiredService<IdentityDbContext>().Users.CountAsync())
             .ShouldBeGreaterThan(0);

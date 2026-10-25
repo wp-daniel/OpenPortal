@@ -17,6 +17,9 @@ public enum AccountOrigin
 
     /// <summary>An application's backend created it through the application API.</summary>
     Provisioned = 3,
+
+    /// <summary>Created at the first sign-in with an external account (Google, Microsoft); it has no password.</summary>
+    External = 4,
 }
 
 /// <summary>

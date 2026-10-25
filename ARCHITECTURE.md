@@ -7,13 +7,15 @@
 
 # Architecture
 
-OpenPortal is a modular monolith: one deployable ASP.NET Core host, a React client, three business modules
-(Identity, Content, Access) plus an Audit and a Notifications module, isolated by convention and enforced by tests. It is also an OpenID Connect
-provider, so other applications can sign their users in through it.
+OpenPortal is a modular monolith: one deployable ASP.NET Core host, a React client, two business modules
+(Identity, Access) plus an Audit and a Notifications module, isolated by convention and enforced by tests. It is
+also an OpenID Connect provider, so other applications can sign their users in through it. It is meant as the base
+of another application (a CRM, a back office): that application adds its own modules next to these, or signs in
+through the portal from its own deployment.
 
 The shape exists to make two specific promises cheap to keep:
 
-1. **The modules do not know about each other.** Identity, Content and Access could each be extracted, replaced
+1. **The modules do not know about each other.** Identity and Access could each be extracted, replaced
    or tested alone; where one needs something from another, the host supplies it through a port.
 2. **The database engine is a host-level decision.** No domain, application or module-infrastructure project
    references a provider; the host picks SQLite or PostgreSQL in one file, and each provider has its own
@@ -29,18 +31,16 @@ names the rule, rather than waiting for review to notice.
 ```
 OpenPortal.slnx
 src/
-  OpenPortal.SharedKernel/              Result, Error, IClock, TextRules, IAuditTrail, INotifier
+  OpenPortal.SharedKernel/              Result, Error, IClock, TextRules, IAuditTrail, INotifier, IOutbox, IJobRegistry
   Modules/
     Identity/
-      OpenPortal.Identity.Domain/          ApplicationUser, Roles
-      OpenPortal.Identity.Application/     IAuthenticationService, IAccountService, IUserAdministrationService
-      OpenPortal.Identity.Infrastructure/  IdentityDbContext, services, AddIdentityModule
-    Content/
-      OpenPortal.Content.Domain/           Profile, Project, Technology
-      OpenPortal.Content.Application/      IPublicContentService, IContentManagementService, DTOs
-      OpenPortal.Content.Infrastructure/   ContentDbContext, services, AddContentModule
+      OpenPortal.Identity.Domain/          ApplicationUser, UserSession, settings, legal documents, invitations
+      OpenPortal.Identity.Application/     IAuthenticationService, IAccountService, IUserAdministrationService,
+                                           ISessionService, IExternalLoginService, ...
+      OpenPortal.Identity.Infrastructure/  IdentityDbContext, services, session ticket store, AddIdentityModule
     Access/
-      OpenPortal.Access.Domain/            PortalApplication, Group, ApplicationUserGrant, ApplicationGroupGrant
+      OpenPortal.Access.Domain/            PortalApplication, Group, grants, Organization (+ members, domains),
+                                           AccessRequest, AccessReview
       OpenPortal.Access.Application/       IApplicationRegistryService, IGroupService, IAccessAdministrationService,
                                            IAccessEvaluator, IApplicationAnnouncementService, host ports
       OpenPortal.Access.Infrastructure/    AccessDbContext (+ OpenIddict tables), services, AddAccessModule
@@ -49,13 +49,14 @@ src/
       OpenPortal.Audit.Application/        IAuditLogService, host ports (IAuditRequestContext, IAuditLogAuthorization)
       OpenPortal.Audit.Infrastructure/     AuditDbContext, IAuditTrail implementation, statistics, retention sweep, AddAuditModule
     Notifications/
-      OpenPortal.Notifications.Domain/          Notification
-      OpenPortal.Notifications.Application/     INotificationService, host port (INotificationContext)
-      OpenPortal.Notifications.Infrastructure/  NotificationsDbContext, INotifier implementation, retention sweep, AddNotificationsModule
+      OpenPortal.Notifications.Domain/          Notification, NotificationPreference, Announcement, OutboxMessage, MailSettings
+      OpenPortal.Notifications.Application/     INotificationService, host ports (INotificationContext, INotificationMailer)
+      OpenPortal.Notifications.Infrastructure/  NotificationsDbContext, INotifier, outbox processor, digest and retention, AddNotificationsModule
   OpenPortal.Migrations.PostgreSql/     the PostgreSQL migrations of every module
   OpenPortal.Client/                    NuGet package for applications: OIDC sign-in + announcement
   OpenPortal.Web/                       composition root: controllers, middleware, SQLite migrations, ClientApp, Oidc/,
-                                        Security/ (headers, rate limits, proxy), Health/, Auditing/
+                                        Security/ (headers, rate limits, proxy), Health/, Auditing/, Authentication/
+                                        (external providers, tokens), Operations/ (system status), Organizations/
 samples/
   OpenPortal.SampleApp/                 minimal application signing in through the portal
 tests/
@@ -79,15 +80,14 @@ Web  ──────────────►  *.Infrastructure  ──► 
 | Domain never references EF Core or ASP.NET Core | `Domain_projects_do_not_reference_EntityFrameworkCore`, `..._AspNetCore` |
 | Application never references EF Core | `Application_projects_do_not_reference_EntityFrameworkCore` |
 | Application never references its own Infrastructure | `Application_projects_do_not_reference_their_own_infrastructure` |
-| Identity never references Content, and vice versa | `Identity_does_not_reference_Content`, `Content_does_not_reference_Identity` |
-| Access references neither Identity nor Content, and neither references Access | `Access_does_not_reference_Identity_or_Content`, `Identity_and_Content_do_not_reference_Access` |
-| Identity, Content and Access record audit events through the shared kernel and never reference Audit; Audit references none of them | `Modules_record_audit_events_without_referencing_the_Audit_module` |
+| Access never references Identity, and vice versa | `Access_does_not_reference_Identity`, `Identity_does_not_reference_Access` |
+| Identity and Access record audit events through the shared kernel and never reference Audit; Audit references none of them | `Modules_record_audit_events_without_referencing_the_Audit_module` |
 | The modules notify through the shared kernel (`INotifier`) and never reference Notifications; Notifications references none of them | `Modules_notify_without_referencing_the_Notifications_module` |
 | The client package references nothing of the portal | `The_client_package_stands_alone` |
 | SharedKernel references no framework and no module | `SharedKernel_references_no_framework_or_module_assembly` |
 | DbContexts and repositories live only in Infrastructure | `Only_the_web_host_and_infrastructure_projects_use_EntityFrameworkCore`, `DbContexts_live_only_in_infrastructure_projects` |
 | Service implementations are `internal` | `Module_services_are_hidden_behind_their_application_interfaces` |
-| One public `AddXModule` per module | `Modules_are_composed_through_a_single_public_extension_point` |
+| One public `AddXModule` per module | `Modules_are_composed_through_a_single_public_extension_entry_point` |
 | Controllers are `sealed` | `Controllers_are_sealed` |
 
 ### Why service implementations are internal
@@ -105,10 +105,10 @@ root.
 Two conventions, one shape.
 
 **In the domain and application layers**, operations return `Result<T>` or `Result`. A failure carries an
-`Error` with a stable `Code` (for example `content.slug_already_in_use`), a human-readable description and a
+`Error` with a stable `Code` (for example `access.group_name_in_use`), a human-readable description and a
 severity. Domain methods use the same pattern, because an entity that throws on invalid input turns a bad
-request into a 500: `Project.ValidateSlug` is called before the constructor rather than by catching its
-`ArgumentException`.
+request into a 500: `PortalApplication.ValidateClientId` is called before the constructor rather than by
+catching its `ArgumentException`.
 
 **At the edges**, `ProblemResults.FromResult` maps a failed `Result` to RFC 9457 `application/problem+json`
 with the error code as the `errorCode` extension.
@@ -146,7 +146,7 @@ await silently disables validation for every endpoint.
 **Authorisation** is applied twice on purpose. `[RequirePortalPage(...)]` (or, for what is never
 delegated, `[Authorize(Policy = Policies.AdministratorOnly)]`) is the first gate, and each module re-checks
 inside its services through a host adapter (`IUserAdministrationAuthorization`, `IAccessAdminAuthorization`,
-`IContentEditAuthorization`, all in `Web/Authorization/ModuleAuthorization.cs`). An abstraction reachable
+all in `Web/Authorization/ModuleAuthorization.cs`). An abstraction reachable
 from more than one pipeline cannot depend on each caller remembering to guard it.
 
 **Page permissions.** The administration pages can be granted to groups, like applications. The pages are
@@ -159,8 +159,8 @@ page without a grant, and a group granted a page gives all its members full use 
 - `PortalPageAuthorizationHandler` reads the caller's pages from the database once per request
   (`CurrentPagePermissions`); nothing is cached in the cookie, so removing a grant or a membership takes
   effect on the next request.
-- Modules do not know pages. They name an *operation* (`AccessOperation`, `UserAdministrationOperation`,
-  `ContentArea`) and the host maps it to the same page lists as the endpoints.
+- Modules do not know pages. They name an *operation* (`AccessOperation`, `UserAdministrationOperation`)
+  and the host maps it to the same page lists as the endpoints.
 - Grants live in Access (`PageGroupGrants`, keyed by page key and group, cascading with the group). Access
   validates keys against the host's `IPortalPageCatalog`; a key the host no longer declares is ignored.
 - Never delegated: the page permissions themselves (`/api/admin/page-permissions`, `AdministratorOnly`),
@@ -194,15 +194,16 @@ Two consequences are load-bearing:
 
 ## Single sign-on for other applications (Access module)
 
-The portal is an OpenID Connect provider built on OpenIddict. Only the authorization-code flow with PKCE and
-refresh tokens is enabled; clients are confidential.
+The portal is an OpenID Connect provider built on OpenIddict. Users sign in through the authorization-code flow
+with PKCE and refresh tokens (plus, per application, the device flow); client credentials serve only an
+application's own API. Clients are confidential or public (PKCE, no secret), fixed at creation.
 
 **Who owns what.** `OpenPortal.Access` owns applications, groups and grants, and the OpenIddict client
 store (its tables live in `AccessDbContext`, so a client and its `PortalApplication` commit together). The
 host owns the OpenIddict *server*: endpoints, keys and `Oidc/ConnectController`, because they depend on the
 authentication stack and the environment. Access stores user ids only; names come through the host's
 `IUserDirectory` adapter (backed by Identity's `IUserLookupService`), and "may the caller do this"
-through `IAccessAdminAuthorization` — the same seam as Content's `IContentEditAuthorization`. Access also
+through `IAccessAdminAuthorization`, implemented by the host. Access also
 stores the page grants (see *Page permissions* above) against the host's `IPortalPageCatalog`.
 
 **The access rule** lives in one place (`AccessQueries`): a user may open an application when it is
@@ -297,7 +298,7 @@ The design choices, in the order they matter:
 
 - **A port in the shared kernel, not a reference to Audit.** The modules stay independent of each other; an
   architecture test checks it. Each module declares its action codes as constants (`IdentityAuditActions`,
-  `AccessAuditActions`, `ContentAuditActions`, `OidcAuditActions`), and a test checks every one has a label.
+  `AccessAuditActions`, `OidcAuditActions`, `SystemAuditActions`), and a test checks every one has a label.
 - **Recorded after the change is committed, never inside a transaction**, so a rolled-back change is never
   reported, and SQLite's single writer is not held by two connections at once.
 - **Best effort.** A failed write is logged and swallowed: the change already happened, and a 500 would invite
@@ -416,32 +417,82 @@ The protections every request passes through, in pipeline order (`Program.cs`):
 
 ---
 
-## Public versus management projections
+## Sessions on the server (Identity module)
 
-`ProjectDto` and `ManagedProjectDto` are separate types on purpose.
+The session cookie carries only a key: the authentication ticket lives in the `UserSessions` table
+(`UserSessionTicketStore`, the cookie handler's `ITicketStore`). A session is therefore an entity with a device,
+an address, a start and a last activity, and ending one (`ISessionService`) works at once on every instance,
+without waiting for the security stamp to be re-validated. What follows from that:
 
-| | `ProjectDto` (public) | `ManagedProjectDto` |
-| --- | --- | --- |
-| Addressed by | slug | row id |
-| Carries `IsPublished`, `Position`, `UpdatedAtUtc` | no | yes |
-| Served to | anonymous readers | administrators only |
+- **Each user** lists their sessions in Account → Security and ends any of them or all the others; an
+  **administrator** does the same for anyone (`/api/admin/users/{id}/sessions`). Changing the password or a
+  sign-out everywhere ends the sessions too; an ended session keeps its row, with the reason, as sign-in history
+  for 30 days (`identity.session_retention`).
+- **Idle timeout** (`SecuritySettings.IdleTimeoutMinutes`, 0 = off): a session unused for longer is refused at its
+  next request. Requests the page makes by itself (the notification stream and count, anything marked
+  `X-Background-Request`) do not count as activity; the client warns before the end (`IdleWarning`).
+- **New devices**: the first session from a device the account has not used is notified to its owner.
+- The current session's id reaches modules as `ICurrentUser.SessionId`, so "end every other session" spares it.
 
-The editor cannot publish, reorder or delete without the id and the published flag, and neither belongs in a
-public payload: publishing a draft flag and a row id to anonymous readers would let anyone enumerate
-unpublished work. `Public_project_payload_does_not_leak_editor_fields` guards the split.
+Deploying this replaces the cookies issued before: every user signs in again once.
+
+---
+
+## External sign-in providers (Identity module + `Web/Authentication/ExternalLogins.cs`)
+
+Google and Microsoft (Entra ID) are configured in the portal, not in appsettings: `ExternalLoginProvider` rows
+(client id, secret protected with Data Protection, for Microsoft the tenant, allowed email domains, sign-up mode
+`disabled` (existing accounts only) / `open` / `approval`). The host registers one OpenID Connect
+handler per known provider whose options are rebuilt from the database (`ExternalLoginOptionsSetup`, invalidated
+when an administrator saves), so a change needs no restart and a disabled provider refuses the challenge.
+
+The callback normalises the claims (Microsoft's stable key is `tid:oid`, never the email) and hands them to
+`IExternalLoginService`: an existing link signs in; otherwise an account with the same **verified** address is
+linked; otherwise the sign-up mode decides. Two-factor still applies after an external sign-in, and the session's
+`amr` is `fed`. Users link and unlink providers from their account; the last way to sign in cannot be removed,
+and an account created externally can set a password later.
+
+---
+
+## OpenID Connect beyond the code flow
+
+- **Consent** (`PortalApplication.RequireConsent`): the first sign-in to such an application stops at the SPA's
+  `/consent`, which posts the decision back to `/connect/authorize`; the OpenIddict authorization is permanent,
+  and users see and withdraw them under *Authorized applications* (withdrawing revokes the tokens).
+- **Device authorization** (`AllowDeviceFlow`): `connect/device` hands out the codes, the SPA's `/device` page
+  (`connect/verify`) lets a signed-in user confirm one, and the access rule, organizations and legal gates apply
+  as for the code flow.
+- **Secret rotation**: regenerating a secret can keep the previous one valid for up to 30 days
+  (`PortalApplicationManager` checks both), so an application is redeployed without downtime.
+- **Key rollover** (`Oidc:CertificatesPath`): the portal keeps a ring of signing certificates a year long; two
+  months before the end it creates a successor valid a week later, publishes it in the JWKS at once and signs with
+  it once it is valid. Loading happens at startup, so an instance must be restarted (any time in that week) to
+  pick up a new key.
+
+---
+
+## Background jobs and the system page
+
+Every sweep (audit and notification retention, access expiry, account deletion, session retention, the
+notification digest) runs in a hosted service on every instance and is idempotent. Each registers with the
+shared-kernel `IJobRegistry` (name, interval, the work as a delegate) and runs through it, so the registry knows
+the last start, duration, outcome and result of each. `GET /api/admin/system` (`AdministratorOnly`,
+`Web/Operations/SystemStatus.cs`) combines it with the readiness checks, the outbox counts, the optional parts of
+the deployment and the signing keys; `POST /api/admin/system/jobs/{name}/run` runs a job now (audited as
+`system.job_run`). The registry is per instance: on several instances the page describes the one that answered.
 
 ---
 
 ## Persistence
 
-Five `DbContext` instances, one per module (Identity, Content, Access, Audit, Notifications). Each module owns its schema and
+Four `DbContext` instances, one per module (Identity, Access, Audit, Notifications). Each module owns its schema and
 its migrations; no context knows the others exist, and the Access context also holds the OpenIddict tables.
 
 **Provider selection** lives only in `DatabaseProviderSelector.Configure`. Modules register their contexts
 through a callback that receives a provider-agnostic `DbContextOptionsBuilder`:
 
 ```csharp
-services.AddContentModule(options => DatabaseProviderSelector.Configure(options, provider, connectionString));
+services.AddAccessModule(options => DatabaseProviderSelector.Configure(options, provider, connectionString));
 ```
 
 `Database:Provider` is `Sqlite` (the default) or `PostgreSql`. No query is provider-specific: text search
@@ -453,7 +504,7 @@ that maps to UTC ticks. This is provider-specific and lives in the Infrastructur
 layer allowed to know the provider.
 
 **Migrations** exist once per provider, because a migration is written for one engine's column types: SQLite's
-under `src/OpenPortal.Web/Persistence/Migrations/{Identity,Content,Access,Audit}`, PostgreSQL's in their own
+under `src/OpenPortal.Web/Persistence/Migrations/{Identity,Access,Audit,Notifications}`, PostgreSQL's in their own
 assembly, `OpenPortal.Migrations.PostgreSql`, which the selector names as the migrations assembly. CI checks
 that neither set lags behind the model (`has-pending-model-changes`). Migrations run at startup only when
 `Database:MigrateOnStartup` is true (development, single-instance SQLite); in production they belong in a

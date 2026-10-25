@@ -136,6 +136,30 @@ namespace OpenPortal.Web.Persistence.Migrations.Notifications
                     b.ToTable("Notifications", (string)null);
                 });
 
+            modelBuilder.Entity("OpenPortal.Notifications.Domain.NotificationPreference", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("LastDigestAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("UpdatedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("UserId");
+
+                    b.HasIndex("Email", "LastDigestAtUtc")
+                        .HasDatabaseName("IX_NotificationPreferences_Email_LastDigestAtUtc");
+
+                    b.ToTable("NotificationPreferences", (string)null);
+                });
+
             modelBuilder.Entity("OpenPortal.Notifications.Domain.OutboxMessage", b =>
                 {
                     b.Property<Guid>("Id")

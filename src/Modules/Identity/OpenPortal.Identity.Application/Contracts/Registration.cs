@@ -48,9 +48,15 @@ public sealed class UpdateRegistrationSettingsRequest
 /// <param name="RequiresApproval">Whether a new account waits for an administrator.</param>
 /// <param name="PasswordReset">Whether the sign-in page offers "forgot your password?" (it needs email delivery).</param>
 /// <param name="Passkeys">Whether the sign-in page offers "sign in with a passkey".</param>
-public sealed record RegistrationInfoDto(bool Enabled, bool RequiresApproval, bool PasswordReset = false, bool Passkeys = false)
+/// <param name="ExternalProviders">The external providers the sign-in page offers ("continue with Google").</param>
+public sealed record RegistrationInfoDto(
+    bool Enabled,
+    bool RequiresApproval,
+    bool PasswordReset = false,
+    bool Passkeys = false,
+    IReadOnlyList<ExternalProviderInfoDto>? ExternalProviders = null)
 {
-    public static RegistrationInfoDto Closed { get; } = new(false, false);
+    public static RegistrationInfoDto Closed { get; } = new(false, false, ExternalProviders: []);
 }
 
 // ---------------------------------------------------------------------------
@@ -180,6 +186,27 @@ public sealed class CreateInvitationRequest
     public IReadOnlyList<Guid>? GroupIds { get; init; }
 
     public IReadOnlyList<Guid>? OrganizationIds { get; init; }
+}
+
+/// <summary>An organization's administrator inviting someone into it by address.</summary>
+public sealed class OrganizationInvitationRequest
+{
+    [Required(AllowEmptyStrings = false, ErrorMessage = "validation.email.required")]
+    [EmailAddress(ErrorMessage = "validation.email.invalid")]
+    [StringLength(256, ErrorMessage = "validation.email.max")]
+    public string Email { get; init; } = string.Empty;
+
+    [StringLength(ApplicationUser.NameMaxLength, ErrorMessage = "validation.name.max")]
+    public string? FirstName { get; init; }
+
+    [StringLength(ApplicationUser.NameMaxLength, ErrorMessage = "validation.name.max")]
+    public string? LastName { get; init; }
+
+    [StringLength(500, ErrorMessage = "validation.message.max")]
+    public string? Message { get; init; }
+
+    /// <summary><c>member</c> (the default) or <c>admin</c>: used when the address already has an account and is added directly.</summary>
+    public string? Role { get; init; }
 }
 
 /// <summary>Filter and paging for the invitation list.</summary>

@@ -34,9 +34,6 @@ COPY src/OpenPortal.Web/*.csproj src/OpenPortal.Web/
 COPY src/Modules/Identity/OpenPortal.Identity.Domain/*.csproj src/Modules/Identity/OpenPortal.Identity.Domain/
 COPY src/Modules/Identity/OpenPortal.Identity.Application/*.csproj src/Modules/Identity/OpenPortal.Identity.Application/
 COPY src/Modules/Identity/OpenPortal.Identity.Infrastructure/*.csproj src/Modules/Identity/OpenPortal.Identity.Infrastructure/
-COPY src/Modules/Content/OpenPortal.Content.Domain/*.csproj src/Modules/Content/OpenPortal.Content.Domain/
-COPY src/Modules/Content/OpenPortal.Content.Application/*.csproj src/Modules/Content/OpenPortal.Content.Application/
-COPY src/Modules/Content/OpenPortal.Content.Infrastructure/*.csproj src/Modules/Content/OpenPortal.Content.Infrastructure/
 COPY src/Modules/Access/OpenPortal.Access.Domain/*.csproj src/Modules/Access/OpenPortal.Access.Domain/
 COPY src/Modules/Access/OpenPortal.Access.Application/*.csproj src/Modules/Access/OpenPortal.Access.Application/
 COPY src/Modules/Access/OpenPortal.Access.Infrastructure/*.csproj src/Modules/Access/OpenPortal.Access.Infrastructure/

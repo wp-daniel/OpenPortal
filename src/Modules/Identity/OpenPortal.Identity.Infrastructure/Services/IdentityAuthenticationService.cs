@@ -43,6 +43,7 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
     private readonly SecuritySettingsStore _security;
     private readonly IAccountMessaging _messaging;
     private readonly IdentityTwoFactorPolicy _policy;
+    private readonly IExternalLoginProviders _externalProviders;
     private readonly Lazy<string> _timingEqualisationHash;
 
     public IdentityAuthenticationService(
@@ -61,9 +62,11 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
         IOptions<IdentityModuleOptions> moduleOptions,
         SecuritySettingsStore security,
         IAccountMessaging messaging,
-        IdentityTwoFactorPolicy policy)
+        IdentityTwoFactorPolicy policy,
+        IExternalLoginProviders externalProviders)
     {
         _policy = policy;
+        _externalProviders = externalProviders;
         _messaging = messaging;
         _security = security;
         _legal = legal;
@@ -360,11 +363,13 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
     {
         var settings = await _registration.ReadAsync(cancellationToken).ConfigureAwait(false);
         var security = await _security.ReadAsync(cancellationToken).ConfigureAwait(false);
+        await _externalProviders.RefreshAsync(cancellationToken).ConfigureAwait(false);
         var registration = new RegistrationInfoDto(
             settings.IsOpen,
             settings.Mode == Domain.Settings.RegistrationMode.Approval,
             PasswordReset: await _messaging.CanSendEmailAsync(cancellationToken).ConfigureAwait(false),
-            Passkeys: security.PasskeysEnabled);
+            Passkeys: security.PasskeysEnabled,
+            ExternalProviders: ExternalProviderInfo.From(_externalProviders));
         var legal = await _legal.GetInfoAsync(cancellationToken).ConfigureAwait(false);
 
         if (!_currentUser.IsAuthenticated)
@@ -416,7 +421,8 @@ internal sealed class IdentityAuthenticationService : IAuthenticationService
             Legal: legal,
             Features: new SessionFeaturesDto(
                 SelfDeletion: privacy.SelfDeletionEnabled,
-                PersonalAccessTokens: security.PersonalAccessTokensEnabled)));
+                PersonalAccessTokens: security.PersonalAccessTokensEnabled,
+                IdleTimeoutMinutes: security.IdleTimeoutMinutes)));
     }
 
     private Task RecordSignInAsync(

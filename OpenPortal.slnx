@@ -16,11 +16,6 @@
     <Project Path="src/Modules/Audit/OpenPortal.Audit.Domain/OpenPortal.Audit.Domain.csproj" />
     <Project Path="src/Modules/Audit/OpenPortal.Audit.Infrastructure/OpenPortal.Audit.Infrastructure.csproj" />
   </Folder>
-  <Folder Name="/src/Modules/Content/">
-    <Project Path="src/Modules/Content/OpenPortal.Content.Application/OpenPortal.Content.Application.csproj" />
-    <Project Path="src/Modules/Content/OpenPortal.Content.Domain/OpenPortal.Content.Domain.csproj" />
-    <Project Path="src/Modules/Content/OpenPortal.Content.Infrastructure/OpenPortal.Content.Infrastructure.csproj" />
-  </Folder>
   <Folder Name="/src/Modules/Notifications/">
     <Project Path="src/Modules/Notifications/OpenPortal.Notifications.Application/OpenPortal.Notifications.Application.csproj" />
     <Project Path="src/Modules/Notifications/OpenPortal.Notifications.Domain/OpenPortal.Notifications.Domain.csproj" />

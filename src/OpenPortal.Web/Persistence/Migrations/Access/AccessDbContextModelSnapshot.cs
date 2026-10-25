@@ -257,6 +257,9 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                     b.Property<bool>("AllowAccessRequests")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("AllowDeviceFlow")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("AnnouncedBackChannelLogoutUri")
                         .HasMaxLength(512)
                         .HasColumnType("TEXT");
@@ -332,6 +335,9 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                     b.Property<string>("RedirectUris")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequireConsent")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Source")
                         .IsRequired()
@@ -536,6 +542,9 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                         .HasMaxLength(120)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("RequireMultiFactor")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -551,6 +560,54 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                         .HasDatabaseName("IX_Organizations_Slug");
 
                     b.ToTable("Organizations", (string)null);
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Organizations.OrganizationDomain", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("AutoJoin")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AutoJoinRole")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Domain")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VerificationToken")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("VerifiedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("VerifiedBy")
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Domain")
+                        .IsUnique()
+                        .HasDatabaseName("IX_OrganizationDomains_Domain");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("OrganizationDomains", (string)null);
                 });
 
             modelBuilder.Entity("OpenPortal.Access.Domain.Organizations.OrganizationMember", b =>
@@ -575,6 +632,31 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                         .HasDatabaseName("IX_OrganizationMembers_UserId");
 
                     b.ToTable("OrganizationMembers", (string)null);
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Organizations.OrganizationMemberRole", b =>
+                {
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ApplicationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Role")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("OrganizationId", "UserId", "ApplicationId", "Role");
+
+                    b.HasIndex("ApplicationId");
+
+                    b.HasIndex("UserId", "ApplicationId")
+                        .HasDatabaseName("IX_OrganizationMemberRoles_UserId_ApplicationId");
+
+                    b.ToTable("OrganizationMemberRoles", (string)null);
                 });
 
             modelBuilder.Entity("OpenPortal.Access.Domain.Requests.AccessRequest", b =>
@@ -811,11 +893,35 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("OpenPortal.Access.Domain.Organizations.OrganizationDomain", b =>
+                {
+                    b.HasOne("OpenPortal.Access.Domain.Organizations.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("OpenPortal.Access.Domain.Organizations.OrganizationMember", b =>
                 {
                     b.HasOne("OpenPortal.Access.Domain.Organizations.Organization", null)
                         .WithMany("Members")
                         .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Organizations.OrganizationMemberRole", b =>
+                {
+                    b.HasOne("OpenPortal.Access.Domain.Applications.PortalApplication", null)
+                        .WithMany()
+                        .HasForeignKey("ApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OpenPortal.Access.Domain.Organizations.OrganizationMember", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

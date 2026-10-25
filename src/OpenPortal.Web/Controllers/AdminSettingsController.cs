@@ -40,6 +40,36 @@ public sealed class AdminSettingsController : ControllerBase
         _mailTester = mailTester;
     }
 
+    /// <summary>The external sign-in providers (Google, Microsoft); client secrets are never returned.</summary>
+    [HttpGet("external-logins")]
+    [ProducesResponseType<IReadOnlyList<ExternalProviderSettingsDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<IReadOnlyList<ExternalProviderSettingsDto>>> ListExternalLoginsAsync(
+        [FromServices] IExternalLoginSettingsService externalLogins,
+        CancellationToken cancellationToken)
+    {
+        var providers = await externalLogins.ListAsync(cancellationToken).ConfigureAwait(false);
+
+        return providers.IsSuccess ? Ok(providers.Value) : ProblemResults.FromResult(HttpContext, providers);
+    }
+
+    /// <summary>Configures one provider; the change applies to the sign-in page at once, without a restart.</summary>
+    [HttpPut("external-logins/{provider}")]
+    [ProducesResponseType<ExternalProviderSettingsDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ExternalProviderSettingsDto>> UpdateExternalLoginAsync(
+        string provider,
+        [FromBody] UpdateExternalProviderRequest request,
+        [FromServices] IExternalLoginSettingsService externalLogins,
+        CancellationToken cancellationToken)
+    {
+        var updated = await externalLogins.UpdateAsync(provider, request, cancellationToken).ConfigureAwait(false);
+
+        return updated.IsSuccess ? Ok(updated.Value) : ProblemResults.FromResult(HttpContext, updated);
+    }
+
     /// <summary>Self-registration and invitations, and whether the portal can send email for them.</summary>
     [HttpGet("registration")]
     [ProducesResponseType<RegistrationSettingsDto>(StatusCodes.Status200OK)]

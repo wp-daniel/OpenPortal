@@ -50,14 +50,42 @@ internal sealed class GroupService : IGroupService
 
     public async Task<Result<IReadOnlyList<GroupSummaryDto>>> ListAsync(CancellationToken cancellationToken)
     {
+        var slice = await ListAsync(ListSlice.All, cancellationToken).ConfigureAwait(false);
+
+        return slice.IsSuccess
+            ? Result<IReadOnlyList<GroupSummaryDto>>.Success(slice.Value.Items)
+            : Result<IReadOnlyList<GroupSummaryDto>>.Failure(slice.Error);
+    }
+
+    public async Task<Result<SliceDto<GroupSummaryDto>>> ListAsync(ListSlice slice, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(slice);
+
         var guard = await _authorization.EnsureCanAsync(AccessOperation.ListGroups, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
-            return Result<IReadOnlyList<GroupSummaryDto>>.Failure(guard.Error);
+            return Result<SliceDto<GroupSummaryDto>>.Failure(guard.Error);
         }
 
-        var groups = await _db.Groups
-            .AsNoTracking()
+        var query = _db.Groups.AsNoTracking();
+
+        // Compared upper-cased on both sides: LIKE is case-sensitive on one engine and not on the other.
+        var term = slice.Search?.Trim().ToUpperInvariant();
+        if (!string.IsNullOrEmpty(term))
+        {
+            query = query.Where(group => group.Name.ToUpper().Contains(term)
+                || (group.Description != null && group.Description.ToUpper().Contains(term)));
+        }
+
+        var total = await query.CountAsync(cancellationToken).ConfigureAwait(false);
+
+        query = query.OrderBy(group => group.Name).Skip(Math.Max(0, slice.Skip));
+        if (slice.Take is int take)
+        {
+            query = query.Take(Math.Clamp(take, 1, ListSlice.MaxTake));
+        }
+
+        var groups = await query
             .Select(group => new
             {
                 group.Id,
@@ -81,7 +109,7 @@ internal sealed class GroupService : IGroupService
                 group.CreatedAtUtc))
             .ToList();
 
-        return Result<IReadOnlyList<GroupSummaryDto>>.Success(result);
+        return Result<SliceDto<GroupSummaryDto>>.Success(new SliceDto<GroupSummaryDto>(result, total));
     }
 
     public async Task<Result<GroupDetailDto>> GetAsync(Guid groupId, CancellationToken cancellationToken)

@@ -10,7 +10,7 @@
 export function serverReturnUrl(search: string): string | null {
   const value = new URLSearchParams(search).get('returnUrl')
 
-  if (!value || !value.startsWith('/connect/authorize') || value.includes('\\')) {
+  if (!value || !(value.startsWith('/connect/authorize') || value.startsWith('/connect/verify')) || value.includes('\\')) {
     return null
   }
 

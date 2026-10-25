@@ -41,11 +41,15 @@ public static class NotificationsModuleServiceCollectionExtensions
         services.AddDbContext<NotificationsDbContext>(configureContext);
 
         services.TryAddSingleton<IClock, SystemClock>();
+        services.TryAddSingleton<OpenPortal.SharedKernel.Jobs.IJobRegistry, OpenPortal.SharedKernel.Jobs.JobRegistry>();
 
         // Nobody is told in real time unless the host supplies a publisher (it registers one before this module).
         services.TryAddSingleton<INotificationPublisher, NoNotificationPublisher>();
         services.AddScoped<INotifier, Notifier>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<INotificationPreferenceService, NotificationPreferenceService>();
+        services.AddScoped<NotificationEmailer>();
+        services.AddHostedService<NotificationDigestService>();
         services.AddScoped<INotificationMaintenance, NotificationMaintenanceService>();
         services.AddScoped<IAnnouncementService, AnnouncementService>();
         services.AddScoped<IPersonalDataSource, NotificationPersonalData>();

@@ -80,7 +80,12 @@ public static class OidcServerSetup
                     // An application revokes its refresh token when its user signs out (RFC 7009), and a confidential
                     // one may ask what a token means (RFC 7662). Both are handled by OpenIddict itself.
                     .SetRevocationEndpointUris("connect/revoke")
-                    .SetIntrospectionEndpointUris("connect/introspect");
+                    .SetIntrospectionEndpointUris("connect/introspect")
+
+                    // The device flow (RFC 8628): a tool without a browser gets a code there, and the person approves it
+                    // on the verification page (the SPA's /device, which posts to connect/verify).
+                    .SetDeviceAuthorizationEndpointUris("connect/device")
+                    .SetEndUserVerificationEndpointUris("connect/verify");
 
                 // Access tokens are signed JWTs, not encrypted ones: an application's own API validates them with
                 // the keys the discovery document publishes (jwks_uri), without calling the portal.
@@ -91,6 +96,7 @@ public static class OidcServerSetup
                 server.AllowAuthorizationCodeFlow()
                     .AllowRefreshTokenFlow()
                     .AllowClientCredentialsFlow()
+                    .AllowDeviceAuthorizationFlow()
                     .RequireProofKeyForCodeExchange();
 
                 server.RegisterScopes(
@@ -136,7 +142,8 @@ public static class OidcServerSetup
                     .EnableAuthorizationEndpointPassthrough()
                     .EnableTokenEndpointPassthrough()
                     .EnableUserInfoEndpointPassthrough()
-                    .EnableEndSessionEndpointPassthrough();
+                    .EnableEndSessionEndpointPassthrough()
+                    .EnableEndUserVerificationEndpointPassthrough();
 
                 // Mirrors Identity:Cookie:RequireSecure: the dev server and the tests run over plain http.
                 if (!requireSecureTransport)
@@ -175,8 +182,19 @@ public static class OidcServerSetup
 
         if (!string.IsNullOrWhiteSpace(options.CertificatesPath))
         {
-            server.AddSigningCertificate(StoredCertificates.LoadOrCreate(options.CertificatesPath, "signing", X509KeyUsageFlags.DigitalSignature, options.CertificatesPassword))
-                .AddEncryptionCertificate(StoredCertificates.LoadOrCreate(options.CertificatesPath, "encryption", X509KeyUsageFlags.KeyEncipherment, options.CertificatesPassword));
+            // Every certificate that has not expired, the successor of one close to its end included: OpenIddict signs
+            // (and encrypts) with the valid one that lasts longest and publishes them all.
+            var now = DateTimeOffset.UtcNow;
+            foreach (var certificate in StoredCertificates.LoadKeyRing(options.CertificatesPath, "signing", X509KeyUsageFlags.DigitalSignature, options.CertificatesPassword, now))
+            {
+                server.AddSigningCertificate(certificate);
+            }
+
+            foreach (var certificate in StoredCertificates.LoadKeyRing(options.CertificatesPath, "encryption", X509KeyUsageFlags.KeyEncipherment, options.CertificatesPassword, now))
+            {
+                server.AddEncryptionCertificate(certificate);
+            }
+
             return;
         }
 

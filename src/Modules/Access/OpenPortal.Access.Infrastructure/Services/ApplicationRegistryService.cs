@@ -139,6 +139,8 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
             return Result<ApplicationSecretDto>.Failure(configured.Error);
         }
 
+        ConfigureSignIn(application, request.RequireConsent, request.AllowDeviceFlow, now);
+
         var webhook = application.SetWebhook(request.WebhookUrl, request.WebhookEvents, now);
         if (webhook.IsFailure)
         {
@@ -219,6 +221,8 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
         {
             return Result<ApplicationDto>.Failure(configured.Error);
         }
+
+        ConfigureSignIn(application, request.RequireConsent, request.AllowDeviceFlow, now);
 
         // Absent leaves the webhook as it is; an empty URL turns it off.
         if (request.WebhookUrl is not null || request.WebhookEvents is not null)
@@ -314,8 +318,16 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
 
     public async Task<Result<ApplicationSecretDto>> RegenerateSecretAsync(
         Guid applicationId,
+        RegenerateSecretRequest request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (request.KeepPreviousHours is < 0 or > RegenerateSecretRequest.MaxKeepPreviousHours)
+        {
+            return Result<ApplicationSecretDto>.Failure(AccessErrors.SecretOverlapInvalid);
+        }
+
         var guard = await _authorization.EnsureCanAsync(AccessOperation.ManageApplications, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
@@ -338,15 +350,19 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
             return Result<ApplicationSecretDto>.Failure(AccessErrors.PublicClientHasNoSecret);
         }
 
-        var secret = await _clients.IssueSecretAsync(application, cancellationToken).ConfigureAwait(false);
+        var until = request.KeepPreviousHours > 0 ? _clock.UtcNow.AddHours(request.KeepPreviousHours) : (DateTimeOffset?)null;
+        var secret = await _clients.ReplaceSecretAsync(application, until, cancellationToken).ConfigureAwait(false);
 
         await _audit.RecordAsync(
-                AuditEvent.Succeeded(AccessAuditActions.ApplicationSecretRegenerated, application.ToAuditSubject()),
+                AuditEvent.Succeeded(
+                    AccessAuditActions.ApplicationSecretRegenerated,
+                    application.ToAuditSubject(),
+                    AccessAudit.Details(("previousValidUntil", until?.ToString("O", System.Globalization.CultureInfo.InvariantCulture) ?? "revoked"))),
                 cancellationToken)
             .ConfigureAwait(false);
 
         return Result<ApplicationSecretDto>.Success(
-            new ApplicationSecretDto(await ToDtoAsync(application, cancellationToken).ConfigureAwait(false), secret));
+            new ApplicationSecretDto(await ToDtoAsync(application, cancellationToken).ConfigureAwait(false), secret, until));
     }
 
     public async Task<Result<WebhookSecretDto>> GenerateWebhookSecretAsync(Guid applicationId, CancellationToken cancellationToken)
@@ -436,6 +452,20 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
     /// Applies the roles, the group claim setting, the API scopes, access requests and the organization mode of a
     /// create or update request. Null leaves each as it is. Returns the keys of the roles that were removed.
     /// </summary>
+    /// <summary>Consent and the device flow; null leaves each as it is.</summary>
+    private static void ConfigureSignIn(PortalApplication application, bool? requireConsent, bool? allowDeviceFlow, DateTimeOffset now)
+    {
+        if (requireConsent is bool consent)
+        {
+            application.SetConsent(consent, now);
+        }
+
+        if (allowDeviceFlow is bool device)
+        {
+            application.SetDeviceFlow(device, now);
+        }
+    }
+
     private static Result<IReadOnlyList<string>> Configure(
         PortalApplication application,
         IReadOnlyList<ApplicationRoleDto>? roles,
@@ -506,6 +536,14 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
         {
             grant.SetRoles(grant.Roles.Except(removed, StringComparer.Ordinal));
         }
+
+        // And from what members hold in it within their organizations.
+        var organizationRoles = await _db.OrganizationMemberRoles
+            .Where(role => role.ApplicationId == applicationId && removed.Contains(role.Role))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        _db.OrganizationMemberRoles.RemoveRange(organizationRoles);
     }
 
     /// <summary>

@@ -14,6 +14,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { notify } from '@/hooks/useToast'
+import { formatDate } from '@/i18n/store'
 import { useI18n } from '@/i18n/useI18n'
 
 /**
@@ -65,6 +66,13 @@ export function SecretDialog({ secret, onClose }: { secret: ApplicationSecret | 
           </DialogTitle>
           <DialogDescription>
             {t('applications.secret.description', { name: secret?.application.displayName ?? '' })}
+            {secret?.previousSecretValidUntilUtc && (
+              <span className="mt-2 block">
+                {t('applications.secret.previousValidUntil', {
+                  date: formatDate(secret.previousSecretValidUntilUtc, { dateStyle: 'medium', timeStyle: 'short' }),
+                })}
+              </span>
+            )}
           </DialogDescription>
         </DialogHeader>
 

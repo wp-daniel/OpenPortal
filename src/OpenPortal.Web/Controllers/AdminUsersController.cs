@@ -141,6 +141,70 @@ public sealed class AdminUsersController : ControllerBase
             : ProblemResults.FromResult(HttpContext, reset);
     }
 
+    /// <summary>An account's open sessions and its recent sign-ins.</summary>
+    [RequirePortalPage(PortalPages.Users)]
+    [HttpGet("{userId:guid}/sessions")]
+    [ProducesResponseType<AccountSessionsDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AccountSessionsDto>> ListSessionsAsync(
+        Guid userId,
+        [FromServices] ISessionService sessions,
+        CancellationToken cancellationToken)
+    {
+        var list = await sessions.ListForUserAsync(userId, cancellationToken).ConfigureAwait(false);
+
+        return list.IsSuccess ? Ok(list.Value) : ProblemResults.FromResult(HttpContext, list);
+    }
+
+    /// <summary>Ends one session of an account (a browser left signed in on a shared computer).</summary>
+    [RequirePortalPage(PortalPages.Users)]
+    [HttpDelete("{userId:guid}/sessions/{sessionId}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> RevokeSessionAsync(
+        Guid userId,
+        string sessionId,
+        [FromServices] ISessionService sessions,
+        CancellationToken cancellationToken)
+    {
+        var revoked = await sessions.RevokeForUserAsync(userId, sessionId, cancellationToken).ConfigureAwait(false);
+
+        return revoked.IsSuccess ? NoContent() : ProblemResults.FromResult(HttpContext, revoked);
+    }
+
+    /// <summary>The external accounts (Google, Microsoft) connected to an account.</summary>
+    [RequirePortalPage(PortalPages.Users)]
+    [HttpGet("{userId:guid}/external-logins")]
+    [ProducesResponseType<IReadOnlyList<ExternalLoginDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<ExternalLoginDto>>> ListExternalLoginsAsync(
+        Guid userId,
+        [FromServices] IExternalLoginService externalLogins,
+        CancellationToken cancellationToken)
+    {
+        var logins = await externalLogins.ListForUserAsync(userId, cancellationToken).ConfigureAwait(false);
+
+        return logins.IsSuccess ? Ok(logins.Value) : ProblemResults.FromResult(HttpContext, logins);
+    }
+
+    /// <summary>Disconnects an external account from an account (it was compromised), ending the sessions it opened.</summary>
+    [RequirePortalPage(PortalPages.Users)]
+    [HttpDelete("{userId:guid}/external-logins/{provider}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> RemoveExternalLoginAsync(
+        Guid userId,
+        string provider,
+        [FromServices] IExternalLoginService externalLogins,
+        CancellationToken cancellationToken)
+    {
+        var removed = await externalLogins.RemoveForUserAsync(userId, provider, cancellationToken).ConfigureAwait(false);
+
+        return removed.IsSuccess ? NoContent() : ProblemResults.FromResult(HttpContext, removed);
+    }
+
     /// <summary>Removes every passkey of an account that lost its devices, ending its sessions.</summary>
     [RequirePortalPage(PortalPages.Users)]
     [HttpDelete("{userId:guid}/passkeys")]

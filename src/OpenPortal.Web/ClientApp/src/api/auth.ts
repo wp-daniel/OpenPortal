@@ -1,6 +1,10 @@
 import { api, invalidateAntiforgeryToken } from './client'
 import type {
   AccountDeletion,
+  AccountExternalLogins,
+  AccountSessions,
+  AuthorizedApplication,
+  ExternalProviderKey,
   CreatedPersonalAccessToken,
   PersonalAccessToken,
   PersonalAccessTokenScope,
@@ -85,6 +89,20 @@ export const accountApi = {
   /** Saves the preferred UI language (null clears it). */
   updateLanguage: (language: string | null) => api.put<AccountProfile>('/api/account/language', { language }),
   changePassword: (body: ChangePasswordRequest) => api.post<void>('/api/account/change-password', body),
+  /** For an account without a password (created through Google or Microsoft). */
+  setPassword: (newPassword: string) => api.post<void>('/api/account/set-password', { newPassword }),
+
+  externalLogins: (signal?: AbortSignal) => api.get<AccountExternalLogins>('/api/account/external-logins', signal),
+
+  sessions: (signal?: AbortSignal) => api.get<AccountSessions>('/api/account/sessions', signal),
+
+  authorizedApplications: (signal?: AbortSignal) =>
+    api.get<AuthorizedApplication[]>('/api/account/authorized-applications', signal),
+  revokeAuthorizedApplication: (clientId: string) =>
+    api.delete<void>(`/api/account/authorized-applications/${encodeURIComponent(clientId)}`),
+  revokeSession: (sessionId: string) => api.delete<void>(`/api/account/sessions/${encodeURIComponent(sessionId)}`),
+  revokeOtherSessions: () => api.post<{ count: number }>('/api/account/sessions/revoke-others'),
+  removeExternalLogin: (provider: ExternalProviderKey) => api.delete<void>(`/api/account/external-logins/${provider}`),
   uploadAvatar: (image: Blob) => api.put<void>('/api/account/avatar', avatarForm(image)),
   removeAvatar: () => api.delete<void>('/api/account/avatar'),
 

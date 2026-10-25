@@ -80,17 +80,7 @@ export function DashboardPage() {
             { to: '/admin/groups', label: t('nav.groups'), page: 'groups' },
             { to: '/admin/organizations', label: t('nav.organizations'), page: 'organizations' },
           ]}
-        />
-
-        <ShortcutSection
-          title={t('dashboard.content.title')}
-          description={t('dashboard.content.description')}
-          links={[
-            { to: '/admin/content/profile', label: t('nav.profile'), page: 'content.profile' },
-            { to: '/admin/content/projects', label: t('nav.projects'), page: 'content.projects' },
-          ]}
-        />
-      </div>
+        />      </div>
     </>
   )
 }

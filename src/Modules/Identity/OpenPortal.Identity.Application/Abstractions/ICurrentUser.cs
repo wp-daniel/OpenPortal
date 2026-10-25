@@ -33,6 +33,15 @@ public interface ICurrentUser
 
     /// <summary>The session's <c>amr</c> values (see <see cref="Abstractions.AuthenticationMethods"/>).</summary>
     IReadOnlyList<string> AuthenticationMethods { get; }
+
+    /// <summary>The portal session (cookie) the request came with; null for a token or an anonymous caller.</summary>
+    string? SessionId { get; }
+}
+
+/// <summary>Where the session store leaves the id of the session a request authenticated with.</summary>
+public static class SessionItems
+{
+    public const string CurrentSessionId = "openportal.session_id";
 }
 
 /// <summary>
@@ -68,4 +77,10 @@ public static class AuthenticationMethods
     public const string HardwareKey = "hwk";
     public const string UserPresence = "user";
     public const string MultiFactor = "mfa";
+
+    /// <summary>
+    /// Signed in through an external identity provider (Google, Microsoft). Not one of RFC 8176's values, which name
+    /// how the person proved who they are; the portal does not see how the provider checked them.
+    /// </summary>
+    public const string Federated = "fed";
 }

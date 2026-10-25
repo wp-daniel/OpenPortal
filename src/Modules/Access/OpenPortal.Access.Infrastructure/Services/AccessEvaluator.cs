@@ -42,7 +42,8 @@ internal sealed class AccessEvaluator : IAccessEvaluator
             Allowed: true,
             application.DisplayName,
             await _access.RolesAsync(application, userId, cancellationToken).ConfigureAwait(false),
-            await _access.GroupClaimsAsync(application, userId, cancellationToken).ConfigureAwait(false));
+            await _access.GroupClaimsAsync(application, userId, cancellationToken).ConfigureAwait(false),
+            application.RequireConsent);
     }
 
     public async Task<OrganizationDecision> EvaluateOrganizationAsync(
@@ -52,16 +53,40 @@ internal sealed class AccessEvaluator : IAccessEvaluator
         bool interactive,
         CancellationToken cancellationToken)
     {
-        var mode = await _db.Applications
+        var application = await _db.Applications
             .AsNoTracking()
-            .Where(application => application.ClientId == clientId)
-            .Select(application => (OrganizationMode?)application.Organizations)
-            .SingleOrDefaultAsync(cancellationToken)
+            .SingleOrDefaultAsync(candidate => candidate.ClientId == clientId, cancellationToken)
             .ConfigureAwait(false);
 
-        if (mode is null or OrganizationMode.None)
+        var mode = application?.Organizations;
+        if (application is null || mode is null or OrganizationMode.None)
         {
             return new OrganizationDecision(OrganizationOutcome.NotUsed, null, []);
+        }
+
+        // The chosen organization adds what the user is in this application within it, and its sign-in policy.
+        async Task<OrganizationDecision> SelectedAsync(OrganizationMembershipDto membership)
+        {
+            var roles = await _db.OrganizationMemberRoles
+                .AsNoTracking()
+                .Where(role => role.OrganizationId == membership.Id && role.UserId == userId && role.ApplicationId == application.Id)
+                .Select(role => role.Role)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            var requireMultiFactor = await _db.Organizations
+                .AsNoTracking()
+                .Where(organization => organization.Id == membership.Id)
+                .Select(organization => organization.RequireMultiFactor)
+                .FirstOrDefaultAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            return new OrganizationDecision(
+                OrganizationOutcome.Selected,
+                membership,
+                [],
+                roles.Where(application.HasRole).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList(),
+                requireMultiFactor);
         }
 
         var memberships = await OrganizationQueries.MembershipsAsync(_db, userId, cancellationToken).ConfigureAwait(false);
@@ -76,14 +101,18 @@ internal sealed class AccessEvaluator : IAccessEvaluator
 
             return match is null
                 ? new OrganizationDecision(OrganizationOutcome.NotMember, null, [])
-                : new OrganizationDecision(OrganizationOutcome.Selected, match, []);
+                : await SelectedAsync(match).ConfigureAwait(false);
+        }
+
+        if (memberships.Count == 1)
+        {
+            return await SelectedAsync(memberships[0]).ConfigureAwait(false);
         }
 
         return memberships.Count switch
         {
             0 when mode == OrganizationMode.Required => new OrganizationDecision(OrganizationOutcome.Missing, null, []),
             0 => new OrganizationDecision(OrganizationOutcome.Unaffiliated, null, []),
-            1 => new OrganizationDecision(OrganizationOutcome.Selected, memberships[0], []),
 
             // Several, and nobody to ask (a refresh of a token that named none): an application that needs one
             // refuses; one that can do without carries on without.

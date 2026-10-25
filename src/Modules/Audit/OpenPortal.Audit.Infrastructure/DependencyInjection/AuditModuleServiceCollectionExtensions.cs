@@ -40,6 +40,7 @@ public static class AuditModuleServiceCollectionExtensions
         services.AddDbContext<AuditDbContext>(configureContext);
 
         services.TryAddSingleton<IClock, SystemClock>();
+        services.TryAddSingleton<OpenPortal.SharedKernel.Jobs.IJobRegistry, OpenPortal.SharedKernel.Jobs.JobRegistry>();
 
         services.AddScoped<IAuditTrail, AuditTrail>();
         services.AddScoped<IAuditLogService, AuditLogService>();

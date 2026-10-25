@@ -50,6 +50,14 @@ public sealed class ChangePasswordRequest
     public string NewPassword { get; init; } = string.Empty;
 }
 
+/// <summary>Gives a password to an account that has none (one created through an external provider).</summary>
+public sealed class SetPasswordRequest
+{
+    [Required(AllowEmptyStrings = false, ErrorMessage = "validation.newPassword.required")]
+    [StringLength(256, ErrorMessage = "validation.newPassword.max")]
+    public string NewPassword { get; init; } = string.Empty;
+}
+
 /// <summary>Sets (or clears, with <see langword="null"/>) the signed-in account's preferred UI language.</summary>
 public sealed class UpdateLanguageRequest
 {

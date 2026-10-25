@@ -88,16 +88,20 @@ export function UserPicker({ id, value, onChange, exclude = [] }: PickerProps) {
   )
 }
 
-/** Combobox over the groups. There are few enough to load once and filter in the list. */
+/** Combobox over the groups, searched on the server as the user types (a portal can have thousands). */
 export function GroupPicker({ id, value, onChange, exclude = [] }: PickerProps) {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const term = useDebounced(search.trim())
 
-  const groups = useQuery({
-    queryKey: accessKeys.groups,
-    queryFn: ({ signal }) => groupsApi.list(signal),
+  const slice = useQuery({
+    queryKey: [...accessKeys.groups, 'picker', term],
+    queryFn: ({ signal }) => groupsApi.slice({ search: term, skip: 0, take: 20 }, signal),
     enabled: open,
+    placeholderData: (previous) => previous,
   })
+  const groups = { isPending: slice.isPending, data: slice.data?.items }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -108,8 +112,8 @@ export function GroupPicker({ id, value, onChange, exclude = [] }: PickerProps) 
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
-        <Command>
-          <CommandInput placeholder={t('access.picker.searchGroups')} />
+        <Command shouldFilter={false}>
+          <CommandInput placeholder={t('access.picker.searchGroups')} value={search} onValueChange={setSearch} />
           <CommandList>
             <CommandEmpty>{groups.isPending ? t('common.loading') : t('access.picker.noGroups')}</CommandEmpty>
             <CommandGroup>

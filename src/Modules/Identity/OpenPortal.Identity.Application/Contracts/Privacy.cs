@@ -28,7 +28,8 @@ public sealed record AccountDeletionDto(DateTimeOffset RequestedAtUtc, DateTimeO
 /// <summary>Optional features the portal offers, so the client shows only what works.</summary>
 /// <param name="SelfDeletion">Account holders may ask for their account to be deleted.</param>
 /// <param name="PersonalAccessTokens">Account holders may create personal access tokens for the API.</param>
-public sealed record SessionFeaturesDto(bool SelfDeletion, bool PersonalAccessTokens)
+/// <param name="IdleTimeoutMinutes">Minutes without activity after which a session ends (0: never), so the client can warn first.</param>
+public sealed record SessionFeaturesDto(bool SelfDeletion, bool PersonalAccessTokens, int IdleTimeoutMinutes = 0)
 {
     public static SessionFeaturesDto None { get; } = new(false, false);
 }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using OpenPortal.Web.Security;
+using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Identity.Application.Contracts;
 using OpenPortal.SharedKernel.Results;
@@ -30,13 +31,16 @@ public sealed class AuthController : ControllerBase
     private readonly IAntiforgery _antiforgery;
     private readonly BackChannelLogoutNotifier _logout;
     private readonly ICurrentUser _currentUser;
+    private readonly IOrganizationAutoJoin _autoJoin;
 
     public AuthController(
         IAuthenticationService authentication,
         IAntiforgery antiforgery,
         BackChannelLogoutNotifier logout,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IOrganizationAutoJoin autoJoin)
     {
+        _autoJoin = autoJoin;
         _logout = logout;
         _currentUser = currentUser;
         _authentication = authentication;
@@ -86,7 +90,21 @@ public sealed class AuthController : ControllerBase
         // state without a second round trip. The fallback is unreachable in practice: GetSessionAsync already
         // converts every failure it can anticipate into an anonymous session. It stays because the endpoint
         // promises "always 200" and a client polling it has no way to recover from a 500.
+        return await SignedInSessionAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The session just established, after joining the organizations whose verified domain matches the account's
+    /// confirmed address (and that let people join by it).
+    /// </summary>
+    private async Task<ActionResult<SessionDto>> SignedInSessionAsync(CancellationToken cancellationToken)
+    {
         var session = await _authentication.GetSessionAsync(cancellationToken).ConfigureAwait(false);
+
+        if (session is { IsSuccess: true, Value.User: { } user })
+        {
+            await _autoJoin.JoinByEmailDomainAsync(user.Id, cancellationToken).ConfigureAwait(false);
+        }
 
         return session.IsSuccess
             ? Ok(session.Value)
@@ -112,11 +130,7 @@ public sealed class AuthController : ControllerBase
             return ProblemResults.FromResult(HttpContext, signedIn);
         }
 
-        var session = await _authentication.GetSessionAsync(cancellationToken).ConfigureAwait(false);
-
-        return session.IsSuccess
-            ? Ok(session.Value)
-            : Ok(SessionDto.AnonymousFor(_authentication.PasswordPolicy));
+        return await SignedInSessionAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -149,11 +163,7 @@ public sealed class AuthController : ControllerBase
             return ProblemResults.FromResult(HttpContext, signedIn);
         }
 
-        var session = await _authentication.GetSessionAsync(cancellationToken).ConfigureAwait(false);
-
-        return session.IsSuccess
-            ? Ok(session.Value)
-            : Ok(SessionDto.AnonymousFor(_authentication.PasswordPolicy));
+        return await SignedInSessionAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Terminates the session and clears its cookie.</summary>

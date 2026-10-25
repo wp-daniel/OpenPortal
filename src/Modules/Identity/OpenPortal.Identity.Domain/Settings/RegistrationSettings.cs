@@ -81,7 +81,7 @@ public sealed class RegistrationSettings
 
         foreach (var value in allowedDomains ?? [])
         {
-            var domain = NormaliseDomain(value);
+            var domain = EmailDomains.Normalise(value);
             if (domain is null)
             {
                 if (!string.IsNullOrWhiteSpace(value))
@@ -123,30 +123,5 @@ public sealed class RegistrationSettings
     }
 
     /// <summary>Whether <paramref name="email"/> may register under the domain list.</summary>
-    public bool AllowsEmail(string email)
-    {
-        ArgumentNullException.ThrowIfNull(email);
-
-        if (AllowedDomains.Count == 0)
-        {
-            return true;
-        }
-
-        var at = email.LastIndexOf('@');
-
-        return at > 0 && AllowedDomains.Contains(email[(at + 1)..].Trim().ToLowerInvariant(), StringComparer.Ordinal);
-    }
-
-    /// <summary>A host name in lower case (<c>example.com</c>), or null when <paramref name="value"/> is not one.</summary>
-    private static string? NormaliseDomain(string? value)
-    {
-        var domain = value?.Trim().TrimStart('@').ToLowerInvariant();
-
-        if (string.IsNullOrEmpty(domain) || domain.Length > DomainMaxLength || Uri.CheckHostName(domain) != UriHostNameType.Dns)
-        {
-            return null;
-        }
-
-        return domain.Contains('.', StringComparison.Ordinal) ? domain : null;
-    }
+    public bool AllowsEmail(string email) => EmailDomains.Allows(AllowedDomains, email);
 }

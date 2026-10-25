@@ -86,6 +86,29 @@ public static class AccessAuditActions
 
     public const string OrganizationMemberRemoved = "organization.member_removed";
 
+    /// <summary>The user took back an application's permission to sign them in; the target is the application.</summary>
+    public const string AuthorizationRevoked = "access.authorization_revoked";
+
+    /// <summary>The organization's sign-in policy changed (two factors required or not).</summary>
+    public const string OrganizationPolicyChanged = "organization.policy_changed";
+
+    /// <summary>An email domain was claimed for the organization; details carry the domain.</summary>
+    public const string OrganizationDomainAdded = "organization.domain_added";
+
+    /// <summary>A domain was verified, by its DNS record or by a portal administrator (details: <c>by</c>).</summary>
+    public const string OrganizationDomainVerified = "organization.domain_verified";
+
+    /// <summary>Joining by the domain was turned on or off.</summary>
+    public const string OrganizationDomainUpdated = "organization.domain_updated";
+
+    public const string OrganizationDomainRemoved = "organization.domain_removed";
+
+    /// <summary>Someone joined the organization by the domain of their address; the actor is the account.</summary>
+    public const string OrganizationJoinedByDomain = "organization.joined_by_domain";
+
+    /// <summary>A member's roles in an application within the organization changed; details carry them.</summary>
+    public const string OrganizationMemberRolesChanged = "organization.member_roles_changed";
+
     /// <summary>A user asked for an application. The target is the application.</summary>
     public const string RequestSubmitted = "access.request_submitted";
 

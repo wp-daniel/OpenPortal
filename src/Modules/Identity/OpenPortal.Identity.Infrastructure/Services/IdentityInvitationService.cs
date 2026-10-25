@@ -32,6 +32,7 @@ internal sealed class IdentityInvitationService : IInvitationService
     private readonly IClock _clock;
     private readonly IAuditTrail _audit;
     private readonly INotifier _notifier;
+    private readonly IOrganizationInvitationAuthorization _organizationInvitations;
 
     public IdentityInvitationService(
         IdentityDbContext dbContext,
@@ -44,8 +45,10 @@ internal sealed class IdentityInvitationService : IInvitationService
         IClock clock,
         IAuditTrail audit,
         INotifier notifier,
-        IdentityLegalDocumentService legal)
+        IdentityLegalDocumentService legal,
+        IOrganizationInvitationAuthorization organizationInvitations)
     {
+        _organizationInvitations = organizationInvitations;
         _legal = legal;
         _dbContext = dbContext;
         _userManager = userManager;
@@ -119,6 +122,39 @@ internal sealed class IdentityInvitationService : IInvitationService
             return Result<InvitationIssuedDto>.Failure(guard.Error);
         }
 
+        return await IssueAsync(request, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<Result<InvitationIssuedDto>> CreateForOrganizationAsync(
+        Guid organizationId,
+        OrganizationInvitationRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        // The organization's own administrators invite into it, and into nothing else: no groups, no other tenant.
+        var guard = await _organizationInvitations.EnsureCanInviteToAsync(organizationId, cancellationToken).ConfigureAwait(false);
+        if (guard.IsFailure)
+        {
+            return Result<InvitationIssuedDto>.Failure(guard.Error);
+        }
+
+        return await IssueAsync(
+                new CreateInvitationRequest
+                {
+                    Email = request.Email,
+                    FirstName = request.FirstName,
+                    LastName = request.LastName,
+                    Message = request.Message,
+                    GroupIds = [],
+                    OrganizationIds = [organizationId],
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private async Task<Result<InvitationIssuedDto>> IssueAsync(CreateInvitationRequest request, CancellationToken cancellationToken)
+    {
         if (_currentUser.UserId is not Guid inviterId)
         {
             return Result<InvitationIssuedDto>.Failure(UserErrors.NotAuthenticated);

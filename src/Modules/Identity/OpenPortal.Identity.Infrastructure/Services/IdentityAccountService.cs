@@ -20,6 +20,8 @@ internal sealed class IdentityAccountService : IAccountService
     private readonly IAuditTrail _audit;
     private readonly IAccountMessaging _messaging;
     private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly UserSessions _sessions;
+    private readonly ICurrentUser _currentUser;
 
     public IdentityAccountService(
         UserManager<ApplicationUser> userManager,
@@ -28,8 +30,12 @@ internal sealed class IdentityAccountService : IAccountService
         ILanguageCatalog languages,
         IAuditTrail audit,
         IAccountMessaging messaging,
-        SignInManager<ApplicationUser> signInManager)
+        SignInManager<ApplicationUser> signInManager,
+        UserSessions sessions,
+        ICurrentUser currentUser)
     {
+        _sessions = sessions;
+        _currentUser = currentUser;
         _signInManager = signInManager;
         _messaging = messaging;
         _audit = audit;
@@ -146,13 +152,44 @@ internal sealed class IdentityAccountService : IAccountService
 
         if (result.IsSuccess)
         {
-            // The new stamp ends every other session; this one is re-issued so its owner stays signed in.
+            // The new stamp ends every other session; this one is re-issued so its owner stays signed in. The others are
+            // ended now too, rather than at their next stamp check.
+            await _sessions.EndAllAsync(lookup.Value.Id, _currentUser.SessionId, SessionEndReason.Revoked, cancellationToken).ConfigureAwait(false);
             await _signInManager.RefreshSignInAsync(lookup.Value).ConfigureAwait(false);
 
             await PasswordChangeNotice.SendAsync(_messaging, lookup.Value, cancellationToken).ConfigureAwait(false);
         }
 
         return result;
+    }
+
+    public async Task<Result> SetPasswordAsync(SetPasswordRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var lookup = await _userLookup.FindCurrentAsync(cancellationToken).ConfigureAwait(false);
+        if (lookup.IsFailure)
+        {
+            return Result.Failure(lookup.Error);
+        }
+
+        var user = lookup.Value;
+        if (await _userManager.HasPasswordAsync(user).ConfigureAwait(false))
+        {
+            return Result.Failure(UserErrors.PasswordAlreadySet);
+        }
+
+        // Validated against the password policy like any other password; adding one rotates the security stamp.
+        var added = await _userManager.AddPasswordAsync(user, request.NewPassword).ConfigureAwait(false);
+        if (!added.Succeeded)
+        {
+            return Result.Failure(added.ToError(UserErrors.SaveFailed));
+        }
+
+        await _audit.RecordAsync(AuditEvent.Succeeded(IdentityAuditActions.PasswordSet), cancellationToken).ConfigureAwait(false);
+        await _signInManager.RefreshSignInAsync(user).ConfigureAwait(false);
+
+        return Result.Success();
     }
 
     private async Task<Result<AccountProfileDto>> ToProfileAsync(

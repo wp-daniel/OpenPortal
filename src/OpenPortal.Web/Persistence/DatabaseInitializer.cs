@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenPortal.Access.Infrastructure.Persistence;
 using OpenPortal.Audit.Infrastructure.Persistence;
-using OpenPortal.Content.Infrastructure.Persistence;
 using OpenPortal.Identity.Domain.Users;
 using OpenPortal.Identity.Infrastructure.Bootstrap;
 using OpenPortal.Identity.Infrastructure.Persistence;
@@ -65,7 +64,6 @@ public sealed class BootstrapAdminOptions
 public sealed class DatabaseInitializer
 {
     private readonly IdentityDbContext _identityContext;
-    private readonly ContentDbContext _contentContext;
     private readonly AccessDbContext _accessContext;
     private readonly AuditDbContext _auditContext;
     private readonly NotificationsDbContext _notificationsContext;
@@ -78,7 +76,6 @@ public sealed class DatabaseInitializer
 
     public DatabaseInitializer(
         IdentityDbContext identityContext,
-        ContentDbContext contentContext,
         AccessDbContext accessContext,
         AuditDbContext auditContext,
         NotificationsDbContext notificationsContext,
@@ -90,7 +87,6 @@ public sealed class DatabaseInitializer
         ILogger<DatabaseInitializer> logger)
     {
         _identityContext = identityContext;
-        _contentContext = contentContext;
         _accessContext = accessContext;
         _auditContext = auditContext;
         _notificationsContext = notificationsContext;
@@ -128,7 +124,6 @@ public sealed class DatabaseInitializer
         _logger.LogInformation("Applying database migrations.");
 
         await _identityContext.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
-        await _contentContext.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
         await _accessContext.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
         await _auditContext.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
         await _notificationsContext.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);

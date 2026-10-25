@@ -147,7 +147,13 @@ export interface RequestOptions {
   readonly body?: unknown
   readonly signal?: AbortSignal
   /** 'file' reads the body as a {@link DownloadedFile} (an export) instead of JSON. */
-  readonly responseType?: 'json' | 'file'
+  readonly responseType?: 'json' | 'file' | 'slice'
+}
+
+/** One page of a long list, with how many entries match in all (the server's X-Total-Count). */
+export interface Slice<T> {
+  readonly items: readonly T[]
+  readonly totalCount: number
 }
 
 /** A file the server sent back, with the name it suggested (Content-Disposition). */
@@ -233,11 +239,18 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     return { blob: await response.blob(), fileName: fileNameOf(response, 'download') } as T
   }
 
+  if (options.responseType === 'slice') {
+    const items = (await response.json()) as unknown[]
+    return { items, totalCount: Number(response.headers.get('X-Total-Count') ?? items.length) } as T
+  }
+
   return (await response.json()) as T
 }
 
 export const api = {
   get: <T>(path: string, signal?: AbortSignal) => request<T>(path, { method: 'GET', signal }),
+  /** A page of a list endpoint that reports the total in X-Total-Count. */
+  getSlice: <T>(path: string, signal?: AbortSignal) => request<Slice<T>>(path, { method: 'GET', signal, responseType: 'slice' }),
   post: <T>(path: string, body?: unknown) => request<T>(path, { method: 'POST', body }),
   put: <T>(path: string, body?: unknown) => request<T>(path, { method: 'PUT', body }),
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),

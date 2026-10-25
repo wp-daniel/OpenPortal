@@ -37,6 +37,7 @@ public static class AccountOrigins
     public const string Registered = "registered";
     public const string Invited = "invited";
     public const string Provisioned = "provisioned";
+    public const string External = "external";
 }
 
 /// <summary>Filter and paging parameters for the administration user list.</summary>

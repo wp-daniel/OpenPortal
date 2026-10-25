@@ -153,6 +153,23 @@ public sealed class NotificationsController : ControllerBase
         return deleted.IsSuccess ? NoContent() : ProblemResults.FromResult(HttpContext, deleted);
     }
 
+    /// <summary>Which notifications are emailed to the caller: <c>security</c> (the default), <c>instant</c>, <c>daily</c> or <c>off</c>.</summary>
+    [HttpGet("preferences")]
+    [ProducesResponseType<NotificationPreferencesDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<NotificationPreferencesDto>> GetPreferencesAsync(
+        [FromServices] INotificationPreferenceService preferences,
+        CancellationToken cancellationToken) =>
+        Respond(await preferences.GetMineAsync(cancellationToken).ConfigureAwait(false));
+
+    [HttpPut("preferences")]
+    [ProducesResponseType<NotificationPreferencesDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<NotificationPreferencesDto>> UpdatePreferencesAsync(
+        [FromBody] UpdateNotificationPreferencesRequest request,
+        [FromServices] INotificationPreferenceService preferences,
+        CancellationToken cancellationToken) =>
+        Respond(await preferences.UpdateMineAsync(request, cancellationToken).ConfigureAwait(false));
+
     private ActionResult<T> Respond<T>(Result<T> result) =>
         result.IsSuccess ? Ok(result.Value) : ProblemResults.FromResult(HttpContext, result);
 }

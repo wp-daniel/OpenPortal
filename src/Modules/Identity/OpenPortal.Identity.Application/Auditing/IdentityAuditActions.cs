@@ -126,6 +126,30 @@ public static class IdentityAuditActions
 
     /// <summary>An administrator revoked someone else's personal access token.</summary>
     public const string UserTokenRevoked = "user.token_revoked";
+
+    /// <summary>An external sign-in provider's settings changed; the target names the provider.</summary>
+    public const string ExternalProviderUpdated = "settings.external_provider_updated";
+
+    /// <summary>An external account was connected to the account; details carry the provider (and how: by the owner or by a verified address).</summary>
+    public const string ExternalLoginAdded = "account.external_login_added";
+
+    /// <summary>The owner disconnected an external account.</summary>
+    public const string ExternalLoginRemoved = "account.external_login_removed";
+
+    /// <summary>An administrator disconnected an external account from someone's account.</summary>
+    public const string UserExternalLoginRemoved = "user.external_login_removed";
+
+    /// <summary>The owner ended one of their other sessions; details carry its device and address.</summary>
+    public const string SessionRevoked = "account.session_revoked";
+
+    /// <summary>The owner ended every other session ("sign out everywhere else").</summary>
+    public const string OtherSessionsRevoked = "account.other_sessions_revoked";
+
+    /// <summary>An administrator ended one session of an account.</summary>
+    public const string UserSessionRevoked = "user.session_revoked";
+
+    /// <summary>The owner of an account without a password set one.</summary>
+    public const string PasswordSet = "account.password_set";
 }
 
 /// <summary>Values of the <c>method</c> detail on a sign-in that needed a second factor.</summary>
@@ -134,6 +158,9 @@ public static class SignInMethods
     public const string Authenticator = "authenticator";
     public const string RecoveryCode = "recovery_code";
     public const string Passkey = "passkey";
+
+    /// <summary>An external provider; the value is prefixed with the provider's key (<c>external:google</c>).</summary>
+    public const string ExternalPrefix = "external:";
 }
 
 /// <summary>Values of the <c>reason</c> detail on a failed sign-in.</summary>
@@ -148,4 +175,6 @@ public static class SignInFailureReasons
     public const string InvalidCode = "invalid_code";
     public const string InvalidPasskey = "invalid_passkey";
     public const string PasskeyRequired = "passkey_required";
+    public const string ExternalFailed = "external_failed";
+    public const string ExternalNotLinked = "external_not_linked";
 }

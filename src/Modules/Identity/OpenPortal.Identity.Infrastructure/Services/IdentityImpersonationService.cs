@@ -110,6 +110,7 @@ internal sealed class IdentityImpersonationService : IImpersonationService
 
                     // The sign-in above already made the account the current caller, who is normally left out.
                     IncludeCaller = true,
+                    Security = true,
                 },
                 cancellationToken)
             .ConfigureAwait(false);

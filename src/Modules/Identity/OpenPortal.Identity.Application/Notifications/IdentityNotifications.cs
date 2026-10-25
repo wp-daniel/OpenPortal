@@ -32,6 +32,12 @@ public static class IdentityNotificationTypes
 
     /// <summary>To the user: an administrator acted as them for support (<c>admin</c>, <c>reason</c>).</summary>
     public const string Impersonated = "account.impersonated";
+
+    /// <summary>To the user: an external account was connected to theirs (<c>provider</c>, <c>account</c>).</summary>
+    public const string ExternalLoginAdded = "account.external_login_added";
+
+    /// <summary>To the user: their account was signed in to from a browser it had not used before (<c>device</c>, <c>ip</c>).</summary>
+    public const string NewSignIn = "account.new_sign_in";
 }
 
 /// <summary>The kinds of work Identity notices are addressed to; the host maps each to the people who may do it.</summary>

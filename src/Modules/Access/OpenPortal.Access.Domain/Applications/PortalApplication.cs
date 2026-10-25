@@ -174,6 +174,38 @@ public sealed class PortalApplication
     /// </summary>
     public bool AllowAccessRequests { get; private set; }
 
+    /// <summary>
+    /// Whether a user is asked to agree to what the application receives (the scopes) the first time it signs them in.
+    /// Off for the organization's own applications; on for a third party's.
+    /// </summary>
+    public bool RequireConsent { get; private set; }
+
+    /// <summary>
+    /// Whether the application may sign people in with the device flow (RFC 8628): a command-line tool or a TV shows a
+    /// code, and the person approves it in a browser.
+    /// </summary>
+    public bool AllowDeviceFlow { get; private set; }
+
+    /// <summary>Asks users to agree before the application's first sign-in, or stops asking.</summary>
+    public void SetConsent(bool required, DateTimeOffset now)
+    {
+        if (RequireConsent != required)
+        {
+            RequireConsent = required;
+            UpdatedAtUtc = now;
+        }
+    }
+
+    /// <summary>Allows or stops the device flow.</summary>
+    public void SetDeviceFlow(bool allowed, DateTimeOffset now)
+    {
+        if (AllowDeviceFlow != allowed)
+        {
+            AllowDeviceFlow = allowed;
+            UpdatedAtUtc = now;
+        }
+    }
+
     /// <summary>Whether the application is told the user's organization, and whether it needs one.</summary>
     public OrganizationMode Organizations { get; private set; }
 

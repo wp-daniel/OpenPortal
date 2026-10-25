@@ -1,3 +1,4 @@
+using OpenPortal.SharedKernel.Jobs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -19,6 +20,11 @@ namespace OpenPortal.Access.Infrastructure.Services;
 /// </summary>
 internal sealed partial class AccessExpiryService : BackgroundService
 {
+    /// <summary>The job's name in the job list (Administration → System).</summary>
+    public const string JobName = "access.expiry";
+
+    private readonly IJobRegistry _jobs;
+
     private static readonly TimeSpan Interval = TimeSpan.FromMinutes(1);
 
     private static readonly AuditSubject Actor = new(AuditSubjectTypes.System, "access-expiry", null);
@@ -27,8 +33,10 @@ internal sealed partial class AccessExpiryService : BackgroundService
     private readonly IClock _clock;
     private readonly ILogger<AccessExpiryService> _logger;
 
-    public AccessExpiryService(IServiceScopeFactory scopes, IClock clock, ILogger<AccessExpiryService> logger)
+    public AccessExpiryService(IServiceScopeFactory scopes, IClock clock, ILogger<AccessExpiryService> logger, IJobRegistry jobs)
     {
+        _jobs = jobs;
+        jobs.Register(JobName, Interval, SweepAsync);
         _scopes = scopes;
         _clock = clock;
         _logger = logger;
@@ -150,7 +158,7 @@ internal sealed partial class AccessExpiryService : BackgroundService
             {
                 try
                 {
-                    var removed = await SweepAsync(stoppingToken).ConfigureAwait(false);
+                    var removed = await _jobs.RunAsync(JobName, stoppingToken).ConfigureAwait(false);
                     if (removed > 0)
                     {
                         LogExpired(removed);

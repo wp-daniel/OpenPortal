@@ -42,12 +42,20 @@ public static class AccessModuleServiceCollectionExtensions
         services.AddDbContext<AccessDbContext>(configureContext);
 
         services.AddOpenIddict()
-            .AddCore(options => options
-                .UseEntityFrameworkCore()
-                .UseDbContext<AccessDbContext>()
-                .ReplaceDefaultEntities<Guid>());
+            .AddCore(options =>
+            {
+                options.UseEntityFrameworkCore()
+                    .UseDbContext<AccessDbContext>()
+                    .ReplaceDefaultEntities<Guid>();
+
+                // Accepts a replaced client secret until its overlap ends.
+                options.ReplaceApplicationManager<OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication<Guid>, PortalApplicationManager>();
+            });
+
+        services.AddScoped<PortalApplicationManager>();
 
         services.TryAddSingleton<IClock, SystemClock>();
+        services.TryAddSingleton<OpenPortal.SharedKernel.Jobs.IJobRegistry, OpenPortal.SharedKernel.Jobs.JobRegistry>();
 
         services.AddScoped<OidcClientRegistry>();
         services.AddScoped<AccessQueries>();
@@ -65,6 +73,8 @@ public static class AccessModuleServiceCollectionExtensions
         services.AddScoped<IPersonalDataSource, AccessPersonalData>();
         services.AddScoped<IAccessRequestService, AccessRequestService>();
         services.AddScoped<IOrganizationService, OrganizationService>();
+        services.AddScoped<IOrganizationAutoJoin, OrganizationAutoJoin>();
+        services.AddScoped<IAuthorizedApplicationService, AuthorizedApplicationService>();
         services.AddScoped<IAccessStatisticsService, AccessStatisticsService>();
         services.AddScoped<IAccessProvisioningService, AccessProvisioningService>();
         services.AddScoped<IAccessEvaluator, AccessEvaluator>();

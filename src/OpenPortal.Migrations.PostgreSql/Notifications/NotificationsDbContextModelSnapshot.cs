@@ -141,6 +141,30 @@ namespace OpenPortal.Migrations.PostgreSql.Notifications
                     b.ToTable("Notifications", (string)null);
                 });
 
+            modelBuilder.Entity("OpenPortal.Notifications.Domain.NotificationPreference", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset?>("LastDigestAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId");
+
+                    b.HasIndex("Email", "LastDigestAtUtc")
+                        .HasDatabaseName("IX_NotificationPreferences_Email_LastDigestAtUtc");
+
+                    b.ToTable("NotificationPreferences", (string)null);
+                });
+
             modelBuilder.Entity("OpenPortal.Notifications.Domain.OutboxMessage", b =>
                 {
                     b.Property<Guid>("Id")

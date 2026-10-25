@@ -306,6 +306,44 @@ namespace OpenPortal.Migrations.PostgreSql.Identity
                     b.ToTable("LegalDocuments", (string)null);
                 });
 
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Settings.ExternalLoginProvider", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("AllowedDomains")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ClientId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ProtectedClientSecret")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("SignUp")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Tenant")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("ExternalLoginProviders", (string)null);
+                });
+
             modelBuilder.Entity("OpenPortal.Identity.Domain.Settings.PrivacySettings", b =>
                 {
                     b.Property<int>("Id")
@@ -356,6 +394,9 @@ namespace OpenPortal.Migrations.PostgreSql.Identity
             modelBuilder.Entity("OpenPortal.Identity.Domain.Settings.SecuritySettings", b =>
                 {
                     b.Property<int>("Id")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("IdleTimeoutMinutes")
                         .HasColumnType("integer");
 
                     b.Property<bool>("PasskeysEnabled")
@@ -601,6 +642,69 @@ namespace OpenPortal.Migrations.PostgreSql.Identity
                     b.ToTable("UserAvatars", (string)null);
                 });
 
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Users.UserSession", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Device")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("EndReason")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset?>("EndedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ImpersonatorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("LastSeenAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Methods")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("Persistent")
+                        .HasColumnType("boolean");
+
+                    b.Property<byte[]>("Ticket")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LastSeenAtUtc")
+                        .HasDatabaseName("IX_UserSessions_LastSeenAtUtc");
+
+                    b.HasIndex("UserId", "CreatedAtUtc")
+                        .HasDatabaseName("IX_UserSessions_UserId_CreatedAtUtc");
+
+                    b.ToTable("UserSessions", (string)null);
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
@@ -764,6 +868,15 @@ namespace OpenPortal.Migrations.PostgreSql.Identity
                     b.HasOne("OpenPortal.Identity.Domain.Users.ApplicationUser", null)
                         .WithOne()
                         .HasForeignKey("OpenPortal.Identity.Domain.Users.UserAvatar", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Users.UserSession", b =>
+                {
+                    b.HasOne("OpenPortal.Identity.Domain.Users.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

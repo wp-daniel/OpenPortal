@@ -2,6 +2,8 @@ import { Outlet } from 'react-router-dom'
 import { AnnouncementBanner } from '@/components/AnnouncementBanner'
 import { AppBreadcrumbs } from '@/components/AppBreadcrumbs'
 import { AppSidebar } from '@/components/AppSidebar'
+import { CommandMenu } from '@/components/CommandMenu'
+import { IdleWarning } from '@/components/IdleWarning'
 import { ImpersonationBanner } from '@/components/ImpersonationBanner'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { LegalLinks } from '@/components/LegalLinks'
@@ -40,6 +42,7 @@ export function AppLayout() {
       </a>
 
       <AppSidebar />
+      <IdleWarning />
 
       {/* min-w-0: a wide table scrolls inside its card instead of widening the whole page. */}
       <SidebarInset className="min-w-0">
@@ -49,6 +52,7 @@ export function AppLayout() {
           <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
           <AppBreadcrumbs />
           <div className="ml-auto flex shrink-0 items-center gap-1">
+            <CommandMenu />
             <NotificationBell />
             <LanguageSwitcher />
             <ThemeToggle />

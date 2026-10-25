@@ -49,7 +49,27 @@ public sealed class Organization
 
     public DateTimeOffset? UpdatedAtUtc { get; private set; }
 
+    /// <summary>
+    /// Members sign in to the applications that serve this organization with two factors only (an authenticator code
+    /// or a passkey), whatever the application asks for.
+    /// </summary>
+    public bool RequireMultiFactor { get; private set; }
+
     public IReadOnlyList<OrganizationMember> Members => _members;
+
+    /// <summary>Sets the organization's sign-in policy. Returns whether anything changed.</summary>
+    public bool SetPolicy(bool requireMultiFactor, DateTimeOffset now)
+    {
+        if (RequireMultiFactor == requireMultiFactor)
+        {
+            return false;
+        }
+
+        RequireMultiFactor = requireMultiFactor;
+        UpdatedAtUtc = now;
+
+        return true;
+    }
 
     public static Result<Organization> Create(Guid id, string? name, string? slug, string? description, DateTimeOffset now)
     {
@@ -150,6 +170,158 @@ public sealed class Organization
             && trimmed.All(character => character is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '-');
 
         return valid ? Result<string>.Success(trimmed) : Result<string>.Failure(AccessErrors.OrganizationSlugInvalid);
+    }
+}
+
+/// <summary>
+/// The roles one member holds in one application within this organization (a sales manager here, a viewer in another
+/// tenant). They add to the roles the user's grants give, and reach the application only when the user signs in for
+/// this organization.
+/// </summary>
+public sealed class OrganizationMemberRole
+{
+    // Required by EF Core.
+    private OrganizationMemberRole()
+    {
+    }
+
+    public OrganizationMemberRole(Guid organizationId, Guid userId, Guid applicationId, string role)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(role);
+
+        OrganizationId = organizationId;
+        UserId = userId;
+        ApplicationId = applicationId;
+        Role = role;
+    }
+
+    public Guid OrganizationId { get; private set; }
+
+    public Guid UserId { get; private set; }
+
+    public Guid ApplicationId { get; private set; }
+
+    /// <summary>The application role's key (<see cref="Applications.ApplicationRole.Key"/>).</summary>
+    public string Role { get; private set; } = string.Empty;
+}
+
+/// <summary>
+/// An email domain an organization owns. Once verified (a DNS TXT record, or a portal administrator vouching for it),
+/// people with a confirmed address at that domain can join the organization by themselves when they sign in.
+/// </summary>
+public sealed class OrganizationDomain
+{
+    public const int DomainMaxLength = 100;
+    public const int TokenLength = 32;
+
+    /// <summary>The TXT record value that proves ownership is this prefix followed by the token.</summary>
+    public const string RecordPrefix = "openportal-verification=";
+
+    // Required by EF Core.
+    private OrganizationDomain()
+    {
+    }
+
+    public Guid Id { get; private set; }
+
+    public Guid OrganizationId { get; private set; }
+
+    /// <summary>Lower-case host name (<c>acme.com</c>), unique across organizations.</summary>
+    public string Domain { get; private set; } = string.Empty;
+
+    public string VerificationToken { get; private set; } = string.Empty;
+
+    public DateTimeOffset? VerifiedAtUtc { get; private set; }
+
+    /// <summary>How the domain was verified: <c>dns</c>, or <c>administrator</c> when a portal administrator vouched for it.</summary>
+    public string? VerifiedBy { get; private set; }
+
+    /// <summary>Whether people with a confirmed address at this domain join the organization when they sign in.</summary>
+    public bool AutoJoin { get; private set; }
+
+    public OrganizationRole AutoJoinRole { get; private set; }
+
+    public DateTimeOffset CreatedAtUtc { get; private set; }
+
+    public bool IsVerified => VerifiedAtUtc is not null;
+
+    /// <summary>The TXT record to publish at the domain to prove it is the organization's.</summary>
+    public string RecordValue => RecordPrefix + VerificationToken;
+
+    public static Result<OrganizationDomain> Create(Guid id, Guid organizationId, string? domain, string token, DateTimeOffset now)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(token);
+
+        var normalised = NormaliseDomain(domain);
+        if (normalised is null)
+        {
+            return Result<OrganizationDomain>.Failure(AccessErrors.OrganizationDomainInvalid);
+        }
+
+        return Result<OrganizationDomain>.Success(new OrganizationDomain
+        {
+            Id = id,
+            OrganizationId = organizationId,
+            Domain = normalised,
+            VerificationToken = token,
+            CreatedAtUtc = now,
+        });
+    }
+
+    public void MarkVerified(DateTimeOffset now, string by)
+    {
+        VerifiedAtUtc ??= now;
+        VerifiedBy ??= by;
+    }
+
+    /// <summary>Sets automatic joining. Refused until the domain is verified: an unproven domain lets in no one.</summary>
+    public Result<bool> SetAutoJoin(bool autoJoin, OrganizationRole role)
+    {
+        if (!Enum.IsDefined(role))
+        {
+            return Result<bool>.Failure(AccessErrors.OrganizationRoleInvalid);
+        }
+
+        if (autoJoin && !IsVerified)
+        {
+            return Result<bool>.Failure(AccessErrors.OrganizationDomainUnverified);
+        }
+
+        if (AutoJoin == autoJoin && AutoJoinRole == role)
+        {
+            return Result<bool>.Success(false);
+        }
+
+        AutoJoin = autoJoin;
+        AutoJoinRole = role;
+
+        return Result<bool>.Success(true);
+    }
+
+    /// <summary>Whether <paramref name="email"/> is an address at this domain (exactly: subdomains are not included).</summary>
+    public bool Covers(string email)
+    {
+        ArgumentNullException.ThrowIfNull(email);
+
+        var at = email.LastIndexOf('@');
+
+        return at > 0 && string.Equals(email[(at + 1)..].Trim(), Domain, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>A host name with at least one dot, in lower case, or null.</summary>
+    public static string? NormaliseDomain(string? value)
+    {
+        var domain = value?.Trim().TrimStart('@').TrimEnd('.').ToLowerInvariant();
+
+        if (string.IsNullOrEmpty(domain)
+            || domain.Length > DomainMaxLength
+            || Uri.CheckHostName(domain) != UriHostNameType.Dns
+            || !domain.Contains('.', StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return domain;
     }
 }
 

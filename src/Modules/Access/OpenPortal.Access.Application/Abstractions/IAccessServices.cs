@@ -26,7 +26,7 @@ public interface IApplicationRegistryService
     Task<Result<ApplicationSecretDto>> ApproveAsync(Guid applicationId, CancellationToken cancellationToken);
 
     /// <summary>Replaces the client secret. The old one stops working immediately.</summary>
-    Task<Result<ApplicationSecretDto>> RegenerateSecretAsync(Guid applicationId, CancellationToken cancellationToken);
+    Task<Result<ApplicationSecretDto>> RegenerateSecretAsync(Guid applicationId, RegenerateSecretRequest request, CancellationToken cancellationToken);
 
     /// <summary>Generates the secret the application's webhook deliveries are signed with, and returns it once.</summary>
     Task<Result<WebhookSecretDto>> GenerateWebhookSecretAsync(Guid applicationId, CancellationToken cancellationToken);
@@ -47,6 +47,9 @@ public interface IApplicationRegistryService
 public interface IGroupService
 {
     Task<Result<IReadOnlyList<GroupSummaryDto>>> ListAsync(CancellationToken cancellationToken);
+
+    /// <summary>The groups whose name matches, by name, one window at a time.</summary>
+    Task<Result<SliceDto<GroupSummaryDto>>> ListAsync(ListSlice slice, CancellationToken cancellationToken);
 
     Task<Result<GroupDetailDto>> GetAsync(Guid groupId, CancellationToken cancellationToken);
 
@@ -150,6 +153,9 @@ public interface IOrganizationService
 {
     Task<Result<IReadOnlyList<OrganizationSummaryDto>>> ListAsync(CancellationToken cancellationToken);
 
+    /// <summary>The organizations whose name or short name matches, by name, one window at a time.</summary>
+    Task<Result<SliceDto<OrganizationSummaryDto>>> ListAsync(ListSlice slice, CancellationToken cancellationToken);
+
     Task<Result<OrganizationDetailDto>> GetAsync(Guid organizationId, CancellationToken cancellationToken);
 
     Task<Result<OrganizationDetailDto>> CreateAsync(CreateOrganizationRequest request, CancellationToken cancellationToken);
@@ -183,6 +189,69 @@ public interface IOrganizationService
 
     /// <summary>The organizations the signed-in user belongs to (<see cref="IAccessCaller"/>).</summary>
     Task<Result<IReadOnlyList<OrganizationMembershipDto>>> ListMineAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Whether the caller may manage the organization's members (the organizations page, or being one of its
+    /// administrators); not found is told only to whoever could manage organizations at all.
+    /// </summary>
+    Task<Result> EnsureCanManageMembersAsync(Guid organizationId, CancellationToken cancellationToken);
+
+    /// <summary>Claims an email domain for the organization; it stays unverified until its DNS carries the record.</summary>
+    Task<Result<OrganizationDetailDto>> AddDomainAsync(Guid organizationId, AddOrganizationDomainRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Verifies a domain: by looking for its TXT record, or, for whoever manages organizations in the portal, by
+    /// vouching for it (<see cref="VerifyOrganizationDomainRequest.Manual"/>).
+    /// </summary>
+    Task<Result<OrganizationDetailDto>> VerifyDomainAsync(
+        Guid organizationId,
+        Guid domainId,
+        VerifyOrganizationDomainRequest request,
+        CancellationToken cancellationToken);
+
+    Task<Result<OrganizationDetailDto>> UpdateDomainAsync(
+        Guid organizationId,
+        Guid domainId,
+        UpdateOrganizationDomainRequest request,
+        CancellationToken cancellationToken);
+
+    Task<Result<OrganizationDetailDto>> RemoveDomainAsync(Guid organizationId, Guid domainId, CancellationToken cancellationToken);
+
+    /// <summary>Sets the roles a member holds in one application within the organization (the organization's own administrators may too).</summary>
+    Task<Result<OrganizationDetailDto>> SetMemberApplicationRolesAsync(
+        Guid organizationId,
+        Guid userId,
+        Guid applicationId,
+        SetMemberApplicationRolesRequest request,
+        CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// The applications the signed-in user (<see cref="IAccessCaller"/>) has let sign them in, and taking that back: the
+/// application's tokens stop working and, if it asks for consent, it asks again next time.
+/// </summary>
+public interface IAuthorizedApplicationService
+{
+    Task<Result<IReadOnlyList<AuthorizedApplicationDto>>> ListMineAsync(CancellationToken cancellationToken);
+
+    Task<Result> RevokeMineAsync(string clientId, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// Joins an account to the organizations whose verified domain matches its confirmed address and lets people join by
+/// it. No caller check: the host calls it for the account that just signed in (or is signing in to an application).
+/// </summary>
+public interface IOrganizationAutoJoin
+{
+    /// <summary>Returns the organizations the account joined now (usually none).</summary>
+    Task<IReadOnlyList<OrganizationMembershipDto>> JoinByEmailDomainAsync(Guid userId, CancellationToken cancellationToken);
+}
+
+/// <summary>Looks up a domain's DNS for the organization domain check. Implemented by the host.</summary>
+public interface IDomainOwnershipVerifier
+{
+    /// <summary>Whether <paramref name="domain"/> has a TXT record whose value is exactly <paramref name="value"/>.</summary>
+    Task<bool> HasTxtRecordAsync(string domain, string value, CancellationToken cancellationToken);
 }
 
 /// <summary>

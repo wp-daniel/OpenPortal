@@ -8,8 +8,6 @@ using OpenPortal.Access.Domain.Applications;
 using OpenPortal.Access.Infrastructure.DependencyInjection;
 using OpenPortal.Audit.Application.Abstractions;
 using OpenPortal.Audit.Infrastructure.DependencyInjection;
-using OpenPortal.Content.Application.Abstractions;
-using OpenPortal.Content.Infrastructure.DependencyInjection;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Identity.Infrastructure.Configuration;
 using OpenPortal.Identity.Infrastructure.DependencyInjection;
@@ -18,6 +16,7 @@ using OpenPortal.Notifications.Infrastructure.DependencyInjection;
 using OpenPortal.Web;
 using OpenPortal.Web.Auditing;
 using OpenPortal.Web.Authentication;
+using OpenPortal.Web.Organizations;
 using OpenPortal.Web.Authorization;
 using OpenPortal.Web.Email;
 using OpenPortal.Web.Geo;
@@ -101,8 +100,11 @@ builder.Services.AddOpenPortalLocalization(builder.Configuration);
 // from the caller's portal pages (Authorization/PortalPages.cs).
 // ---------------------------------------------------------------------------
 builder.Services.AddSingleton<ICurrentUser, HttpContextCurrentUser>();
-builder.Services.AddScoped<IContentEditAuthorization, ContentEditAuthorization>();
 builder.Services.AddScoped<IUserAdministrationAuthorization, UserAdministrationAuthorization>();
+builder.Services.AddScoped<IOrganizationInvitationAuthorization, OrganizationInvitationAuthorization>();
+
+// Organization domains are verified through their DNS (a TXT record), read over DNS-over-HTTPS.
+builder.Services.AddOpenPortalOrganizations(builder.Configuration);
 builder.Services.AddScoped<IUserPageSource, PortalUserPageSource>();
 
 // Account email (invitations, address confirmation, approvals): delivery is the host's (SMTP or a pickup folder),
@@ -111,13 +113,18 @@ builder.Services.AddOpenPortalEmail(builder.Configuration);
 builder.Services.AddScoped<HostAccountMessaging>();
 builder.Services.AddScoped<IAccountMessaging>(provider => provider.GetRequiredService<HostAccountMessaging>());
 builder.Services.AddScoped<MailTester>();
+builder.Services.AddScoped<OpenPortal.Web.Operations.SystemStatus>();
 
 builder.Services.AddIdentityModule(
     builder.Configuration,
     options => DatabaseProviderSelector.Configure(options, database.Provider, database.ConnectionString));
 
-builder.Services.AddContentModule(options =>
-    DatabaseProviderSelector.Configure(options, database.Provider, database.ConnectionString));
+// The notification bell polls and streams on its own: those requests do not keep an idle session alive.
+builder.Services.Configure<SessionStoreOptions>(options =>
+    options.IsBackgroundRequest = context =>
+        context.Request.Path.StartsWithSegments("/api/notifications/count", StringComparison.OrdinalIgnoreCase)
+        || context.Request.Path.StartsWithSegments("/api/notifications/stream", StringComparison.OrdinalIgnoreCase)
+        || context.Request.Headers.ContainsKey("X-Background-Request"));
 
 // Access: which applications sign in through the portal and who may open them. The host answers "is this
 // caller an administrator" and supplies user names from Identity, so the two modules stay unaware of each
@@ -161,6 +168,7 @@ builder.Services.AddHttpClient(WebhookHandler.HttpClientName, client => client.T
 // Notifications: the notifier every module tells people with (INotifier) and each user's notification center. The
 // host says who is calling and which people each kind of work (a notice's roles) names.
 builder.Services.AddScoped<INotificationContext, HostNotificationContext>();
+builder.Services.AddScoped<INotificationMailer, HostNotificationMailer>();
 
 // Real-time notification signals (the bell's event stream): in memory, or across instances through Redis.
 builder.Services.AddSingleton<NotificationHub>();
@@ -271,6 +279,9 @@ builder.Services.AddAntiforgery(options =>
         : CookieSecurePolicy.SameAsRequest;
     options.HeaderName = AntiforgeryDefaults.HeaderName;
 });
+
+// Signing in with Google and Microsoft, configured by administrators from the portal (Settings → Sign-in providers).
+builder.Services.AddOpenPortalExternalLogins(requireSecureCookies);
 
 // OpenID Connect provider for other applications. Transport security follows the cookie setting, because the
 // development server and the tests run over plain http.
@@ -386,6 +397,9 @@ app.UseExceptionHandler();
 app.UseOpenPortalStatusCodePages();
 
 app.UseRouting();
+
+// Before authentication, which handles the providers' answers (/signin-google, /signin-microsoft).
+app.UseOpenPortalExternalLogins();
 
 app.UseAuthentication();
 

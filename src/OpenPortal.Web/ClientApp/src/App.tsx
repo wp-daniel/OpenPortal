@@ -33,11 +33,11 @@ import { SelectOrganizationPage } from '@/pages/SelectOrganizationPage'
 import { AdminApplicationsPage } from '@/pages/AdminApplicationsPage'
 import { AdminAuditPage } from '@/pages/AdminAuditPage'
 import { AdminSettingsPage } from '@/pages/AdminSettingsPage'
+import { AdminSystemPage } from '@/pages/AdminSystemPage'
 import { AdminGroupsPage } from '@/pages/AdminGroupsPage'
 import { AdminPagePermissionsPage } from '@/pages/AdminPagePermissionsPage'
 import { AdminUsersPage } from '@/pages/AdminUsersPage'
-import { ContentProfilePage } from '@/pages/ContentProfilePage'
-import { ContentProjectPage } from '@/pages/ContentProjectPage'
+import { ConsentPage, DevicePage } from '@/pages/ConsentPages'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { SignInPage } from '@/pages/SignInPage'
@@ -142,6 +142,8 @@ const router = createBrowserRouter([
               { path: 'legal/accept', element: <AcceptLegalPage /> },
               { path: 'account/security-setup', element: <SecuritySetupPage /> },
               { path: 'account/deletion', element: <DeletionPendingPage /> },
+              { path: 'consent', element: <ConsentPage /> },
+              { path: 'device', element: <DevicePage /> },
             ],
           },
           {
@@ -225,6 +227,7 @@ const router = createBrowserRouter([
                           },
                           // No page: portal settings are for administrators only.
                           { path: 'admin/settings', element: <AdminSettingsPage />, handle: crumbs({ labelKey: 'nav.settings' }) },
+                          { path: 'admin/system', element: <AdminSystemPage />, handle: crumbs({ labelKey: 'nav.system' }) },
                         ],
                       },
                       {
@@ -234,30 +237,6 @@ const router = createBrowserRouter([
                             path: 'admin/announcements',
                             element: <AdminAnnouncementsPage />,
                             handle: page('announcements', { labelKey: 'nav.announcements' }),
-                          },
-                        ],
-                      },
-                      {
-                        handle: crumbs({ labelKey: 'nav.content' }),
-                        children: [
-                          {
-                            path: 'admin/content/profile',
-                            element: <ContentProfilePage />,
-                            handle: page('content.profile', { labelKey: 'nav.profile' }),
-                          },
-                          {
-                            path: 'admin/content/projects',
-                            element: <ContentProjectPage />,
-                            handle: page('content.projects', { labelKey: 'nav.projects' }),
-                          },
-                          {
-                            path: 'admin/content/projects/:projectId',
-                            element: <ContentProjectPage />,
-                            handle: page(
-                              'content.projects',
-                              { labelKey: 'nav.projects', to: '/admin/content/projects' },
-                              { labelKey: 'common.edit' },
-                            ),
                           },
                         ],
                       },

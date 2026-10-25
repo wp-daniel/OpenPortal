@@ -61,7 +61,7 @@ jobs:
       - name: Migrations match the model (both providers)
         run: |
           set -e
-          for context in IdentityDbContext ContentDbContext AccessDbContext AuditDbContext NotificationsDbContext; do
+          for context in IdentityDbContext AccessDbContext AuditDbContext NotificationsDbContext; do
             dotnet ef migrations has-pending-model-changes --project src/OpenPortal.Web --context "$context" \
               --configuration Release --no-build
             dotnet ef migrations has-pending-model-changes --project src/OpenPortal.Migrations.PostgreSql \

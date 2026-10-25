@@ -86,9 +86,20 @@ public static class IdentityModuleServiceCollectionExtensions
         services.AddOptions<PasswordResetTokenProviderOptions>();
         services.AddScoped<IInvitationService, IdentityInvitationService>();
         services.AddScoped<IUserStatisticsService, UserStatisticsService>();
+        services.AddSingleton<ExternalSecretProtector>();
+        services.AddSingleton<ExternalLoginDirectory>();
+        services.AddSingleton<IExternalLoginProviders>(provider => provider.GetRequiredService<ExternalLoginDirectory>());
+        services.AddScoped<IExternalLoginSettingsService, IdentityExternalLoginSettingsService>();
+        services.AddScoped<IExternalLoginService, IdentityExternalLoginService>();
+        services.AddOptions<SessionStoreOptions>();
+        services.AddSingleton<UserSessionTicketStore>();
+        services.AddScoped<UserSessions>();
+        services.AddScoped<ISessionService, IdentitySessionService>();
+        services.AddHostedService<SessionRetentionService>();
         services.AddScoped<IdentityDataSeeder>();
 
         services.TryAddSingleton<IClock, SystemClock>();
+        services.TryAddSingleton<OpenPortal.SharedKernel.Jobs.IJobRegistry, OpenPortal.SharedKernel.Jobs.JobRegistry>();
 
         services
             .AddIdentityCore<ApplicationUser>()
@@ -137,8 +148,14 @@ public static class IdentityModuleServiceCollectionExtensions
 
         // Configured per scheme so the values come from the same "Identity" section as everything else.
         services.AddOptions<CookieAuthenticationOptions>(IdentityConstants.ApplicationScheme)
-            .Configure<IOptions<IdentityModuleOptions>>(
-                (cookie, module) => ApplyCookieOptions(cookie, module.Value));
+            .Configure<IOptions<IdentityModuleOptions>, UserSessionTicketStore>(
+                (cookie, module, sessions) =>
+                {
+                    ApplyCookieOptions(cookie, module.Value);
+
+                    // The ticket lives in the database and the cookie carries only its id: sessions can be listed and ended.
+                    cookie.SessionStore = sessions;
+                });
 
         // A support session keeps who is behind it when the security stamp is re-validated: the refreshed principal
         // is rebuilt from the impersonated account alone, and losing the marker would leave the administrator

@@ -21,12 +21,15 @@ internal sealed class OidcClientRegistry
     private readonly IOpenIddictApplicationManager _applications;
     private readonly IOpenIddictAuthorizationManager _authorizations;
     private readonly IOpenIddictTokenManager _tokens;
+    private readonly PortalApplicationManager _manager;
 
     public OidcClientRegistry(
         IOpenIddictApplicationManager applications,
         IOpenIddictAuthorizationManager authorizations,
-        IOpenIddictTokenManager tokens)
+        IOpenIddictTokenManager tokens,
+        PortalApplicationManager manager)
     {
+        _manager = manager;
         _applications = applications;
         _authorizations = authorizations;
         _tokens = tokens;
@@ -69,6 +72,26 @@ internal sealed class OidcClientRegistry
         {
             await _applications.UpdateAsync(client, secret, cancellationToken).ConfigureAwait(false);
         }
+
+        return secret;
+    }
+
+    /// <summary>
+    /// Replaces an existing confidential client's secret and returns the new one in clear. With <paramref name="keepPreviousUntil"/>
+    /// the replaced secret keeps working until then.
+    /// </summary>
+    public async Task<string> ReplaceSecretAsync(PortalApplication application, DateTimeOffset? keepPreviousUntil, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(application);
+
+        var client = await _manager.FindByClientIdAsync(application.ClientId, cancellationToken).ConfigureAwait(false);
+        if (client is null)
+        {
+            return (await IssueSecretAsync(application, cancellationToken).ConfigureAwait(false))!;
+        }
+
+        var secret = NewSecret();
+        await _manager.ReplaceSecretAsync(client, secret, keepPreviousUntil, cancellationToken).ConfigureAwait(false);
 
         return secret;
     }
@@ -222,6 +245,13 @@ internal sealed class OidcClientRegistry
         if (!application.IsPublic)
         {
             permissions.Add(Permissions.Endpoints.Introspection);
+        }
+
+        // The device flow: the tool asks for a code at the device endpoint, then polls the token endpoint with it.
+        if (application.AllowDeviceFlow)
+        {
+            permissions.Add(Permissions.Endpoints.DeviceAuthorization);
+            permissions.Add(Permissions.GrantTypes.DeviceCode);
         }
 
         if (application.ApiScopes.Count > 0)

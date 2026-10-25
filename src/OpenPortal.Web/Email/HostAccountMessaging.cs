@@ -137,7 +137,7 @@ public sealed partial class HostAccountMessaging : IAccountMessaging
     }
 
     /// <summary>The resource text with its <c>{name}</c> placeholders filled; empty values leave the placeholder out.</summary>
-    private string Text(string key, IReadOnlyDictionary<string, string?> values)
+    internal string Text(string key, IReadOnlyDictionary<string, string?> values)
     {
         var entry = _localizer[key];
         var text = entry.ResourceNotFound ? string.Empty : entry.Value;
@@ -157,7 +157,7 @@ public sealed partial class HostAccountMessaging : IAccountMessaging
         return text.Trim();
     }
 
-    private static string PlainText(string greeting, string body, string? note, string action, string link, string footer)
+    internal static string PlainText(string greeting, string body, string? note, string action, string link, string footer)
     {
         var text = new StringBuilder();
         text.AppendLine(greeting).AppendLine();
@@ -174,7 +174,7 @@ public sealed partial class HostAccountMessaging : IAccountMessaging
         return text.ToString();
     }
 
-    private static string Html(string subject, string greeting, string body, string? note, string action, string link, string footer)
+    internal static string Html(string subject, string greeting, string body, string? note, string action, string link, string footer)
     {
         var encode = HtmlEncoder.Default;
         var quote = string.IsNullOrWhiteSpace(note)
@@ -188,7 +188,7 @@ public sealed partial class HostAccountMessaging : IAccountMessaging
             <body style="margin:0;padding:24px;background:#fafafa;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#171717">
               <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e5e5e5;border-radius:12px;padding:32px">
                 <p style="margin:0 0 16px;font-size:16px">{encode.Encode(greeting)}</p>
-                <p style="margin:0 0 16px;font-size:14px;line-height:1.6">{encode.Encode(body)}</p>
+                <p style="margin:0 0 16px;font-size:14px;line-height:1.6">{encode.Encode(body).Replace("&#xA;", "<br>", StringComparison.Ordinal)}</p>
                 {quote}
                 <p style="margin:24px 0"><a href="{encode.Encode(link)}" style="display:inline-block;background:#171717;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:8px;font-size:14px">{encode.Encode(action)}</a></p>
                 <p style="margin:0;font-size:12px;color:#737373;word-break:break-all">{encode.Encode(link)}</p>

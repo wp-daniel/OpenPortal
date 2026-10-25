@@ -297,6 +297,44 @@ namespace OpenPortal.Web.Persistence.Migrations.Identity
                     b.ToTable("LegalDocuments", (string)null);
                 });
 
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Settings.ExternalLoginProvider", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AllowedDomains")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClientId")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ProtectedClientSecret")
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SignUp")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Tenant")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("UpdatedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("ExternalLoginProviders", (string)null);
+                });
+
             modelBuilder.Entity("OpenPortal.Identity.Domain.Settings.PrivacySettings", b =>
                 {
                     b.Property<int>("Id")
@@ -347,6 +385,9 @@ namespace OpenPortal.Web.Persistence.Migrations.Identity
             modelBuilder.Entity("OpenPortal.Identity.Domain.Settings.SecuritySettings", b =>
                 {
                     b.Property<int>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("IdleTimeoutMinutes")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("PasskeysEnabled")
@@ -592,6 +633,69 @@ namespace OpenPortal.Web.Persistence.Migrations.Identity
                     b.ToTable("UserAvatars", (string)null);
                 });
 
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Users.UserSession", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Device")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EndReason")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("EndedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("ExpiresAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("ImpersonatorId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("LastSeenAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Methods")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Persistent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte[]>("Ticket")
+                        .IsRequired()
+                        .HasColumnType("BLOB");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LastSeenAtUtc")
+                        .HasDatabaseName("IX_UserSessions_LastSeenAtUtc");
+
+                    b.HasIndex("UserId", "CreatedAtUtc")
+                        .HasDatabaseName("IX_UserSessions_UserId_CreatedAtUtc");
+
+                    b.ToTable("UserSessions", (string)null);
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
@@ -755,6 +859,15 @@ namespace OpenPortal.Web.Persistence.Migrations.Identity
                     b.HasOne("OpenPortal.Identity.Domain.Users.ApplicationUser", null)
                         .WithOne()
                         .HasForeignKey("OpenPortal.Identity.Domain.Users.UserAvatar", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OpenPortal.Identity.Domain.Users.UserSession", b =>
+                {
+                    b.HasOne("OpenPortal.Identity.Domain.Users.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

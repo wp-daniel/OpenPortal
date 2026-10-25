@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query'
-import { Loader2, Lock, Mail, ShieldCheck, UserPlus } from 'lucide-react'
+import { KeyRound, Loader2, Lock, Mail, ShieldCheck, UserPlus } from 'lucide-react'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { settingsApi } from '@/api/settings'
 import type { PrivacySettings, RegistrationMode, RegistrationSettings, SecuritySettings, TwoFactorRequirement } from '@/api/types'
@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EmailSettingsTab } from '@/components/settings/EmailSettings'
+import { ExternalLoginSettingsTab } from '@/components/settings/ExternalLoginSettings'
 import { useTabParam } from '@/hooks/useTabParam'
 import { SESSION_QUERY_KEY } from '@/hooks/useSession'
 import { notify } from '@/hooks/useToast'
@@ -26,7 +27,7 @@ import { reportFormError, serverFieldErrors } from '@/lib/forms'
 const SETTINGS_KEY = ['admin-settings-security'] as const
 const REGISTRATION_KEY = ['admin-settings-registration'] as const
 const PRIVACY_KEY = ['admin-settings-privacy'] as const
-const SETTINGS_TABS = ['security', 'registration', 'privacy', 'email'] as const
+const SETTINGS_TABS = ['security', 'providers', 'registration', 'privacy', 'email'] as const
 const REGISTRATION_MODES: readonly RegistrationMode[] = ['disabled', 'open', 'approval']
 const REQUIREMENTS: readonly TwoFactorRequirement[] = ['none', 'administrators', 'everyone']
 
@@ -51,6 +52,10 @@ export function AdminSettingsPage() {
             <ShieldCheck />
             {t('settings.tabs.security')}
           </TabsTrigger>
+          <TabsTrigger value="providers">
+            <KeyRound />
+            {t('settings.tabs.providers')}
+          </TabsTrigger>
           <TabsTrigger value="registration">
             <UserPlus />
             {t('settings.tabs.registration')}
@@ -67,6 +72,9 @@ export function AdminSettingsPage() {
 
         <TabsContent value="security" className="mt-4">
           <SecurityTab />
+        </TabsContent>
+        <TabsContent value="providers" className="mt-4">
+          <ExternalLoginSettingsTab />
         </TabsContent>
         <TabsContent value="registration" className="mt-4">
           <RegistrationTab />
@@ -317,7 +325,9 @@ function SecurityForm({ initial }: { initial: SecuritySettings }) {
   const [tokens, setTokens] = useState(initial.personalAccessTokensEnabled)
   const [passkeys, setPasskeys] = useState(initial.passkeysEnabled)
   const [requirement, setRequirement] = useState<TwoFactorRequirement>(initial.twoFactorRequirement)
+  const [idleMinutes, setIdleMinutes] = useState(String(initial.idleTimeoutMinutes))
   const [issuerError, setIssuerError] = useState<string | undefined>()
+  const [idleError, setIdleError] = useState<string | undefined>()
 
   const save = useMutation({
     mutationFn: () =>
@@ -327,6 +337,7 @@ function SecurityForm({ initial }: { initial: SecuritySettings }) {
         personalAccessTokensEnabled: tokens,
         passkeysEnabled: passkeys,
         twoFactorRequirement: requirement,
+        idleTimeoutMinutes: Number(idleMinutes),
       }),
     meta: { handlesErrors: true },
     onSuccess: async (saved) => {
@@ -356,6 +367,15 @@ function SecurityForm({ initial }: { initial: SecuritySettings }) {
     }
 
     setIssuerError(undefined)
+
+    const idle = Number(idleMinutes)
+    if (!Number.isInteger(idle) || (idle !== 0 && (idle < 5 || idle > 1440))) {
+      setIdleError(t('settings.idle.invalid'))
+
+      return
+    }
+
+    setIdleError(undefined)
     save.mutate()
   }
 
@@ -365,6 +385,7 @@ function SecurityForm({ initial }: { initial: SecuritySettings }) {
     issuer.trim() !== initial.twoFactorIssuer ||
     tokens !== initial.personalAccessTokensEnabled ||
     passkeys !== initial.passkeysEnabled ||
+    Number(idleMinutes) !== initial.idleTimeoutMinutes ||
     requirement !== initial.twoFactorRequirement
   const unsatisfiable = requirement !== 'none' && !twoFactorEnabled && !passkeys
 
@@ -424,6 +445,22 @@ function SecurityForm({ initial }: { initial: SecuritySettings }) {
           </div>
           <Switch id="personalAccessTokensEnabled" checked={tokens} onCheckedChange={setTokens} />
         </div>
+
+        <FormField
+          label={t('settings.idle.label')}
+          htmlFor="idleTimeoutMinutes"
+          hint={t('settings.idle.hint')}
+          error={idleError ?? serverErrors.idleTimeoutMinutes?.[0]}
+        >
+          <Input
+            type="number"
+            min={0}
+            max={1440}
+            className="w-32"
+            value={idleMinutes}
+            onChange={(event) => setIdleMinutes(event.target.value)}
+          />
+        </FormField>
 
         <div>
           <Button type="submit" disabled={save.isPending || !dirty || unsatisfiable}>

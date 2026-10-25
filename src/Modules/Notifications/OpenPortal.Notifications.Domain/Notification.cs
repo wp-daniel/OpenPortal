@@ -153,6 +153,9 @@ public static class NotificationErrors
     public static Error RecipientRequired { get; } =
         Error.Validation(Prefix + "recipient_required", "A notification needs a recipient.");
 
+    public static Error EmailDeliveryInvalid { get; } =
+        Error.Validation(Prefix + "email_delivery_invalid", "Email delivery must be security, instant, daily or off.");
+
     public static Error TypeInvalid { get; } =
         Error.Validation(
             Prefix + "type_invalid",

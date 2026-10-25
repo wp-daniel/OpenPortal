@@ -30,12 +30,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { notify } from '@/hooks/useToast'
 import { matchesSearch } from '@/lib/tableFilter'
 import { formatDate } from '@/i18n/store'
 import { useI18n } from '@/i18n/useI18n'
 import { describeError, traceIdOf } from '@/lib/errors'
+
+/** How long a replaced client secret keeps working, in hours (0: it stops at once). */
+const SECRET_OVERLAPS = ['0', '1', '24', '168'] as const
 
 type Confirmation =
   | { readonly kind: 'secret'; readonly application: ApplicationSummary }
@@ -55,6 +60,7 @@ export function AdminApplicationsPage() {
   const [editing, setEditing] = useState<ApplicationSummary | null>(null)
   const [secret, setSecret] = useState<ApplicationSecret | null>(null)
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
+  const [keepPreviousHours, setKeepPreviousHours] = useState('0')
 
   const applications = useQuery({
     queryKey: accessKeys.applications,
@@ -74,7 +80,7 @@ export function AdminApplicationsPage() {
     mutationFn: async (pending: Confirmation): Promise<ApplicationSecret | null> => {
       switch (pending.kind) {
         case 'secret':
-          return applicationsApi.regenerateSecret(pending.application.id)
+          return applicationsApi.regenerateSecret(pending.application.id, Number(keepPreviousHours))
         case 'disable':
           await applicationsApi.disable(pending.application.id)
           return null
@@ -321,6 +327,21 @@ export function AdminApplicationsPage() {
                     <p>{t(`applications.confirm.${confirmation.kind}.description`)}</p>
                     {confirmation.kind === 'manifest' && (
                       <ManifestDiff application={confirmation.application} />
+                    )}
+                    {confirmation.kind === 'secret' && (
+                      <fieldset className="grid gap-2 text-left">
+                        <legend className="text-foreground mb-1 text-sm font-medium">{t('applications.secretOverlap.title')}</legend>
+                        <RadioGroup value={keepPreviousHours} onValueChange={setKeepPreviousHours} className="gap-2">
+                          {SECRET_OVERLAPS.map((hours) => (
+                            <div key={hours} className="flex items-center gap-2">
+                              <RadioGroupItem value={hours} id={`secret-overlap-${hours}`} />
+                              <Label htmlFor={`secret-overlap-${hours}`} className="font-normal">
+                                {t(`applications.secretOverlap.option.${hours}`)}
+                              </Label>
+                            </div>
+                          ))}
+                        </RadioGroup>
+                      </fieldset>
                     )}
                   </div>
                 </AlertDialogDescription>

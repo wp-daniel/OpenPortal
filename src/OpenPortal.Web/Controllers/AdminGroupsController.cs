@@ -27,8 +27,12 @@ public sealed class AdminGroupsController : ControllerBase
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<GroupSummaryDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
-    public async Task<ActionResult<IReadOnlyList<GroupSummaryDto>>> ListAsync(CancellationToken cancellationToken) =>
-        Respond(await _groups.ListAsync(cancellationToken).ConfigureAwait(false));
+    public async Task<ActionResult<IReadOnlyList<GroupSummaryDto>>> ListAsync(
+        [FromQuery] string? search,
+        [FromQuery] int skip,
+        [FromQuery] int? take,
+        CancellationToken cancellationToken) =>
+        ListSlices.Respond(this, await _groups.ListAsync(new ListSlice(search, skip, take), cancellationToken).ConfigureAwait(false));
 
     [RequirePortalPage(PortalPages.Groups)]
     [HttpGet("{groupId:guid}")]

@@ -61,6 +61,8 @@ export interface SessionImpersonator {
 export interface SessionFeatures {
   readonly selfDeletion: boolean
   readonly personalAccessTokens: boolean
+  /** Minutes without activity after which the session ends (0: never); the client warns before. */
+  readonly idleTimeoutMinutes: number
 }
 
 /**
@@ -86,6 +88,31 @@ export interface RegistrationInfo {
   readonly passwordReset: boolean
   /** Whether the sign-in page offers "sign in with a passkey". */
   readonly passkeys: boolean
+  /** The external providers the sign-in page offers ("continue with Google"). */
+  readonly externalProviders: readonly ExternalProviderInfo[]
+}
+
+export type ExternalProviderKey = 'google' | 'microsoft'
+
+export interface ExternalProviderInfo {
+  readonly key: ExternalProviderKey
+  readonly displayName: string
+}
+
+/** An external account connected to a portal account. */
+export interface ExternalLogin {
+  readonly provider: ExternalProviderKey
+  readonly displayName: string
+  /** The external account's address when it was connected. */
+  readonly accountName: string | null
+}
+
+export interface AccountExternalLogins {
+  /** False for an account created through a provider that has not set a password yet. */
+  readonly hasPassword: boolean
+  readonly logins: readonly ExternalLogin[]
+  /** Providers that are on and not connected yet. */
+  readonly available: readonly ExternalProviderInfo[]
 }
 
 export interface Session {
@@ -164,7 +191,7 @@ export interface UserSummary extends UserDetails {
   readonly passkeyCount: number
 }
 
-export type AccountOrigin = 'created' | 'registered' | 'invited' | 'provisioned'
+export type AccountOrigin = 'created' | 'registered' | 'invited' | 'provisioned' | 'external'
 
 export interface PagedResult<T> {
   readonly items: readonly T[]
@@ -185,97 +212,6 @@ export interface CreateUserRequest extends UserDetails {
 
 export interface UpdateUserRequest extends UserDetails {
   readonly isAdministrator: boolean
-}
-
-// ---------------------------------------------------------------------------
-// Content.
-// ---------------------------------------------------------------------------
-
-export interface Technology {
-  readonly name: string
-}
-
-export interface SocialLink {
-  readonly platform: string
-  readonly url: string
-  readonly label: string | null
-}
-
-/**
- * A project as the management screens receive it.
- *
- * A distinct shape from the public `Project`: the editor needs the row id to publish or delete, plus the
- * published flag, the position and the updated timestamp, none of which are reader-facing.
- */
-export interface ManagedProject {
-  readonly id: string
-  readonly slug: string
-  readonly name: string
-  readonly summary: string | null
-  readonly description: string | null
-  readonly url: string | null
-  readonly repositoryUrl: string | null
-  readonly position: number | null
-  readonly isPublished: boolean
-  readonly startedOn: string | null
-  readonly completedOn: string | null
-  readonly updatedAtUtc: string
-  readonly technologies: readonly Technology[]
-}
-
-export interface Project {
-  readonly slug: string
-  readonly name: string
-  readonly summary: string | null
-  readonly description: string | null
-  readonly url: string | null
-  readonly repositoryUrl: string | null
-  readonly startedOn: string | null
-  readonly completedOn: string | null
-  readonly technologies: readonly Technology[]
-}
-
-export interface Profile {
-  readonly displayName: string
-  readonly headline: string | null
-  readonly summary: string | null
-  readonly location: string | null
-  readonly email: string | null
-  readonly avatarUrl: string | null
-  readonly socialLinks: readonly SocialLink[]
-  readonly projects: readonly Project[]
-}
-
-export interface ProfileRequest {
-  readonly id: string | null
-  readonly displayName: string
-  readonly headline: string | null
-  readonly summary: string | null
-  readonly location: string | null
-  readonly email: string | null
-  readonly avatarUrl: string | null
-  readonly socialLinks: readonly SocialLinkRequest[]
-}
-
-export interface SocialLinkRequest {
-  readonly platform: string
-  readonly url: string
-  readonly label: string | null
-}
-
-export interface ProjectRequest {
-  readonly id: string | null
-  readonly name: string
-  readonly slug: string
-  readonly summary: string | null
-  readonly description: string | null
-  readonly url: string | null
-  readonly repositoryUrl: string | null
-  readonly position: number | null
-  readonly isPublished: boolean
-  readonly startedOn: string | null
-  readonly completedOn: string | null
-  readonly technologies: readonly string[]
 }
 // ---------------------------------------------------------------------------
 // Applications, groups and access.
@@ -321,6 +257,10 @@ export interface ApplicationSummary {
   readonly webhookUrl: string | null
   readonly webhookEvents: readonly string[] | null
   readonly hasWebhookSecret: boolean
+  /** Users are asked to agree to what the application receives before its first sign-in. */
+  readonly requireConsent: boolean
+  /** The application may sign people in with the device flow (a tool shows a code, the person approves it). */
+  readonly allowDeviceFlow: boolean
 }
 
 export type ApplicationClientType = 'confidential' | 'public'
@@ -343,6 +283,17 @@ export interface ApplicationSecret {
   readonly application: ApplicationSummary
   /** Null for a public client, which has none. */
   readonly clientSecret: string | null
+  /** After a replacement with an overlap: until when the replaced secret still works. */
+  readonly previousSecretValidUntilUtc?: string | null
+}
+
+/** An application the signed-in user let sign them in. */
+export interface AuthorizedApplication {
+  readonly clientId: string
+  readonly displayName: string
+  readonly baseUrl: string | null
+  readonly scopes: readonly string[]
+  readonly authorizedAtUtc: string | null
 }
 
 export interface UpdateApplicationRequest {
@@ -361,6 +312,8 @@ export interface UpdateApplicationRequest {
   readonly backChannelLogoutUri: string | null
   readonly webhookUrl: string | null
   readonly webhookEvents: readonly string[]
+  readonly requireConsent: boolean
+  readonly allowDeviceFlow: boolean
 }
 
 export interface CreateApplicationRequest extends UpdateApplicationRequest {
@@ -569,6 +522,8 @@ export interface SecuritySettings {
   readonly personalAccessTokensEnabled: boolean
   readonly passkeysEnabled: boolean
   readonly twoFactorRequirement: TwoFactorRequirement
+  /** Minutes without activity after which a session ends (0: never). */
+  readonly idleTimeoutMinutes: number
 }
 
 export interface UpdateSecuritySettingsRequest {
@@ -577,6 +532,40 @@ export interface UpdateSecuritySettingsRequest {
   readonly personalAccessTokensEnabled: boolean
   readonly passkeysEnabled: boolean
   readonly twoFactorRequirement: TwoFactorRequirement
+  readonly idleTimeoutMinutes: number
+}
+
+/** Which notifications are also emailed. */
+export type NotificationEmail = 'security' | 'instant' | 'daily' | 'off'
+
+export interface NotificationPreferences {
+  readonly email: NotificationEmail
+  /** Whether the portal can send email at all. */
+  readonly emailAvailable: boolean
+}
+
+/** One sign-in to the portal on one browser. */
+export interface SessionInfo {
+  readonly id: string
+  readonly createdAtUtc: string
+  readonly lastSeenAtUtc: string
+  readonly expiresAtUtc: string | null
+  readonly endedAtUtc: string | null
+  readonly endReason: 'signed_out' | 'revoked' | 'idle' | 'expired' | null
+  readonly ipAddress: string | null
+  /** "Firefox on Windows". */
+  readonly device: string | null
+  readonly methods: readonly string[]
+  /** The session this page is using. */
+  readonly current: boolean
+  readonly supportSession: boolean
+  readonly persistent: boolean
+}
+
+export interface AccountSessions {
+  readonly active: readonly SessionInfo[]
+  /** Sessions that ended recently: the account's sign-in history. */
+  readonly recent: readonly SessionInfo[]
 }
 
 /** One passkey of the signed-in account. */
@@ -693,6 +682,28 @@ export interface OrganizationSummary {
 export interface OrganizationMember extends UserReference {
   readonly role: OrganizationRole
   readonly addedAtUtc: string
+  /** The roles the member holds in the organization's applications, within this organization only. */
+  readonly applicationRoles: readonly { readonly applicationId: string; readonly roles: readonly string[] }[]
+}
+
+/** An email domain an organization claims. */
+export interface OrganizationDomain {
+  readonly id: string
+  readonly domain: string
+  readonly verified: boolean
+  readonly verifiedAtUtc: string | null
+  readonly verifiedBy: 'dns' | 'administrator' | null
+  /** The TXT record to publish at the domain to verify it. */
+  readonly recordValue: string
+  readonly autoJoin: boolean
+  readonly autoJoinRole: OrganizationRole
+}
+
+/** An application that works per organization and defines roles. */
+export interface OrganizationApplication {
+  readonly id: string
+  readonly displayName: string
+  readonly roles: readonly ApplicationRole[]
 }
 
 export interface OrganizationDetail {
@@ -703,6 +714,10 @@ export interface OrganizationDetail {
   readonly members: readonly OrganizationMember[]
   readonly createdAtUtc: string
   readonly updatedAtUtc: string | null
+  /** Members sign in to the organization's applications with two factors only. */
+  readonly requireMultiFactor: boolean
+  readonly domains: readonly OrganizationDomain[]
+  readonly applications: readonly OrganizationApplication[]
 }
 
 /** An organization a user belongs to, as applications are told about it. */
@@ -727,6 +742,34 @@ export interface RegistrationSettings {
   /** Whether the portal can send email (confirmations, invitations). */
   readonly emailDeliveryAvailable: boolean
   readonly updatedAtUtc: string | null
+}
+
+export type ExternalSignUpMode = 'disabled' | 'open' | 'approval'
+
+/** One external sign-in provider as the settings screen shows it; the client secret is never sent back. */
+export interface ExternalProviderSettings {
+  readonly key: ExternalProviderKey
+  readonly displayName: string
+  readonly enabled: boolean
+  readonly clientId: string | null
+  readonly hasClientSecret: boolean
+  /** Microsoft only: organizations, common, consumers, or one directory. */
+  readonly tenant: string | null
+  readonly signUp: ExternalSignUpMode
+  readonly allowedDomains: readonly string[]
+  /** Appended to the portal's address, the redirect URI to register at the provider. */
+  readonly callbackPath: string
+  readonly updatedAtUtc: string | null
+}
+
+export interface UpdateExternalProviderRequest {
+  readonly enabled: boolean
+  readonly clientId: string | null
+  /** A new secret; omitted keeps the stored one. */
+  readonly clientSecret?: string
+  readonly tenant: string | null
+  readonly signUp: ExternalSignUpMode
+  readonly allowedDomains: readonly string[]
 }
 
 export interface UpdateRegistrationSettingsRequest {

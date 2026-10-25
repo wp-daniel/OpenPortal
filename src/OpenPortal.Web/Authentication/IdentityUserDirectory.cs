@@ -23,11 +23,11 @@ internal sealed class IdentityUserDirectory : IUserDirectory
     {
         var users = await _users.FindManyAsync(userIds, cancellationToken).ConfigureAwait(false);
 
-        return users.ToDictionary(user => user.Id, user => new DirectoryUser(user.Id, user.Email, user.DisplayName));
+        return users.ToDictionary(user => user.Id, user => new DirectoryUser(user.Id, user.Email, user.DisplayName, user.EmailConfirmed));
     }
 
     public async Task<DirectoryUser?> FindByEmailAsync(string email, CancellationToken cancellationToken) =>
         await _users.FindByEmailAsync(email, cancellationToken).ConfigureAwait(false) is { } user
-            ? new DirectoryUser(user.Id, user.Email, user.DisplayName)
+            ? new DirectoryUser(user.Id, user.Email, user.DisplayName, user.EmailConfirmed)
             : null;
 }

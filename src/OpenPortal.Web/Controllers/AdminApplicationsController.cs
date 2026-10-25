@@ -76,13 +76,20 @@ public sealed class AdminApplicationsController : ControllerBase
     public async Task<ActionResult<ApplicationSecretDto>> ApproveAsync(Guid applicationId, CancellationToken cancellationToken) =>
         Respond(await _applications.ApproveAsync(applicationId, cancellationToken).ConfigureAwait(false));
 
-    /// <summary>Issues a new client secret; the previous one stops working.</summary>
+    /// <summary>
+    /// Issues a new client secret. The previous one stops working at once, or after <c>keepPreviousHours</c> so the
+    /// application's servers can switch without downtime.
+    /// </summary>
     [RequirePortalPage(PortalPages.Applications)]
     [HttpPost("{applicationId:guid}/secret")]
     [ProducesResponseType<ApplicationSecretDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<ApplicationSecretDto>> RegenerateSecretAsync(Guid applicationId, CancellationToken cancellationToken) =>
-        Respond(await _applications.RegenerateSecretAsync(applicationId, cancellationToken).ConfigureAwait(false));
+    public async Task<ActionResult<ApplicationSecretDto>> RegenerateSecretAsync(
+        Guid applicationId,
+        [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] RegenerateSecretRequest? request,
+        CancellationToken cancellationToken) =>
+        Respond(await _applications.RegenerateSecretAsync(applicationId, request ?? new RegenerateSecretRequest(), cancellationToken).ConfigureAwait(false));
 
     /// <summary>Generates the secret webhook deliveries are signed with (<c>whsec_…</c>); the previous one stops working.</summary>
     [RequirePortalPage(PortalPages.Applications)]

@@ -58,7 +58,8 @@ public sealed record SecuritySettingsDto(
     bool PersonalAccessTokensEnabled,
     DateTimeOffset? UpdatedAtUtc,
     bool PasskeysEnabled,
-    string TwoFactorRequirement);
+    string TwoFactorRequirement,
+    int IdleTimeoutMinutes = 0);
 
 /// <summary>New values for the portal's sign-in security settings.</summary>
 public sealed class UpdateSecuritySettingsRequest
@@ -75,6 +76,9 @@ public sealed class UpdateSecuritySettingsRequest
 
     /// <summary><c>none</c>, <c>administrators</c> or <c>everyone</c>.</summary>
     public string TwoFactorRequirement { get; init; } = "none";
+
+    /// <summary>Minutes without activity after which a session ends; 0 keeps sessions until they expire.</summary>
+    public int IdleTimeoutMinutes { get; init; }
 }
 
 /// <summary>The names of <see cref="Domain.Settings.TwoFactorRequirement"/> in the API.</summary>

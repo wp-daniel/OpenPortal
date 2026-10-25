@@ -3,7 +3,6 @@ using OpenPortal.Access.Domain;
 using OpenPortal.Access.Domain.Applications;
 using OpenPortal.Audit.Application.Abstractions;
 using OpenPortal.Audit.Domain;
-using OpenPortal.Content.Application.Abstractions;
 using OpenPortal.Identity.Application.Abstractions;
 using OpenPortal.Identity.Domain.Users;
 using OpenPortal.Notifications.Application.Abstractions;
@@ -103,31 +102,21 @@ internal sealed class UserAdministrationAuthorization : IUserAdministrationAutho
     }
 }
 
-/// <summary>Answers the Content module's authorization question.</summary>
-internal sealed class ContentEditAuthorization : IContentEditAuthorization
+/// <summary>
+/// Answers Identity's question "may the caller invite into this organization" from the Access module: the
+/// organizations page or being one of the organization's administrators.
+/// </summary>
+internal sealed class OrganizationInvitationAuthorization : IOrganizationInvitationAuthorization
 {
-    private readonly CurrentPagePermissions _permissions;
+    private readonly IOrganizationService _organizations;
 
-    public ContentEditAuthorization(CurrentPagePermissions permissions)
+    public OrganizationInvitationAuthorization(IOrganizationService organizations)
     {
-        _permissions = permissions;
+        _organizations = organizations;
     }
 
-    public async Task<Result> EnsureCanEditAsync(ContentArea area, CancellationToken cancellationToken)
-    {
-        var page = area switch
-        {
-            ContentArea.Profile => PortalPages.ContentProfile,
-            ContentArea.Projects => PortalPages.ContentProjects,
-            _ => throw new ArgumentOutOfRangeException(nameof(area), area, null),
-        };
-
-        return await _permissions.HoldsAnyAsync([page], cancellationToken).ConfigureAwait(false)
-            ? Result.Success()
-            : Result.Failure(Error.Forbidden(
-                "content.edit_forbidden",
-                "Editing site content requires an administrator account or a page granted to one of your groups."));
-    }
+    public Task<Result> EnsureCanInviteToAsync(Guid organizationId, CancellationToken cancellationToken) =>
+        _organizations.EnsureCanManageMembersAsync(organizationId, cancellationToken);
 }
 
 /// <summary>Answers the Audit module's authorization question: reading the log needs the audit page.</summary>

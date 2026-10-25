@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using OpenPortal.Identity.Application.Abstractions;
+using OpenPortal.Identity.Domain.Settings;
 
 namespace OpenPortal.Web.Authentication;
 
@@ -17,16 +18,19 @@ public static class SessionAuthentication
             return [];
         }
 
+        // Identity writes the external provider's name (google, microsoft) as the authentication method of a session
+        // it opened through one; the portal reports that as fed.
         var methods = principal.FindAll(AuthenticationMethods.ClaimType)
-            .Concat(principal.FindAll(ClaimTypes.AuthenticationMethod))
             .Select(claim => claim.Value)
+            .Concat(principal.FindAll(ClaimTypes.AuthenticationMethod)
+                .Select(claim => ExternalLoginProviders.IsKnown(claim.Value) ? AuthenticationMethods.Federated : claim.Value))
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Distinct(StringComparer.Ordinal)
             .ToList();
 
-        // Identity marks a completed second step with mfa only; the password came first.
+        // Identity marks a completed second step with mfa only; the password (or the provider) came first.
         if (methods.Contains(AuthenticationMethods.MultiFactor) && !methods.Contains(AuthenticationMethods.HardwareKey)
-            && !methods.Contains(AuthenticationMethods.Password))
+            && !methods.Contains(AuthenticationMethods.Password) && !methods.Contains(AuthenticationMethods.Federated))
         {
             methods.Insert(0, AuthenticationMethods.Password);
         }

@@ -25,6 +25,7 @@ internal sealed class OrganizationService : IOrganizationService
     private readonly IClock _clock;
     private readonly IAuditTrail _audit;
     private readonly INotifier _notifier;
+    private readonly IDomainOwnershipVerifier _domains;
 
     public OrganizationService(
         AccessDbContext db,
@@ -34,8 +35,10 @@ internal sealed class OrganizationService : IOrganizationService
         IAccessCaller caller,
         IClock clock,
         IAuditTrail audit,
-        INotifier notifier)
+        INotifier notifier,
+        IDomainOwnershipVerifier domains)
     {
+        _domains = domains;
         _db = db;
         _clients = clients;
         _directory = directory;
@@ -48,14 +51,42 @@ internal sealed class OrganizationService : IOrganizationService
 
     public async Task<Result<IReadOnlyList<OrganizationSummaryDto>>> ListAsync(CancellationToken cancellationToken)
     {
+        var slice = await ListAsync(ListSlice.All, cancellationToken).ConfigureAwait(false);
+
+        return slice.IsSuccess
+            ? Result<IReadOnlyList<OrganizationSummaryDto>>.Success(slice.Value.Items)
+            : Result<IReadOnlyList<OrganizationSummaryDto>>.Failure(slice.Error);
+    }
+
+    public async Task<Result<SliceDto<OrganizationSummaryDto>>> ListAsync(ListSlice slice, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(slice);
+
         var guard = await _authorization.EnsureCanAsync(AccessOperation.ListOrganizations, cancellationToken).ConfigureAwait(false);
         if (guard.IsFailure)
         {
-            return Result<IReadOnlyList<OrganizationSummaryDto>>.Failure(guard.Error);
+            return Result<SliceDto<OrganizationSummaryDto>>.Failure(guard.Error);
         }
 
-        var organizations = await _db.Organizations
-            .AsNoTracking()
+        var query = _db.Organizations.AsNoTracking();
+
+        var term = slice.Search?.Trim().ToUpperInvariant();
+        if (!string.IsNullOrEmpty(term))
+        {
+            query = query.Where(organization => organization.Name.ToUpper().Contains(term)
+                || organization.Slug.ToUpper().Contains(term)
+                || (organization.Description != null && organization.Description.ToUpper().Contains(term)));
+        }
+
+        var total = await query.CountAsync(cancellationToken).ConfigureAwait(false);
+
+        query = query.OrderBy(organization => organization.Name).Skip(Math.Max(0, slice.Skip));
+        if (slice.Take is int take)
+        {
+            query = query.Take(Math.Clamp(take, 1, ListSlice.MaxTake));
+        }
+
+        var organizations = await query
             .Select(organization => new
             {
                 organization.Id,
@@ -79,7 +110,7 @@ internal sealed class OrganizationService : IOrganizationService
                 organization.CreatedAtUtc))
             .ToList();
 
-        return Result<IReadOnlyList<OrganizationSummaryDto>>.Success(result);
+        return Result<SliceDto<OrganizationSummaryDto>>.Success(new SliceDto<OrganizationSummaryDto>(result, total));
     }
 
     public async Task<Result<OrganizationDetailDto>> GetAsync(Guid organizationId, CancellationToken cancellationToken)
@@ -210,7 +241,21 @@ internal sealed class OrganizationService : IOrganizationService
             return Result<OrganizationDetailDto>.Failure(updated.Error);
         }
 
+        var policyChanged = request.RequireMultiFactor is { } requireMultiFactor
+            && organization.SetPolicy(requireMultiFactor, _clock.UtcNow);
+
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        if (policyChanged)
+        {
+            await _audit.RecordAsync(
+                    AuditEvent.Succeeded(
+                        AccessAuditActions.OrganizationPolicyChanged,
+                        organization.ToAuditSubject(),
+                        AccessAudit.Details(("requireMultiFactor", organization.RequireMultiFactor ? "on" : "off"))),
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
 
         // The new name reaches the applications at their next refresh: the token endpoint reads it every time.
         await _audit.RecordAsync(AuditEvent.Succeeded(AccessAuditActions.OrganizationUpdated, organization.ToAuditSubject()), cancellationToken)
@@ -374,6 +419,247 @@ internal sealed class OrganizationService : IOrganizationService
                 await OrganizationQueries.MembershipsAsync(_db, userId, cancellationToken).ConfigureAwait(false))
             : Result<IReadOnlyList<OrganizationMembershipDto>>.Failure(AccessErrors.SignInRequired);
 
+    public async Task<Result> EnsureCanManageMembersAsync(Guid organizationId, CancellationToken cancellationToken) =>
+        await EnsureCanManageMembersAsync(await FindAsync(organizationId, cancellationToken).ConfigureAwait(false), cancellationToken)
+            .ConfigureAwait(false);
+
+    public async Task<Result<OrganizationDetailDto>> AddDomainAsync(
+        Guid organizationId,
+        AddOrganizationDomainRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var organization = await FindAsync(organizationId, cancellationToken).ConfigureAwait(false);
+        var guard = await EnsureCanManageMembersAsync(organization, cancellationToken).ConfigureAwait(false);
+        if (guard.IsFailure)
+        {
+            return Result<OrganizationDetailDto>.Failure(guard.Error);
+        }
+
+        var token = Convert.ToHexStringLower(System.Security.Cryptography.RandomNumberGenerator.GetBytes(OrganizationDomain.TokenLength / 2));
+        var created = OrganizationDomain.Create(Guid.NewGuid(), organizationId, request.Domain, token, _clock.UtcNow);
+        if (created.IsFailure)
+        {
+            return Result<OrganizationDetailDto>.Failure(created.Error);
+        }
+
+        var domain = created.Value;
+        if (await _db.OrganizationDomains.AnyAsync(candidate => candidate.Domain == domain.Domain, cancellationToken).ConfigureAwait(false))
+        {
+            return Result<OrganizationDetailDto>.Failure(AccessErrors.OrganizationDomainInUse);
+        }
+
+        _db.OrganizationDomains.Add(domain);
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        await _audit.RecordAsync(
+                AuditEvent.Succeeded(AccessAuditActions.OrganizationDomainAdded, organization!.ToAuditSubject(), AccessAudit.Details(("domain", domain.Domain))),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return Result<OrganizationDetailDto>.Success(await ToDetailAsync(organization!, cancellationToken).ConfigureAwait(false));
+    }
+
+    public async Task<Result<OrganizationDetailDto>> VerifyDomainAsync(
+        Guid organizationId,
+        Guid domainId,
+        VerifyOrganizationDomainRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var (organization, domain, failure) = await FindDomainAsync(organizationId, domainId, cancellationToken).ConfigureAwait(false);
+        if (failure is not null)
+        {
+            return Result<OrganizationDetailDto>.Failure(failure);
+        }
+
+        if (!domain!.IsVerified)
+        {
+            string by;
+            if (request.Manual)
+            {
+                // Vouching for a domain without its DNS is for the portal's own administrators, not the tenant's.
+                var portal = await _authorization.EnsureCanAsync(AccessOperation.ManageOrganizations, cancellationToken).ConfigureAwait(false);
+                if (portal.IsFailure)
+                {
+                    return Result<OrganizationDetailDto>.Failure(portal.Error);
+                }
+
+                by = "administrator";
+            }
+            else
+            {
+                if (!await _domains.HasTxtRecordAsync(domain.Domain, domain.RecordValue, cancellationToken).ConfigureAwait(false))
+                {
+                    return Result<OrganizationDetailDto>.Failure(AccessErrors.OrganizationDomainCheckFailed);
+                }
+
+                by = "dns";
+            }
+
+            domain.MarkVerified(_clock.UtcNow, by);
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            await _audit.RecordAsync(
+                    AuditEvent.Succeeded(
+                        AccessAuditActions.OrganizationDomainVerified,
+                        organization!.ToAuditSubject(),
+                        AccessAudit.Details(("domain", domain.Domain), ("by", by))),
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return Result<OrganizationDetailDto>.Success(await ToDetailAsync(organization!, cancellationToken).ConfigureAwait(false));
+    }
+
+    public async Task<Result<OrganizationDetailDto>> UpdateDomainAsync(
+        Guid organizationId,
+        Guid domainId,
+        UpdateOrganizationDomainRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var (organization, domain, failure) = await FindDomainAsync(organizationId, domainId, cancellationToken).ConfigureAwait(false);
+        if (failure is not null)
+        {
+            return Result<OrganizationDetailDto>.Failure(failure);
+        }
+
+        if (ParseRole(request.Role ?? OrganizationRoles.Member) is not { } role)
+        {
+            return Result<OrganizationDetailDto>.Failure(AccessErrors.OrganizationRoleInvalid);
+        }
+
+        var changed = domain!.SetAutoJoin(request.AutoJoin, role);
+        if (changed.IsFailure)
+        {
+            return Result<OrganizationDetailDto>.Failure(changed.Error);
+        }
+
+        if (changed.Value)
+        {
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            await _audit.RecordAsync(
+                    AuditEvent.Succeeded(
+                        AccessAuditActions.OrganizationDomainUpdated,
+                        organization!.ToAuditSubject(),
+                        AccessAudit.Details(("domain", domain.Domain), ("autoJoin", domain.AutoJoin ? "on" : "off"), ("role", ToContract(role)))),
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return Result<OrganizationDetailDto>.Success(await ToDetailAsync(organization!, cancellationToken).ConfigureAwait(false));
+    }
+
+    public async Task<Result<OrganizationDetailDto>> RemoveDomainAsync(Guid organizationId, Guid domainId, CancellationToken cancellationToken)
+    {
+        var (organization, domain, failure) = await FindDomainAsync(organizationId, domainId, cancellationToken).ConfigureAwait(false);
+        if (failure is not null)
+        {
+            return Result<OrganizationDetailDto>.Failure(failure);
+        }
+
+        // Members who joined by the domain stay: removing the domain only stops new people joining by it.
+        _db.OrganizationDomains.Remove(domain!);
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        await _audit.RecordAsync(
+                AuditEvent.Succeeded(AccessAuditActions.OrganizationDomainRemoved, organization!.ToAuditSubject(), AccessAudit.Details(("domain", domain!.Domain))),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return Result<OrganizationDetailDto>.Success(await ToDetailAsync(organization!, cancellationToken).ConfigureAwait(false));
+    }
+
+    public async Task<Result<OrganizationDetailDto>> SetMemberApplicationRolesAsync(
+        Guid organizationId,
+        Guid userId,
+        Guid applicationId,
+        SetMemberApplicationRolesRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var organization = await FindAsync(organizationId, cancellationToken).ConfigureAwait(false);
+        var guard = await EnsureCanManageMembersAsync(organization, cancellationToken).ConfigureAwait(false);
+        if (guard.IsFailure)
+        {
+            return Result<OrganizationDetailDto>.Failure(guard.Error);
+        }
+
+        if (organization!.Members.All(member => member.UserId != userId))
+        {
+            return Result<OrganizationDetailDto>.Failure(AccessErrors.OrganizationMemberNotFound);
+        }
+
+        var application = await _db.Applications
+            .SingleOrDefaultAsync(candidate => candidate.Id == applicationId, cancellationToken)
+            .ConfigureAwait(false);
+        if (application is null || application.Organizations == OrganizationMode.None)
+        {
+            return Result<OrganizationDetailDto>.Failure(AccessErrors.OrganizationApplicationInvalid);
+        }
+
+        var wanted = (request.Roles ?? []).Select(role => role?.Trim().ToLowerInvariant() ?? string.Empty).Distinct(StringComparer.Ordinal).ToList();
+        if (wanted.Any(role => !application.HasRole(role)))
+        {
+            return Result<OrganizationDetailDto>.Failure(AccessErrors.RoleNotFound);
+        }
+
+        var current = await _db.OrganizationMemberRoles
+            .Where(role => role.OrganizationId == organizationId && role.UserId == userId && role.ApplicationId == applicationId)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var removing = current.Where(role => !wanted.Contains(role.Role, StringComparer.Ordinal)).ToList();
+        var adding = wanted.Where(role => current.All(existing => existing.Role != role)).ToList();
+
+        if (removing.Count > 0 || adding.Count > 0)
+        {
+            _db.OrganizationMemberRoles.RemoveRange(removing);
+            _db.OrganizationMemberRoles.AddRange(adding.Select(role => new OrganizationMemberRole(organizationId, userId, applicationId, role)));
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            // The new roles reach the application at its next refresh: the token endpoint computes them every time.
+            await _audit.RecordAsync(
+                    AuditEvent.Succeeded(
+                        AccessAuditActions.OrganizationMemberRolesChanged,
+                        await _directory.UserSubjectAsync(userId, cancellationToken).ConfigureAwait(false),
+                        AccessAudit.Details(
+                            ("organization", organization.Name),
+                            ("organizationId", organization.Id.ToString()),
+                            ("application", application.DisplayName),
+                            ("roles", string.Join(", ", wanted.Order(StringComparer.Ordinal))))),
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return Result<OrganizationDetailDto>.Success(await ToDetailAsync(organization, cancellationToken).ConfigureAwait(false));
+    }
+
+    private async Task<(Organization? Organization, OrganizationDomain? Domain, Error? Failure)> FindDomainAsync(
+        Guid organizationId,
+        Guid domainId,
+        CancellationToken cancellationToken)
+    {
+        var organization = await FindAsync(organizationId, cancellationToken).ConfigureAwait(false);
+        var guard = await EnsureCanManageMembersAsync(organization, cancellationToken).ConfigureAwait(false);
+        if (guard.IsFailure)
+        {
+            return (null, null, guard.Error);
+        }
+
+        var domain = await _db.OrganizationDomains
+            .SingleOrDefaultAsync(candidate => candidate.Id == domainId && candidate.OrganizationId == organizationId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return domain is null ? (organization, null, AccessErrors.OrganizationDomainNotFound) : (organization, domain, null);
+    }
+
     /// <summary>
     /// Ends the sessions the users hold in the applications that work per organization, so a token naming an
     /// organization they left cannot be refreshed into one more access token. Their sessions elsewhere stay.
@@ -411,6 +697,39 @@ internal sealed class OrganizationService : IOrganizationService
                 cancellationToken)
             .ConfigureAwait(false);
 
+        var domains = await _db.OrganizationDomains
+            .AsNoTracking()
+            .Where(domain => domain.OrganizationId == organization.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var memberRoles = await _db.OrganizationMemberRoles
+            .AsNoTracking()
+            .Where(role => role.OrganizationId == organization.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var applications = (await _db.Applications
+                .AsNoTracking()
+                .Where(application => application.Organizations != OrganizationMode.None)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false))
+            .Where(application => application.Roles.Count > 0)
+            .OrderBy(application => application.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .Select(application => new OrganizationApplicationDto(
+                application.Id,
+                application.DisplayName,
+                application.Roles.Select(role => new ApplicationRoleDto(role.Key, role.DisplayName, role.Description)).ToList()))
+            .ToList();
+
+        IReadOnlyList<OrganizationMemberApplicationRolesDto> RolesOf(Guid userId) => memberRoles
+            .Where(role => role.UserId == userId)
+            .GroupBy(role => role.ApplicationId)
+            .Select(group => new OrganizationMemberApplicationRolesDto(
+                group.Key,
+                group.Select(role => role.Role).Order(StringComparer.Ordinal).ToList()))
+            .ToList();
+
         return new OrganizationDetailDto(
             organization.Id,
             organization.Name,
@@ -425,10 +744,25 @@ internal sealed class OrganizationService : IOrganizationService
                     row.User.DisplayName,
                     row.User.IsKnown,
                     ToContract(row.member.Role),
-                    row.member.AddedAtUtc))
+                    row.member.AddedAtUtc,
+                    RolesOf(row.member.UserId)))
                 .ToList(),
             organization.CreatedAtUtc,
-            organization.UpdatedAtUtc);
+            organization.UpdatedAtUtc,
+            organization.RequireMultiFactor,
+            domains
+                .OrderBy(domain => domain.Domain, StringComparer.Ordinal)
+                .Select(domain => new OrganizationDomainDto(
+                    domain.Id,
+                    domain.Domain,
+                    domain.IsVerified,
+                    domain.VerifiedAtUtc,
+                    domain.VerifiedBy,
+                    domain.RecordValue,
+                    domain.AutoJoin,
+                    ToContract(domain.AutoJoinRole)))
+                .ToList(),
+            applications);
     }
 
     public static string ToContract(OrganizationRole role) => role switch
@@ -438,7 +772,7 @@ internal sealed class OrganizationService : IOrganizationService
         _ => throw new ArgumentOutOfRangeException(nameof(role), role, null),
     };
 
-    private static OrganizationRole? ParseRole(string? role) => role?.Trim().ToLowerInvariant() switch
+    internal static OrganizationRole? ParseRole(string? role) => role?.Trim().ToLowerInvariant() switch
     {
         OrganizationRoles.Member => OrganizationRole.Member,
         OrganizationRoles.Admin => OrganizationRole.Admin,

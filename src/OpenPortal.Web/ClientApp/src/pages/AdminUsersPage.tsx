@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Download, Fingerprint, Headset, History, KeyRound, KeySquare, Upload, Loader2, MoreHorizontal, Pencil, Plus, ShieldCheck, ShieldOff, Smartphone, Trash2, UserCheck } from 'lucide-react'
+import { Download, Fingerprint, Headset, History, KeyRound, KeySquare, Link2, MonitorSmartphone, Upload, Loader2, MoreHorizontal, Pencil, Plus, ShieldCheck, ShieldOff, Smartphone, Trash2, UserCheck } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
@@ -13,6 +13,8 @@ import { ImpersonateDialog, canImpersonate } from '@/components/ImpersonateDialo
 import { UserBulkBar } from '@/components/users/UserBulkBar'
 import { UserImportDialog } from '@/components/users/UserImportDialog'
 import { UserTokensDialog } from '@/components/users/UserTokensDialog'
+import { UserExternalLoginsDialog } from '@/components/users/UserExternalLoginsDialog'
+import { UserSessionsDialog } from '@/components/users/UserSessionsDialog'
 import { PageHeader } from '@/components/PageHeader'
 import { Section } from '@/components/Section'
 import { ErrorPanel, LoadingState } from '@/components/StatePanels'
@@ -81,7 +83,7 @@ const STATUSES = ['active', 'pending', 'locked', 'unconfirmed', 'inactive', 'del
  */
 export function AdminUsersPage() {
   const [page, setPage] = useState(1)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(() => new URLSearchParams(window.location.search).get('search') ?? '')
   const [kind, setKind] = useState('')
   // A link (the dashboard's "needs attention") may open the list already filtered.
   const [searchParams] = useSearchParams()
@@ -97,6 +99,8 @@ export function AdminUsersPage() {
   const [resettingPasskeys, setResettingPasskeys] = useState<UserSummary | null>(null)
   const [impersonating, setImpersonating] = useState<UserSummary | null>(null)
   const [tokensOf, setTokensOf] = useState<UserSummary | null>(null)
+  const [loginsOf, setLoginsOf] = useState<UserSummary | null>(null)
+  const [sessionsOf, setSessionsOf] = useState<UserSummary | null>(null)
   const [importing, setImporting] = useState(false)
   const [selected, setSelected] = useState<readonly string[]>([])
   const queryClient = useQueryClient()
@@ -424,6 +428,14 @@ export function AdminUsersPage() {
                                   {t('tokens.open')}
                                 </DropdownMenuItem>
                               )}
+                              <DropdownMenuItem onSelect={() => setSessionsOf(user)}>
+                                <MonitorSmartphone />
+                                {t('sessions.open')}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => setLoginsOf(user)}>
+                                <Link2 />
+                                {t('externalLogins.open')}
+                              </DropdownMenuItem>
                               {isAdministrator && canImpersonate(user, session.user?.id) && (
                                 <DropdownMenuItem onSelect={() => setImpersonating(user)}>
                                   <Headset />
@@ -494,6 +506,8 @@ export function AdminUsersPage() {
 
       <ImpersonateDialog user={impersonating} onClose={() => setImpersonating(null)} />
       <UserTokensDialog user={tokensOf} onClose={() => setTokensOf(null)} />
+      <UserExternalLoginsDialog user={loginsOf} onClose={() => setLoginsOf(null)} />
+      <UserSessionsDialog user={sessionsOf} onClose={() => setSessionsOf(null)} />
       <UserImportDialog
         open={importing}
         onClose={() => setImporting(false)}

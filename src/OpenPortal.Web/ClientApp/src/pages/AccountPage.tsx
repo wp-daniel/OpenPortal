@@ -14,6 +14,9 @@ import { Section } from '@/components/Section'
 import { LoadingState } from '@/components/StatePanels'
 import { TokensSection } from '@/components/TokensSection'
 import { PasskeysSection } from '@/components/PasskeysSection'
+import { SessionsSection } from '@/components/SessionsSection'
+import { AuthorizedAppsSection } from '@/components/AuthorizedAppsSection'
+import { ExternalLoginsSection } from '@/components/ExternalLoginsSection'
 import { TwoFactorSection } from '@/components/TwoFactorSection'
 import { UserDetailsFields } from '@/components/UserDetailsFields'
 import { Badge } from '@/components/ui/badge'
@@ -26,6 +29,7 @@ import { useTabParam } from '@/hooks/useTabParam'
 import { notify } from '@/hooks/useToast'
 import { formatDate } from '@/i18n/store'
 import { useI18n } from '@/i18n/useI18n'
+import { EXTERNAL_LOGINS_KEY, useExternalLogins } from '@/lib/externalLogins'
 import { reportFormError, serverFieldErrors, zodFieldErrors } from '@/lib/forms'
 import { describePasswordPolicy, newPasswordSchema } from '@/lib/passwordPolicy'
 import {
@@ -116,9 +120,12 @@ export function AccountPage() {
         </TabsContent>
 
         <TabsContent value="security" className="space-y-6 pt-4">
-          <PasswordForm policy={session.passwordPolicy} />
+          <PasswordSection policy={session.passwordPolicy} />
           <TwoFactorSection />
           <PasskeysSection />
+          <ExternalLoginsSection />
+          <SessionsSection />
+          <AuthorizedAppsSection />
         </TabsContent>
 
         <TabsContent value="organizations" className="pt-4">
@@ -249,6 +256,70 @@ function ProfileForm({ initial }: { initial: AccountProfile }) {
           <Button type="submit" disabled={save.isPending}>
             {save.isPending && <Loader2 className="animate-spin" />}
             {save.isPending ? t('common.saving') : t('common.save')}
+          </Button>
+        </div>
+      </form>
+    </Section>
+  )
+}
+
+/** Changing the password, or setting a first one for an account created through Google or Microsoft. */
+function PasswordSection({ policy }: { policy: PasswordPolicy }) {
+  const logins = useExternalLogins()
+
+  return logins.data?.hasPassword === false ? <SetPasswordForm policy={policy} /> : <PasswordForm policy={policy} />
+}
+
+function SetPasswordForm({ policy }: { policy: PasswordPolicy }) {
+  const { t } = useI18n()
+  const queryClient = useQueryClient()
+  const [newPassword, setNewPassword] = useState('')
+  const [error, setError] = useState<string | undefined>()
+  const schema = useMemo(() => newPasswordSchema(policy, t, t('validation.newPasswordRequired')), [policy, t])
+
+  const set = useMutation({
+    mutationFn: () => accountApi.setPassword(newPassword),
+    meta: { handlesErrors: true },
+    onSuccess: async () => {
+      notify.success(t('account.passwordSet'))
+      setNewPassword('')
+      await queryClient.invalidateQueries({ queryKey: EXTERNAL_LOGINS_KEY })
+    },
+    onError: (failure) => reportFormError(failure, t('account.passwordFailed')),
+  })
+
+  function submit(event: FormEvent) {
+    event.preventDefault()
+
+    const parsed = schema.safeParse(newPassword)
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message)
+
+      return
+    }
+
+    setError(undefined)
+    set.mutate()
+  }
+
+  return (
+    <Section title={t('account.setPasswordSection')} description={t('account.setPasswordDescription')}>
+      <form onSubmit={submit} noValidate className="grid max-w-md gap-4">
+        <FormField label={t('account.newPassword')} htmlFor="setPassword" error={error} hint={describePasswordPolicy(policy, t)}>
+          <Input
+            name="setPassword"
+            type="password"
+            autoComplete="new-password"
+            required
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
+          />
+        </FormField>
+
+        <div>
+          <Button type="submit" disabled={set.isPending}>
+            {set.isPending && <Loader2 className="animate-spin" />}
+            {t('account.setPasswordSection')}
           </Button>
         </div>
       </form>

@@ -70,6 +70,9 @@ internal sealed class HttpContextCurrentUser : ICurrentUser
 
     public IReadOnlyList<string> AuthenticationMethods => SessionAuthentication.Methods(Principal);
 
+    public string? SessionId =>
+        PersonalAccessTokenId is null ? _httpContextAccessor.HttpContext?.Items[SessionItems.CurrentSessionId] as string : null;
+
     private Guid? GuidClaim(string type) =>
         Guid.TryParse(Principal?.FindFirstValue(type), out var value) ? value : null;
 }

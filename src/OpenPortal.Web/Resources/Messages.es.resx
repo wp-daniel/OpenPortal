@@ -27,8 +27,6 @@
   <data name="nav.skip" xml:space="preserve"><value>Saltar al contenido</value></data>
   <data name="nav.dashboard" xml:space="preserve"><value>Panel</value></data>
   <data name="nav.users" xml:space="preserve"><value>Usuarios</value></data>
-  <data name="nav.profile" xml:space="preserve"><value>Perfil</value></data>
-  <data name="nav.projects" xml:space="preserve"><value>Proyectos</value></data>
   <data name="nav.account" xml:space="preserve"><value>Cuenta</value></data>
   <data name="nav.signOut" xml:space="preserve"><value>Cerrar sesión</value></data>
   <data name="nav.signingOut" xml:space="preserve"><value>Cerrando sesión…</value></data>
@@ -70,21 +68,11 @@
   <data name="validation.emailRequired" xml:space="preserve"><value>El correo electrónico es obligatorio.</value></data>
   <data name="validation.emailInvalid" xml:space="preserve"><value>Introduce una dirección de correo válida.</value></data>
   <data name="validation.passwordRequired" xml:space="preserve"><value>La contraseña es obligatoria.</value></data>
-  <data name="validation.displayNameMin" xml:space="preserve"><value>El nombre para mostrar debe tener al menos {min} caracteres.</value></data>
   <data name="validation.maxLength" xml:space="preserve"><value>Usa menos de {max} caracteres.</value></data>
   <data name="validation.currentPasswordRequired" xml:space="preserve"><value>Introduce tu contraseña actual.</value></data>
   <data name="validation.newPasswordRequired" xml:space="preserve"><value>Introduce una contraseña nueva.</value></data>
   <data name="validation.passwordRequiredNew" xml:space="preserve"><value>Se requiere una contraseña.</value></data>
   <data name="validation.emailRequiredNew" xml:space="preserve"><value>Se requiere un correo electrónico.</value></data>
-  <data name="validation.nameRequired" xml:space="preserve"><value>El nombre es obligatorio.</value></data>
-  <data name="validation.slugRequired" xml:space="preserve"><value>El slug es obligatorio.</value></data>
-  <data name="validation.slugFormat" xml:space="preserve"><value>Usa letras, números y guiones simples.</value></data>
-  <data name="validation.absoluteUrl" xml:space="preserve"><value>Introduce una URL absoluta.</value></data>
-  <data name="validation.absoluteImageUrl" xml:space="preserve"><value>Introduce la URL absoluta de una imagen.</value></data>
-  <data name="validation.contactEmail" xml:space="preserve"><value>Introduce una dirección de contacto pública válida.</value></data>
-  <data name="validation.wholeNumber" xml:space="preserve"><value>La posición debe ser un número entero.</value></data>
-  <data name="validation.datePicker" xml:space="preserve"><value>Usa el selector de fecha.</value></data>
-  <data name="validation.completionBeforeStart" xml:space="preserve"><value>La finalización no puede ser anterior al inicio.</value></data>
   <data name="password.min_one" xml:space="preserve"><value>Usa al menos {count} carácter.</value></data>
   <data name="password.min_other" xml:space="preserve"><value>Usa al menos {count} caracteres.</value></data>
   <data name="password.lowercase" xml:space="preserve"><value>Añade una letra minúscula.</value></data>
@@ -116,8 +104,6 @@
   <data name="dashboard.users.title" xml:space="preserve"><value>Usuarios</value></data>
   <data name="dashboard.users.description" xml:space="preserve"><value>Crea cuentas, asigna roles y revisa el estado de acceso.</value></data>
   <data name="dashboard.users.manage" xml:space="preserve"><value>Gestionar usuarios</value></data>
-  <data name="dashboard.content.title" xml:space="preserve"><value>Contenido</value></data>
-  <data name="dashboard.content.description" xml:space="preserve"><value>Módulo de ejemplo: perfil y proyectos.</value></data>
   <data name="account.title" xml:space="preserve"><value>Cuenta</value></data>
   <data name="account.description" xml:space="preserve"><value>Tu perfil y los datos de acceso.</value></data>
   <data name="account.saveFailed" xml:space="preserve"><value>No se pudo guardar el cambio</value></data>
@@ -151,62 +137,6 @@
   <data name="users.create.submit" xml:space="preserve"><value>Crear cuenta</value></data>
   <data name="users.create.created" xml:space="preserve"><value>Cuenta creada</value></data>
   <data name="users.create.failed" xml:space="preserve"><value>No se pudo crear la cuenta</value></data>
-  <data name="profile.title" xml:space="preserve"><value>Perfil</value></data>
-  <data name="profile.exists" xml:space="preserve"><value>El único registro de perfil de este portal.</value></data>
-  <data name="profile.missing" xml:space="preserve"><value>Aún no existe un perfil. Al guardar se creará.</value></data>
-  <data name="profile.saved" xml:space="preserve"><value>Perfil guardado</value></data>
-  <data name="profile.saveFailed" xml:space="preserve"><value>No se pudo guardar el perfil</value></data>
-  <data name="profile.identity" xml:space="preserve"><value>Identidad</value></data>
-  <data name="profile.headline" xml:space="preserve"><value>Titular</value></data>
-  <data name="profile.location" xml:space="preserve"><value>Ubicación</value></data>
-  <data name="profile.contactEmail" xml:space="preserve"><value>Correo de contacto</value></data>
-  <data name="profile.contactEmailHint" xml:space="preserve"><value>Distinto de la dirección de acceso.</value></data>
-  <data name="profile.avatarUrl" xml:space="preserve"><value>URL del avatar</value></data>
-  <data name="profile.summary" xml:space="preserve"><value>Resumen</value></data>
-  <data name="profile.links.title" xml:space="preserve"><value>Enlaces sociales</value></data>
-  <data name="profile.links.description" xml:space="preserve"><value>Se muestran en orden. Al guardar se reemplaza toda la lista.</value></data>
-  <data name="profile.links.add" xml:space="preserve"><value>Añadir enlace</value></data>
-  <data name="profile.links.none" xml:space="preserve"><value>Aún no hay enlaces.</value></data>
-  <data name="profile.links.platform" xml:space="preserve"><value>Plataforma</value></data>
-  <data name="profile.links.url" xml:space="preserve"><value>URL</value></data>
-  <data name="profile.links.label" xml:space="preserve"><value>Etiqueta (opcional)</value></data>
-  <data name="profile.links.remove" xml:space="preserve"><value>Quitar el enlace {n}</value></data>
-  <data name="profile.submit" xml:space="preserve"><value>Guardar perfil</value></data>
-  <data name="projects.title" xml:space="preserve"><value>Proyectos</value></data>
-  <data name="projects.new" xml:space="preserve"><value>Nuevo proyecto</value></data>
-  <data name="projects.emptyTitle" xml:space="preserve"><value>Aún no hay proyectos</value></data>
-  <data name="projects.emptyDescription" xml:space="preserve"><value>Crea el primero para empezar.</value></data>
-  <data name="projects.name" xml:space="preserve"><value>Nombre</value></data>
-  <data name="projects.slug" xml:space="preserve"><value>Slug</value></data>
-  <data name="projects.published" xml:space="preserve"><value>Publicado</value></data>
-  <data name="projects.draft" xml:space="preserve"><value>Borrador</value></data>
-  <data name="projects.publish" xml:space="preserve"><value>Publicar</value></data>
-  <data name="projects.unpublish" xml:space="preserve"><value>Despublicar</value></data>
-  <data name="projects.nowPublished" xml:space="preserve"><value>Proyecto publicado</value></data>
-  <data name="projects.nowUnpublished" xml:space="preserve"><value>Proyecto despublicado</value></data>
-  <data name="projects.deleted" xml:space="preserve"><value>Proyecto eliminado</value></data>
-  <data name="projects.deleteTitle" xml:space="preserve"><value>¿Eliminar este proyecto?</value></data>
-  <data name="projects.deleteDescription" xml:space="preserve"><value>{name} se eliminará de forma permanente. Esta acción no se puede deshacer.</value></data>
-  <data name="projects.notFoundTitle" xml:space="preserve"><value>Proyecto no encontrado</value></data>
-  <data name="projects.notFoundMessage" xml:space="preserve"><value>Puede que se haya eliminado. Elige otro proyecto de la lista.</value></data>
-  <data name="projects.saved" xml:space="preserve"><value>Proyecto guardado</value></data>
-  <data name="projects.saveFailed" xml:space="preserve"><value>No se pudo guardar el proyecto</value></data>
-  <data name="projects.editTitle" xml:space="preserve"><value>Editar proyecto</value></data>
-  <data name="projects.newTitle" xml:space="preserve"><value>Nuevo proyecto</value></data>
-  <data name="projects.newDescription" xml:space="preserve"><value>El slug se convierte en la dirección del proyecto.</value></data>
-  <data name="projects.slugHint" xml:space="preserve"><value>En minúsculas, separado por guiones.</value></data>
-  <data name="projects.summary" xml:space="preserve"><value>Resumen</value></data>
-  <data name="projects.description" xml:space="preserve"><value>Descripción</value></data>
-  <data name="projects.liveUrl" xml:space="preserve"><value>URL en vivo</value></data>
-  <data name="projects.repositoryUrl" xml:space="preserve"><value>URL del repositorio</value></data>
-  <data name="projects.startedOn" xml:space="preserve"><value>Iniciado el</value></data>
-  <data name="projects.completedOn" xml:space="preserve"><value>Completado el</value></data>
-  <data name="projects.completedHint" xml:space="preserve"><value>Déjalo vacío mientras siga en curso.</value></data>
-  <data name="projects.position" xml:space="preserve"><value>Posición de visualización</value></data>
-  <data name="projects.positionHint" xml:space="preserve"><value>El valor más bajo va primero. Vacío va al final.</value></data>
-  <data name="projects.technologies" xml:space="preserve"><value>Tecnologías</value></data>
-  <data name="projects.technologiesHint" xml:space="preserve"><value>Separadas por comas; compartidas entre proyectos.</value></data>
-  <data name="projects.submit" xml:space="preserve"><value>Guardar proyecto</value></data>
   <data name="validation.currentPassword.required" xml:space="preserve"><value>La contraseña actual es obligatoria.</value></data>
   <data name="validation.currentPassword.max" xml:space="preserve"><value>La contraseña actual no puede superar los 256 caracteres.</value></data>
   <data name="validation.newPassword.required" xml:space="preserve"><value>La contraseña nueva es obligatoria.</value></data>
@@ -244,32 +174,6 @@
   <data name="error.identity.current_password_incorrect" xml:space="preserve"><value>La contraseña actual no es correcta.</value></data>
   <data name="error.identity.display_name_too_long" xml:space="preserve"><value>El nombre completo (nombre y apellidos) no puede superar los 120 caracteres.</value></data>
   <data name="error.identity.role_update_failed" xml:space="preserve"><value>No se pudieron actualizar los roles de la cuenta.</value></data>
-  <data name="error.content.edit_forbidden" xml:space="preserve"><value>Editar el contenido requiere una cuenta de administrador.</value></data>
-  <data name="error.content.profile_not_found" xml:space="preserve"><value>El perfil solicitado no existe.</value></data>
-  <data name="error.content.project_not_found" xml:space="preserve"><value>El proyecto solicitado no existe.</value></data>
-  <data name="error.content.display_name_required" xml:space="preserve"><value>Se requiere un nombre para mostrar.</value></data>
-  <data name="error.content.display_name_too_short" xml:space="preserve"><value>El nombre para mostrar debe tener al menos 2 caracteres.</value></data>
-  <data name="error.content.display_name_too_long" xml:space="preserve"><value>El nombre para mostrar no puede superar los 120 caracteres.</value></data>
-  <data name="error.content.headline_too_long" xml:space="preserve"><value>El titular no puede superar los 160 caracteres.</value></data>
-  <data name="error.content.summary_too_long" xml:space="preserve"><value>El resumen no puede superar los 2000 caracteres.</value></data>
-  <data name="error.content.location_too_long" xml:space="preserve"><value>La ubicación no puede superar los 120 caracteres.</value></data>
-  <data name="error.content.email_invalid" xml:space="preserve"><value>La dirección de correo no es válida.</value></data>
-  <data name="error.content.url_invalid" xml:space="preserve"><value>El valor debe ser una URL http o https absoluta.</value></data>
-  <data name="error.content.slug_required" xml:space="preserve"><value>Se requiere un slug.</value></data>
-  <data name="error.content.slug_too_long" xml:space="preserve"><value>El slug no puede superar los 160 caracteres.</value></data>
-  <data name="error.content.slug_invalid" xml:space="preserve"><value>Un slug solo puede contener letras ASCII, dígitos, guiones y guiones bajos.</value></data>
-  <data name="error.content.slug_already_in_use" xml:space="preserve"><value>Otro proyecto ya usa este slug.</value></data>
-  <data name="error.content.project_summary_too_long" xml:space="preserve"><value>El resumen no puede superar los 400 caracteres.</value></data>
-  <data name="error.content.description_too_long" xml:space="preserve"><value>La descripción no puede superar los 8000 caracteres.</value></data>
-  <data name="error.content.technology_name_required" xml:space="preserve"><value>El nombre de una tecnología no puede estar en blanco.</value></data>
-  <data name="error.content.technology_name_too_long" xml:space="preserve"><value>El nombre de una tecnología no puede superar los 80 caracteres.</value></data>
-  <data name="error.content.project_name_required" xml:space="preserve"><value>Se requiere un nombre de proyecto.</value></data>
-  <data name="error.content.project_name_too_long" xml:space="preserve"><value>El nombre del proyecto no puede superar los 160 caracteres.</value></data>
-  <data name="error.content.completion_before_start" xml:space="preserve"><value>Un proyecto no puede completarse antes de haber empezado.</value></data>
-  <data name="error.content.social_link_platform_required" xml:space="preserve"><value>Un enlace social requiere una plataforma.</value></data>
-  <data name="error.content.social_link_platform_too_long" xml:space="preserve"><value>La plataforma no puede superar los 60 caracteres.</value></data>
-  <data name="error.content.social_link_label_too_long" xml:space="preserve"><value>La etiqueta no puede superar los 120 caracteres.</value></data>
-  <data name="error.content.duplicate_technology" xml:space="preserve"><value>La misma tecnología no puede aparecer dos veces.</value></data>
   <data name="error.http.validation_failed" xml:space="preserve"><value>La solicitud no es válida.</value></data>
   <data name="error.http.endpoint_not_found" xml:space="preserve"><value>El endpoint de la API solicitado no existe.</value></data>
   <data name="error.http.bad_request" xml:space="preserve"><value>La solicitud no es válida.</value></data>
@@ -515,7 +419,6 @@
   <data name="table.results_other" xml:space="preserve"><value>{count} resultados</value></data>
   <data name="groups.searchPlaceholder" xml:space="preserve"><value>Buscar grupos…</value></data>
   <data name="applications.searchPlaceholder" xml:space="preserve"><value>Buscar aplicaciones…</value></data>
-  <data name="projects.searchPlaceholder" xml:space="preserve"><value>Buscar proyectos…</value></data>
   <data name="validation.firstName.required" xml:space="preserve"><value>El nombre es obligatorio.</value></data>
   <data name="validation.lastName.required" xml:space="preserve"><value>Los apellidos son obligatorios.</value></data>
   <data name="validation.name.max" xml:space="preserve"><value>Los nombres no pueden superar los 60 caracteres.</value></data>
@@ -529,7 +432,6 @@
   <data name="nav.portal" xml:space="preserve"><value>Portal</value></data>
   <data name="nav.tagline" xml:space="preserve"><value>Identidad y acceso</value></data>
   <data name="nav.identity" xml:space="preserve"><value>Identidad y acceso</value></data>
-  <data name="nav.content" xml:space="preserve"><value>Contenido</value></data>
   <data name="nav.userMenu" xml:space="preserve"><value>Menú de la cuenta</value></data>
   <data name="nav.toggleSidebar" xml:space="preserve"><value>Mostrar u ocultar la barra lateral</value></data>
   <data name="nav.accessDenied" xml:space="preserve"><value>Acceso denegado</value></data>
@@ -641,7 +543,6 @@
   <data name="audit.category.pages" xml:space="preserve"><value>Permisos de página</value></data>
   <data name="audit.category.application" xml:space="preserve"><value>Aplicaciones</value></data>
   <data name="audit.category.oidc" xml:space="preserve"><value>Inicios de sesión en aplicaciones</value></data>
-  <data name="audit.category.content" xml:space="preserve"><value>Contenido</value></data>
   <data name="audit.outcome.label" xml:space="preserve"><value>Resultado</value></data>
   <data name="audit.outcome.success" xml:space="preserve"><value>Correcto</value></data>
   <data name="audit.outcome.failure" xml:space="preserve"><value>Fallido</value></data>
@@ -1901,4 +1802,295 @@
   <data name="error.access.review_decision_invalid" xml:space="preserve"><value>La decisión debe ser pending, keep o revoke.</value></data>
   <data name="error.access.review_note_too_long" xml:space="preserve"><value>Una nota tiene como máximo 500 caracteres.</value></data>
   <data name="error.access.review_forbidden" xml:space="preserve"><value>Revisar accesos requiere una cuenta de administrador o la página de revisiones.</value></data>
+  <data name="error.identity.password_already_set" xml:space="preserve"><value>La cuenta ya tiene contraseña; cámbiala con la actual.</value></data>
+  <data name="error.identity.external_provider_not_found" xml:space="preserve"><value>Ese proveedor de inicio de sesión no existe.</value></data>
+  <data name="error.identity.external_provider_disabled" xml:space="preserve"><value>El inicio de sesión con este proveedor está desactivado.</value></data>
+  <data name="error.identity.external_provider_incomplete" xml:space="preserve"><value>Un proveedor solo puede activarse con su client ID y su client secret.</value></data>
+  <data name="error.identity.external_client_id_invalid" xml:space="preserve"><value>El client ID tiene como máximo 200 caracteres.</value></data>
+  <data name="error.identity.external_client_secret_invalid" xml:space="preserve"><value>El client secret es demasiado largo.</value></data>
+  <data name="error.identity.external_tenant_invalid" xml:space="preserve"><value>El tenant es organizations, common, consumers, el ID de un directorio o su dominio.</value></data>
+  <data name="error.identity.external_sign_up_invalid" xml:space="preserve"><value>La creación de cuentas debe ser disabled, open o approval.</value></data>
+  <data name="error.identity.external_sign_in_failed" xml:space="preserve"><value>El inicio de sesión con el proveedor externo no se completó. Inténtalo de nuevo.</value></data>
+  <data name="error.identity.external_sign_in_cancelled" xml:space="preserve"><value>El inicio de sesión se canceló en el proveedor.</value></data>
+  <data name="error.identity.external_email_missing" xml:space="preserve"><value>La cuenta externa no compartió una dirección de correo.</value></data>
+  <data name="error.identity.external_email_unverified" xml:space="preserve"><value>Ya existe una cuenta con esta dirección, pero el proveedor no la garantiza: inicia sesión con tu contraseña y vincula la cuenta desde la seguridad de tu cuenta.</value></data>
+  <data name="error.identity.external_email_not_verified" xml:space="preserve"><value>El proveedor no garantiza esta dirección de correo, así que no se puede crear una cuenta con ella.</value></data>
+  <data name="error.identity.external_sign_up_closed" xml:space="preserve"><value>No hay ninguna cuenta para esta cuenta externa y este proveedor no crea cuentas nuevas.</value></data>
+  <data name="error.identity.external_domain_not_allowed" xml:space="preserve"><value>Con este proveedor no se pueden crear cuentas con este dominio de correo.</value></data>
+  <data name="error.identity.external_login_in_use" xml:space="preserve"><value>Esta cuenta externa ya está vinculada a otra cuenta del portal.</value></data>
+  <data name="error.identity.external_login_not_found" xml:space="preserve"><value>Esta cuenta no está vinculada a ese proveedor.</value></data>
+  <data name="error.identity.external_login_last_method" xml:space="preserve"><value>Es la única forma de iniciar sesión de la cuenta: establece una contraseña o añade una llave de acceso antes de desvincularla.</value></data>
+  <data name="validation.externalClientId.max" xml:space="preserve"><value>El client ID tiene como máximo 200 caracteres.</value></data>
+  <data name="validation.externalClientSecret.max" xml:space="preserve"><value>El client secret tiene como máximo 1000 caracteres.</value></data>
+  <data name="validation.externalTenant.max" xml:space="preserve"><value>El tenant tiene como máximo 100 caracteres.</value></data>
+  <data name="audit.action.settings.external_provider_updated" xml:space="preserve"><value>Proveedor de inicio de sesión modificado</value></data>
+  <data name="audit.action.account.external_login_added" xml:space="preserve"><value>Cuenta externa vinculada</value></data>
+  <data name="audit.action.account.external_login_removed" xml:space="preserve"><value>Cuenta externa desvinculada</value></data>
+  <data name="audit.action.user.external_login_removed" xml:space="preserve"><value>Cuenta externa de un usuario desvinculada</value></data>
+  <data name="audit.action.account.password_set" xml:space="preserve"><value>Primera contraseña establecida</value></data>
+  <data name="notification.account.external_login_added.title" xml:space="preserve"><value>Cuenta externa vinculada</value></data>
+  <data name="notification.account.external_login_added.body" xml:space="preserve"><value>Tu cuenta de {provider} {account} ya puede iniciar sesión en tu cuenta del portal. Si no fuiste tú, desvincúlala y cambia tu contraseña.</value></data>
+  <data name="users.origin.external" xml:space="preserve"><value>Creado con un proveedor externo</value></data>
+  <data name="signIn.external.continueWith" xml:space="preserve"><value>Continuar con {provider}</value></data>
+  <data name="signIn.external.failed" xml:space="preserve"><value>No se completó el inicio de sesión</value></data>
+  <data name="settings.tabs.providers" xml:space="preserve"><value>Proveedores de inicio de sesión</value></data>
+  <data name="settings.external.intro" xml:space="preserve"><value>Permite iniciar sesión con una cuenta de Google o Microsoft. Registra el portal en el proveedor con el URI de redirección que se muestra abajo y escribe el client ID y el secret que te dé. Los cambios se aplican al momento, sin reiniciar.</value></data>
+  <data name="settings.external.on" xml:space="preserve"><value>Activado</value></data>
+  <data name="settings.external.off" xml:space="preserve"><value>Desactivado</value></data>
+  <data name="settings.external.google.description" xml:space="preserve"><value>Cuentas de Google, incluidas las de Google Workspace. Crea un cliente OAuth de tipo "Aplicación web" en la consola de Google Cloud.</value></data>
+  <data name="settings.external.google.redirectHint" xml:space="preserve"><value>Añádelo en "URI de redireccionamiento autorizados" del cliente OAuth.</value></data>
+  <data name="settings.external.microsoft.description" xml:space="preserve"><value>Cuentas profesionales o educativas de Microsoft Entra ID y cuentas Microsoft personales. Registra una aplicación en el centro de administración de Entra (Registros de aplicaciones) con un client secret.</value></data>
+  <data name="settings.external.microsoft.redirectHint" xml:space="preserve"><value>Añádelo como URI de redirección "Web" en Autenticación.</value></data>
+  <data name="settings.external.redirectUri" xml:space="preserve"><value>URI de redirección</value></data>
+  <data name="settings.external.clientId" xml:space="preserve"><value>Client ID</value></data>
+  <data name="settings.external.clientSecret" xml:space="preserve"><value>Client secret</value></data>
+  <data name="settings.external.secretStored" xml:space="preserve"><value>Hay un secret guardado; déjalo vacío para conservarlo.</value></data>
+  <data name="settings.external.clientIdRequired" xml:space="preserve"><value>Escribe el client ID para activar el proveedor.</value></data>
+  <data name="settings.external.secretRequired" xml:space="preserve"><value>Escribe el client secret para activar el proveedor.</value></data>
+  <data name="settings.external.tenantRequired" xml:space="preserve"><value>Escribe el ID o el dominio del directorio.</value></data>
+  <data name="settings.external.tenant" xml:space="preserve"><value>Qué cuentas de Microsoft</value></data>
+  <data name="settings.external.tenantId" xml:space="preserve"><value>ID o dominio del directorio (tenant)</value></data>
+  <data name="settings.external.tenants.organizations" xml:space="preserve"><value>Cualquier cuenta profesional o educativa</value></data>
+  <data name="settings.external.tenants.organizationsHint" xml:space="preserve"><value>Cualquier directorio de Entra ID. Una dirección solo se considera fiable si Entra indica que su dominio está verificado.</value></data>
+  <data name="settings.external.tenants.common" xml:space="preserve"><value>Cuentas profesionales, educativas y personales</value></data>
+  <data name="settings.external.tenants.commonHint" xml:space="preserve"><value>Cualquier directorio de Entra ID y las cuentas Microsoft personales (Outlook.com, Xbox).</value></data>
+  <data name="settings.external.tenants.consumers" xml:space="preserve"><value>Solo cuentas personales</value></data>
+  <data name="settings.external.tenants.consumersHint" xml:space="preserve"><value>Cuentas Microsoft personales (Outlook.com, Hotmail, Xbox).</value></data>
+  <data name="settings.external.tenants.single" xml:space="preserve"><value>Solo el directorio de mi organización</value></data>
+  <data name="settings.external.tenants.singleHint" xml:space="preserve"><value>Un solo directorio de Entra ID. Sus direcciones se consideran fiables, porque las fijan sus administradores.</value></data>
+  <data name="settings.external.signUp" xml:space="preserve"><value>Alguien que aún no tiene cuenta en el portal</value></data>
+  <data name="settings.external.signUpModes.disabled" xml:space="preserve"><value>Solo cuentas existentes</value></data>
+  <data name="settings.external.signUpModes.disabledHint" xml:space="preserve"><value>Solo inician sesión así las cuentas existentes: vinculadas por su titular o reconocidas por una dirección verificada.</value></data>
+  <data name="settings.external.signUpModes.open" xml:space="preserve"><value>Crear la cuenta</value></data>
+  <data name="settings.external.signUpModes.openHint" xml:space="preserve"><value>En el primer inicio de sesión se crea una cuenta que se puede usar al momento.</value></data>
+  <data name="settings.external.signUpModes.approval" xml:space="preserve"><value>Crear la cuenta, tras aprobación</value></data>
+  <data name="settings.external.signUpModes.approvalHint" xml:space="preserve"><value>Se crea una cuenta que espera la aprobación de un administrador.</value></data>
+  <data name="settings.external.domains" xml:space="preserve"><value>Dominios de correo permitidos</value></data>
+  <data name="settings.external.domainsHint" xml:space="preserve"><value>Uno por línea; cuentas nuevas solo para estos dominios. Vacío permite cualquiera.</value></data>
+  <data name="settings.external.enable" xml:space="preserve"><value>Permitir iniciar sesión con {provider}</value></data>
+  <data name="settings.external.enableHint" xml:space="preserve"><value>Muestra el botón en la página de inicio de sesión y permite que las cuentas lo vinculen.</value></data>
+  <data name="common.copy" xml:space="preserve"><value>Copiar</value></data>
+  <data name="common.copied" xml:space="preserve"><value>Copiado</value></data>
+  <data name="common.copyFailed" xml:space="preserve"><value>No se pudo copiar</value></data>
+  <data name="externalLogins.title" xml:space="preserve"><value>Cuentas vinculadas</value></data>
+  <data name="externalLogins.description" xml:space="preserve"><value>Inicia sesión con estas cuentas de Google o Microsoft en lugar de tu contraseña.</value></data>
+  <data name="externalLogins.none" xml:space="preserve"><value>Ninguna cuenta vinculada</value></data>
+  <data name="externalLogins.userNone" xml:space="preserve"><value>Esta persona inicia sesión con la contraseña o las llaves de acceso del portal.</value></data>
+  <data name="externalLogins.connect" xml:space="preserve"><value>Vincular {provider}</value></data>
+  <data name="externalLogins.disconnect" xml:space="preserve"><value>Desvincular</value></data>
+  <data name="externalLogins.linked" xml:space="preserve"><value>Cuenta vinculada</value></data>
+  <data name="externalLogins.linkFailed" xml:space="preserve"><value>No se pudo vincular la cuenta</value></data>
+  <data name="externalLogins.removed" xml:space="preserve"><value>Cuenta desvinculada</value></data>
+  <data name="externalLogins.removeFailed" xml:space="preserve"><value>No se pudo desvincular la cuenta</value></data>
+  <data name="externalLogins.removeTitle" xml:space="preserve"><value>¿Desvincular {provider}?</value></data>
+  <data name="externalLogins.removeDescription" xml:space="preserve"><value>Ya no podrás iniciar sesión con ella. Las sesiones que abrió terminan.</value></data>
+  <data name="externalLogins.open" xml:space="preserve"><value>Cuentas vinculadas</value></data>
+  <data name="externalLogins.userTitle" xml:space="preserve"><value>Cuentas vinculadas de {name}</value></data>
+  <data name="externalLogins.userDescription" xml:space="preserve"><value>Desvincula la que esté comprometida: sus sesiones terminan y la persona vuelve a entrar restableciendo la contraseña.</value></data>
+  <data name="account.passwordSet" xml:space="preserve"><value>Contraseña establecida</value></data>
+  <data name="account.setPasswordSection" xml:space="preserve"><value>Establecer una contraseña</value></data>
+  <data name="account.setPasswordDescription" xml:space="preserve"><value>Tu cuenta se creó con Google o Microsoft y aún no tiene contraseña. Con una podrás iniciar sesión aquí directamente y confirmar acciones delicadas.</value></data>
+  <data name="audit.action.account.session_revoked" xml:space="preserve"><value>Sesión propia cerrada</value></data>
+  <data name="audit.action.account.other_sessions_revoked" xml:space="preserve"><value>Cierre de todas las demás sesiones</value></data>
+  <data name="audit.action.user.session_revoked" xml:space="preserve"><value>Sesión de un usuario cerrada</value></data>
+  <data name="notification.account.new_sign_in.title" xml:space="preserve"><value>Nuevo inicio de sesión en tu cuenta</value></data>
+  <data name="notification.account.new_sign_in.body" xml:space="preserve"><value>Alguien inició sesión desde {device} ({ip}), un navegador que tu cuenta no había usado antes. Si no fuiste tú, cierra esa sesión y cambia tu contraseña.</value></data>
+  <data name="error.identity.idle_timeout_invalid" xml:space="preserve"><value>El tiempo de inactividad es 0 (desactivado) o entre 5 y 1440 minutos.</value></data>
+  <data name="error.identity.session_not_found" xml:space="preserve"><value>Esa sesión no existe o ya terminó.</value></data>
+  <data name="error.identity.session_is_current" xml:space="preserve"><value>Es la sesión que estás usando: cierra sesión.</value></data>
+  <data name="settings.idle.label" xml:space="preserve"><value>Tiempo de inactividad (minutos)</value></data>
+  <data name="settings.idle.hint" xml:space="preserve"><value>Una sesión sin actividad durante este tiempo termina; la página avisa dos minutos antes. 0 mantiene las sesiones hasta que caduquen.</value></data>
+  <data name="settings.idle.invalid" xml:space="preserve"><value>Escribe 0 o un número de minutos de 5 a 1440.</value></data>
+  <data name="sessions.title" xml:space="preserve"><value>Dónde has iniciado sesión</value></data>
+  <data name="sessions.description" xml:space="preserve"><value>Cada navegador con tu cuenta abierta. Cierra una sesión que no reconozcas o que quedó abierta en un ordenador compartido.</value></data>
+  <data name="sessions.unknownDevice" xml:space="preserve"><value>Navegador desconocido</value></data>
+  <data name="sessions.thisDevice" xml:space="preserve"><value>Este navegador</value></data>
+  <data name="sessions.support" xml:space="preserve"><value>Sesión de soporte</value></data>
+  <data name="sessions.method.mfa" xml:space="preserve"><value>Dos factores</value></data>
+  <data name="sessions.method.fed" xml:space="preserve"><value>Google / Microsoft</value></data>
+  <data name="sessions.signedIn" xml:space="preserve"><value>inicio {date}</value></data>
+  <data name="sessions.lastSeen" xml:space="preserve"><value>activa {when}</value></data>
+  <data name="sessions.ended.signed_out" xml:space="preserve"><value>cerrada {when}</value></data>
+  <data name="sessions.ended.revoked" xml:space="preserve"><value>terminada {when}</value></data>
+  <data name="sessions.ended.idle" xml:space="preserve"><value>cerrada por inactividad {when}</value></data>
+  <data name="sessions.ended.expired" xml:space="preserve"><value>caducada {when}</value></data>
+  <data name="sessions.revoke" xml:space="preserve"><value>Cerrar sesión</value></data>
+  <data name="sessions.revoked" xml:space="preserve"><value>Sesión cerrada</value></data>
+  <data name="sessions.revokeOthers" xml:space="preserve"><value>Cerrar las demás sesiones</value></data>
+  <data name="sessions.othersRevoked_one" xml:space="preserve"><value>{count} sesión más cerrada</value></data>
+  <data name="sessions.othersRevoked_other" xml:space="preserve"><value>{count} sesiones más cerradas</value></data>
+  <data name="sessions.showHistory_one" xml:space="preserve"><value>Mostrar el último inicio de sesión</value></data>
+  <data name="sessions.showHistory_other" xml:space="preserve"><value>Mostrar los últimos {count} inicios de sesión</value></data>
+  <data name="sessions.hideHistory" xml:space="preserve"><value>Ocultar los inicios anteriores</value></data>
+  <data name="sessions.history" xml:space="preserve"><value>Inicios de sesión recientes</value></data>
+  <data name="sessions.open" xml:space="preserve"><value>Sesiones</value></data>
+  <data name="sessions.userTitle" xml:space="preserve"><value>Sesiones de {name}</value></data>
+  <data name="sessions.userDescription" xml:space="preserve"><value>Dónde está abierta la cuenta. Cerrar una sesión desconecta ese navegador en su siguiente petición.</value></data>
+  <data name="sessions.noneTitle" xml:space="preserve"><value>Sin sesiones abiertas</value></data>
+  <data name="sessions.noneDescription" xml:space="preserve"><value>La cuenta no tiene ninguna sesión abierta ahora.</value></data>
+  <data name="idle.title" xml:space="preserve"><value>¿Sigues ahí?</value></data>
+  <data name="idle.description" xml:space="preserve"><value>Por seguridad se cerrará tu sesión en {time} porque no ha habido actividad durante un rato.</value></data>
+  <data name="idle.stay" xml:space="preserve"><value>Seguir conectado</value></data>
+  <data name="idle.signedOut" xml:space="preserve"><value>Se cerró tu sesión tras un periodo de inactividad.</value></data>
+  <data name="error.access.organization_domain_invalid" xml:space="preserve"><value>Escribe un dominio como acme.com.</value></data>
+  <data name="error.access.organization_domain_in_use" xml:space="preserve"><value>Este dominio ya lo reclama una organización.</value></data>
+  <data name="error.access.organization_domain_not_found" xml:space="preserve"><value>La organización no tiene ese dominio.</value></data>
+  <data name="error.access.organization_domain_unverified" xml:space="preserve"><value>Verifica el dominio antes de permitir que se unan con él.</value></data>
+  <data name="error.access.organization_domain_check_failed" xml:space="preserve"><value>El DNS del dominio aún no tiene un registro TXT con el valor de verificación. Los cambios de DNS pueden tardar en aparecer.</value></data>
+  <data name="error.access.organization_application_invalid" xml:space="preserve"><value>La aplicación no funciona por organización.</value></data>
+  <data name="error.access.organization_member_not_found" xml:space="preserve"><value>El usuario no es miembro de la organización.</value></data>
+  <data name="audit.action.organization.policy_changed" xml:space="preserve"><value>Política de acceso de la organización modificada</value></data>
+  <data name="audit.action.organization.domain_added" xml:space="preserve"><value>Dominio reclamado para una organización</value></data>
+  <data name="audit.action.organization.domain_verified" xml:space="preserve"><value>Dominio de la organización verificado</value></data>
+  <data name="audit.action.organization.domain_updated" xml:space="preserve"><value>Unión por dominio modificada</value></data>
+  <data name="audit.action.organization.domain_removed" xml:space="preserve"><value>Dominio de la organización eliminado</value></data>
+  <data name="audit.action.organization.joined_by_domain" xml:space="preserve"><value>Unión a una organización por dominio de correo</value></data>
+  <data name="audit.action.organization.member_roles_changed" xml:space="preserve"><value>Roles de un miembro en una aplicación de la organización modificados</value></data>
+  <data name="organizations.tab.domains" xml:space="preserve"><value>Dominios</value></data>
+  <data name="organizations.form.requireMfa" xml:space="preserve"><value>Exigir dos factores</value></data>
+  <data name="organizations.form.requireMfaHint" xml:space="preserve"><value>Los miembros solo inician sesión en las aplicaciones de esta organización con un código de autenticación o una llave de acceso, pida lo que pida la aplicación.</value></data>
+  <data name="organizations.domains.hint" xml:space="preserve"><value>Reclama los dominios de correo de la organización. Una vez verificados, quien tenga allí una dirección confirmada puede unirse por sí mismo al iniciar sesión.</value></data>
+  <data name="organizations.domains.add" xml:space="preserve"><value>Añadir dominio</value></data>
+  <data name="organizations.domains.addFailed" xml:space="preserve"><value>No se pudo añadir el dominio</value></data>
+  <data name="organizations.domains.none" xml:space="preserve"><value>Ningún dominio todavía.</value></data>
+  <data name="organizations.domains.verified" xml:space="preserve"><value>{domain} verificado</value></data>
+  <data name="organizations.domains.verifyFailed" xml:space="preserve"><value>No se pudo verificar el dominio</value></data>
+  <data name="organizations.domains.verifiedBadge" xml:space="preserve"><value>Verificado</value></data>
+  <data name="organizations.domains.unverified" xml:space="preserve"><value>Sin verificar</value></data>
+  <data name="organizations.domains.autoJoin" xml:space="preserve"><value>Quien tenga una dirección de este dominio se une solo</value></data>
+  <data name="organizations.domains.as" xml:space="preserve"><value>como {role}</value></data>
+  <data name="organizations.domains.verifiedBy.dns" xml:space="preserve"><value>verificado por DNS el {date}</value></data>
+  <data name="organizations.domains.verifiedBy.administrator" xml:space="preserve"><value>avalado por un administrador del portal el {date}</value></data>
+  <data name="organizations.domains.publish" xml:space="preserve"><value>Añade este registro TXT en {domain} (el propio dominio, no un subdominio) y compruébalo:</value></data>
+  <data name="organizations.domains.check" xml:space="preserve"><value>Comprobar DNS</value></data>
+  <data name="organizations.domains.vouch" xml:space="preserve"><value>Avalarlo</value></data>
+  <data name="organizations.appRoles.open" xml:space="preserve"><value>Roles de {name} en las aplicaciones</value></data>
+  <data name="organizations.appRoles.title" xml:space="preserve"><value>Roles en esta organización</value></data>
+  <data name="organizations.appRoles.hint" xml:space="preserve"><value>Solo se aplican cuando el miembro inicia sesión para esta organización, además de sus propios permisos.</value></data>
+  <data name="organizations.manage.invite" xml:space="preserve"><value>Invitar</value></data>
+  <data name="organizations.manage.inviteHint" xml:space="preserve"><value>Una dirección con cuenta se añade al momento; las demás reciben una invitación por correo.</value></data>
+  <data name="organizations.manage.invited" xml:space="preserve"><value>Invitación creada</value></data>
+  <data name="organizations.manage.invitedEmailed" xml:space="preserve"><value>El enlace se envió por correo.</value></data>
+  <data name="organizations.manage.invitedLink" xml:space="preserve"><value>El portal no puede enviar correo: pide el enlace a un administrador.</value></data>
+  <data name="error.access.secret_overlap_invalid" xml:space="preserve"><value>El secret anterior puede seguir funcionando de 0 a 720 horas.</value></data>
+  <data name="audit.action.access.authorization_revoked" xml:space="preserve"><value>Retirado el permiso de una aplicación</value></data>
+  <data name="applications.consent.title" xml:space="preserve"><value>Pedir consentimiento a los usuarios</value></data>
+  <data name="applications.consent.hint" xml:space="preserve"><value>Antes del primer inicio de sesión, cada usuario ve lo que recibirá la aplicación y lo acepta. Úsalo para aplicaciones de terceros.</value></data>
+  <data name="applications.deviceFlow.title" xml:space="preserve"><value>Permitir el flujo de dispositivo</value></data>
+  <data name="applications.deviceFlow.hint" xml:space="preserve"><value>Para herramientas de línea de comandos y televisores sin navegador: la herramienta muestra un código y la persona lo aprueba en el portal (RFC 8628).</value></data>
+  <data name="applications.secretOverlap.title" xml:space="preserve"><value>El secret actual</value></data>
+  <data name="applications.secretOverlap.option.0" xml:space="preserve"><value>Deja de funcionar ahora (se filtró)</value></data>
+  <data name="applications.secretOverlap.option.1" xml:space="preserve"><value>Sigue funcionando 1 hora</value></data>
+  <data name="applications.secretOverlap.option.24" xml:space="preserve"><value>Sigue funcionando 24 horas</value></data>
+  <data name="applications.secretOverlap.option.168" xml:space="preserve"><value>Sigue funcionando 7 días</value></data>
+  <data name="applications.secret.previousValidUntil" xml:space="preserve"><value>El secret anterior sigue funcionando hasta el {date}: actualiza los servidores de la aplicación antes.</value></data>
+  <data name="consent.title" xml:space="preserve"><value>Permitir el acceso</value></data>
+  <data name="consent.description" xml:space="preserve"><value>{app} quiere iniciar tu sesión como {user} y recibir:</value></data>
+  <data name="consent.hint" xml:space="preserve"><value>Puedes retirarlo cuando quieras desde la seguridad de tu cuenta.</value></data>
+  <data name="consent.deny" xml:space="preserve"><value>No permitir</value></data>
+  <data name="consent.allow" xml:space="preserve"><value>Permitir a {app}</value></data>
+  <data name="consent.invalid" xml:space="preserve"><value>Esta solicitud ya no es válida. Vuelve a la aplicación e inicia sesión de nuevo.</value></data>
+  <data name="consent.scope.openid" xml:space="preserve"><value>Tu identidad en el portal</value></data>
+  <data name="consent.scope.profile" xml:space="preserve"><value>Tu nombre</value></data>
+  <data name="consent.scope.email" xml:space="preserve"><value>Tu dirección de correo</value></data>
+  <data name="consent.scope.offline_access" xml:space="preserve"><value>Mantener la sesión cuando no estás</value></data>
+  <data name="consent.scope.roles" xml:space="preserve"><value>Tus roles en la aplicación</value></data>
+  <data name="consent.scope.groups" xml:space="preserve"><value>Los grupos a los que perteneces</value></data>
+  <data name="consent.scope.organization" xml:space="preserve"><value>La organización para la que inicias sesión</value></data>
+  <data name="device.title" xml:space="preserve"><value>Iniciar sesión en un dispositivo</value></data>
+  <data name="device.description" xml:space="preserve"><value>Escribe el código que muestra el dispositivo o la herramienta.</value></data>
+  <data name="device.code" xml:space="preserve"><value>Código</value></data>
+  <data name="device.continue" xml:space="preserve"><value>Continuar</value></data>
+  <data name="device.invalidCode" xml:space="preserve"><value>Este código no es válido o ha caducado.</value></data>
+  <data name="device.confirm" xml:space="preserve"><value>{app} pide iniciar sesión con el código {code} y recibir:</value></data>
+  <data name="device.organization" xml:space="preserve"><value>Iniciar sesión para</value></data>
+  <data name="device.warning" xml:space="preserve"><value>Aprueba solo un código que hayas iniciado tú en tu propio dispositivo.</value></data>
+  <data name="device.approve" xml:space="preserve"><value>Aprobar</value></data>
+  <data name="device.deny" xml:space="preserve"><value>Denegar</value></data>
+  <data name="device.approved" xml:space="preserve"><value>Listo. Puedes volver al dispositivo.</value></data>
+  <data name="device.denied" xml:space="preserve"><value>El dispositivo no inició sesión.</value></data>
+  <data name="authorizedApps.title" xml:space="preserve"><value>Aplicaciones permitidas</value></data>
+  <data name="authorizedApps.description" xml:space="preserve"><value>Aplicaciones que pueden iniciar tu sesión sin volver a preguntar. Al retirarlo, se cierra tu sesión en ellas.</value></data>
+  <data name="authorizedApps.none" xml:space="preserve"><value>Ninguna aplicación tiene permiso.</value></data>
+  <data name="authorizedApps.revoked" xml:space="preserve"><value>{app} ya no puede iniciar tu sesión sin preguntar</value></data>
+  <data name="authorizedApps.since" xml:space="preserve"><value>desde el {date}</value></data>
+  <data name="authorizedApps.revoke" xml:space="preserve"><value>Retirar</value></data>
+  <data name="email.digest.subject" xml:space="preserve"><value>{count} notificaciones te esperan</value></data>
+  <data name="email.digest.action" xml:space="preserve"><value>Abrir tus notificaciones</value></data>
+  <data name="email.notification.greeting" xml:space="preserve"><value>Hola {name}:</value></data>
+  <data name="email.notification.action" xml:space="preserve"><value>Abrir en el portal</value></data>
+  <data name="email.notification.footer" xml:space="preserve"><value>Recibes este correo por tu configuración de notificaciones; puedes cambiarla en la página de notificaciones.</value></data>
+  <data name="error.notifications.email_delivery_invalid" xml:space="preserve"><value>El envío por correo debe ser security, instant, daily u off.</value></data>
+  <data name="notifications.email.title" xml:space="preserve"><value>Correo</value></data>
+  <data name="notifications.email.description" xml:space="preserve"><value>Qué notificaciones te llegan también por correo.</value></data>
+  <data name="notifications.email.unavailable" xml:space="preserve"><value>Ahora el portal no puede enviar correo, así que las notificaciones solo se muestran aquí.</value></data>
+  <data name="notifications.email.saved" xml:space="preserve"><value>Preferencia de correo guardada</value></data>
+  <data name="notifications.email.option.security" xml:space="preserve"><value>Solo avisos de seguridad</value></data>
+  <data name="notifications.email.option.securityHint" xml:space="preserve"><value>Un nuevo inicio de sesión, una contraseña restablecida, una sesión de soporte: al momento.</value></data>
+  <data name="notifications.email.option.instant" xml:space="preserve"><value>Todas las notificaciones</value></data>
+  <data name="notifications.email.option.instantHint" xml:space="preserve"><value>Cada notificación llega también por correo en cuanto se produce.</value></data>
+  <data name="notifications.email.option.daily" xml:space="preserve"><value>Un resumen diario</value></data>
+  <data name="notifications.email.option.dailyHint" xml:space="preserve"><value>Los avisos de seguridad al momento y una vez al día el resto sin leer.</value></data>
+  <data name="notifications.email.option.off" xml:space="preserve"><value>Nunca</value></data>
+  <data name="notifications.email.option.offHint" xml:space="preserve"><value>Nada por correo, ni siquiera los avisos de seguridad.</value></data>
+  <data name="table.pageOf" xml:space="preserve"><value>Página {page} de {total} · {count} en total</value></data>
+  <data name="nav.system" xml:space="preserve"><value>Sistema</value></data>
+  <data name="error.system.job_not_found" xml:space="preserve"><value>Esa tarea en segundo plano no existe.</value></data>
+  <data name="audit.action.system.job_run" xml:space="preserve"><value>Tarea en segundo plano ejecutada</value></data>
+  <data name="system.title" xml:space="preserve"><value>Sistema</value></data>
+  <data name="system.description" xml:space="preserve"><value>Esta instancia del portal: su versión, comprobaciones, tareas en segundo plano y claves de firma.</value></data>
+  <data name="system.refresh" xml:space="preserve"><value>Actualizar</value></data>
+  <data name="system.instance" xml:space="preserve"><value>Esta instancia</value></data>
+  <data name="system.version" xml:space="preserve"><value>Versión</value></data>
+  <data name="system.environment" xml:space="preserve"><value>Entorno</value></data>
+  <data name="system.runtime" xml:space="preserve"><value>Entorno de ejecución</value></data>
+  <data name="system.machine" xml:space="preserve"><value>Máquina</value></data>
+  <data name="system.database" xml:space="preserve"><value>Base de datos</value></data>
+  <data name="system.started" xml:space="preserve"><value>Iniciada</value></data>
+  <data name="system.on" xml:space="preserve"><value>activado</value></data>
+  <data name="system.off" xml:space="preserve"><value>desactivado</value></data>
+  <data name="system.feature.email" xml:space="preserve"><value>Correo</value></data>
+  <data name="system.feature.redis" xml:space="preserve"><value>Redis</value></data>
+  <data name="system.feature.telemetry" xml:space="preserve"><value>Telemetría</value></data>
+  <data name="system.feature.providers_one" xml:space="preserve"><value>{count} proveedor de inicio de sesión</value></data>
+  <data name="system.feature.providers_other" xml:space="preserve"><value>{count} proveedores de inicio de sesión</value></data>
+  <data name="system.checks" xml:space="preserve"><value>Comprobaciones</value></data>
+  <data name="system.status.Healthy" xml:space="preserve"><value>Correcto</value></data>
+  <data name="system.status.Degraded" xml:space="preserve"><value>Degradado</value></data>
+  <data name="system.status.Unhealthy" xml:space="preserve"><value>Con fallos</value></data>
+  <data name="system.jobs.title" xml:space="preserve"><value>Tareas en segundo plano</value></data>
+  <data name="system.jobs.description" xml:space="preserve"><value>Lo que el portal hace por sí solo y cómo fue su última ejecución en esta instancia. Cada instancia las ejecuta.</value></data>
+  <data name="system.jobs.name" xml:space="preserve"><value>Tarea</value></data>
+  <data name="system.jobs.every" xml:space="preserve"><value>Cada</value></data>
+  <data name="system.jobs.minutes_one" xml:space="preserve"><value>{count} minuto</value></data>
+  <data name="system.jobs.minutes_other" xml:space="preserve"><value>{count} minutos</value></data>
+  <data name="system.jobs.last" xml:space="preserve"><value>Última ejecución</value></data>
+  <data name="system.jobs.outcome" xml:space="preserve"><value>Resultado</value></data>
+  <data name="system.jobs.never" xml:space="preserve"><value>aún no en esta instancia</value></data>
+  <data name="system.jobs.result_one" xml:space="preserve"><value>{count} elemento</value></data>
+  <data name="system.jobs.result_other" xml:space="preserve"><value>{count} elementos</value></data>
+  <data name="system.jobs.run" xml:space="preserve"><value>Ejecutar ahora</value></data>
+  <data name="system.jobs.ran" xml:space="preserve"><value>{name} ejecutado</value></data>
+  <data name="system.jobs.failed" xml:space="preserve"><value>{name} falló</value></data>
+  <data name="system.job.access.expiry" xml:space="preserve"><value>Permisos y pertenencias caducados</value></data>
+  <data name="system.job.audit.retention" xml:space="preserve"><value>Entradas de auditoría antiguas</value></data>
+  <data name="system.job.identity.session_retention" xml:space="preserve"><value>Sesiones antiguas</value></data>
+  <data name="system.job.notifications.digest" xml:space="preserve"><value>Correos diarios de notificaciones</value></data>
+  <data name="system.job.notifications.retention" xml:space="preserve"><value>Notificaciones antiguas</value></data>
+  <data name="system.job.privacy.account_deletion" xml:space="preserve"><value>Eliminaciones de cuentas programadas</value></data>
+  <data name="system.outbox" xml:space="preserve"><value>Cola de entrega: {pending} en espera, {failed} con fallos, {delivered} entregadas en el último día.</value></data>
+  <data name="system.keys.title" xml:space="preserve"><value>Claves de firma de tokens</value></data>
+  <data name="system.keys.description" xml:space="preserve"><value>Firma la clave válida más reciente; las demás siguen publicadas para verificar los tokens que firmaron. Una sucesora se crea dos meses antes del final y se usa una semana después.</value></data>
+  <data name="system.keys.inUse" xml:space="preserve"><value>En uso</value></data>
+  <data name="system.keys.valid" xml:space="preserve"><value>válida del {from} al {to}</value></data>
+  <data name="command.open" xml:space="preserve"><value>Buscar…</value></data>
+  <data name="command.title" xml:space="preserve"><value>Buscar en el portal</value></data>
+  <data name="command.description" xml:space="preserve"><value>Páginas, personas, grupos y organizaciones.</value></data>
+  <data name="command.placeholder" xml:space="preserve"><value>Escribe una página, un nombre o una dirección…</value></data>
+  <data name="command.empty" xml:space="preserve"><value>Sin resultados.</value></data>
+  <data name="command.pages" xml:space="preserve"><value>Páginas</value></data>
+  <data name="command.users" xml:space="preserve"><value>Personas</value></data>
+  <data name="command.groups" xml:space="preserve"><value>Grupos</value></data>
+  <data name="command.organizations" xml:space="preserve"><value>Organizaciones</value></data>
+  <data name="command.hint" xml:space="preserve"><value>Intro abre · Ctrl/Cmd+K abre y cierra</value></data>
 </root>

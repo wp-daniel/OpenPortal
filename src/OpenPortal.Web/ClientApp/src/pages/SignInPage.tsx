@@ -1,11 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Fingerprint, Loader2, Smartphone } from 'lucide-react'
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { z } from 'zod'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { authApi, TWO_FACTOR_REQUIRED, TWO_FACTOR_SESSION_EXPIRED } from '@/api/auth'
 import { ApiError } from '@/api/client'
 import { ACCOUNT_PENDING_APPROVAL, EMAIL_NOT_CONFIRMED, registrationApi } from '@/api/registration'
+import { ExternalSignInButtons } from '@/components/ExternalProviders'
 import { FormField } from '@/components/FormField'
 import { OTP_LENGTH, OtpCodeInput } from '@/components/OtpCodeInput'
 import { Section } from '@/components/Section'
@@ -18,6 +19,7 @@ import { notify } from '@/hooks/useToast'
 import { useI18n } from '@/i18n/useI18n'
 import type { TFunction } from '@/i18n/store'
 import { zodFieldErrors } from '@/lib/forms'
+import { serverReturnUrl } from '@/lib/returnUrl'
 import { getPasskey, isPasskeyCancelled, passkeysSupported } from '@/lib/webauthn'
 
 const PASSKEY_REQUIRED = 'identity.passkey_required'
@@ -46,8 +48,36 @@ const makeSchema = (t: TFunction) =>
 type Fields = z.infer<ReturnType<typeof makeSchema>>
 
 export function SignInPage() {
-  // Set once the password was accepted and the account still needs its code.
-  const [codeStep, setCodeStep] = useState<{ rememberMe: boolean } | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { t } = useI18n()
+
+  // Set once the password was accepted and the account still needs its code. A sign-in through Google or Microsoft
+  // comes back here with step=two-factor for the same reason.
+  const [codeStep, setCodeStep] = useState<{ rememberMe: boolean } | null>(() =>
+    searchParams.get('step') === 'two-factor' ? { rememberMe: false } : null,
+  )
+
+  // An external sign-in that did not complete comes back with its reason; it is said once, then dropped from the URL.
+  useEffect(() => {
+    const error = searchParams.get('externalError')
+    const notice = searchParams.get('notice')
+
+    if (!error && !notice && !searchParams.has('step')) {
+      return
+    }
+
+    if (error) {
+      notify.error(t('signIn.external.failed'), t(`error.${error}`))
+    } else if (notice === 'approval_pending') {
+      notify.warning(t('signIn.pendingApproval.title'), t('signIn.pendingApproval.description'))
+    }
+
+    const next = new URLSearchParams(searchParams)
+    next.delete('externalError')
+    next.delete('notice')
+    next.delete('step')
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams, t])
 
   return codeStep ? (
     <TwoFactorStep rememberMe={codeStep.rememberMe} onBack={() => setCodeStep(null)} />
@@ -64,6 +94,10 @@ function PasswordStep({ onTwoFactorRequired }: { onTwoFactorRequired: (rememberM
   const { session } = useSession()
   const schema = useMemo(() => makeSchema(t), [t])
   const [unconfirmed, setUnconfirmed] = useState<string | null>(null)
+  const location = useLocation()
+
+  // Where an external sign-in lands: back to the application that started it, or to the page that sent here.
+  const returnUrl = serverReturnUrl(location.search) ?? (location.state as { from?: string } | null)?.from ?? null
 
   const resend = useMutation({
     mutationFn: (email: string) => registrationApi.resendConfirmation(email),
@@ -207,19 +241,26 @@ function PasswordStep({ onTwoFactorRequired }: { onTwoFactorRequired: (rememberM
           {signIn.isPending ? t('signIn.submitting') : t('signIn.submit')}
         </Button>
 
-        {session.registration.passkeys && passkeysSupported() && (
-          <>
-            <div className="text-muted-foreground flex items-center gap-3 text-xs uppercase">
-              <span className="bg-border h-px flex-1" />
-              {t('signIn.or')}
-              <span className="bg-border h-px flex-1" />
-            </div>
-            <Button variant="outline" className="w-full" disabled={passkey.isPending} onClick={() => passkey.mutate()}>
-              {passkey.isPending ? <Loader2 className="animate-spin" /> : <Fingerprint />}
-              {t('signIn.withPasskey')}
-            </Button>
-          </>
+        {((session.registration.passkeys && passkeysSupported()) || session.registration.externalProviders.length > 0) && (
+          <div className="text-muted-foreground flex items-center gap-3 text-xs uppercase">
+            <span className="bg-border h-px flex-1" />
+            {t('signIn.or')}
+            <span className="bg-border h-px flex-1" />
+          </div>
         )}
+
+        {session.registration.passkeys && passkeysSupported() && (
+          <Button variant="outline" className="w-full" disabled={passkey.isPending} onClick={() => passkey.mutate()}>
+            {passkey.isPending ? <Loader2 className="animate-spin" /> : <Fingerprint />}
+            {t('signIn.withPasskey')}
+          </Button>
+        )}
+
+        <ExternalSignInButtons
+          providers={session.registration.externalProviders}
+          returnUrl={returnUrl}
+          rememberMe={fields.rememberMe}
+        />
 
         {unconfirmed && (
           <div role="alert" className="bg-warning/10 grid gap-2 rounded-lg border p-3 text-sm">

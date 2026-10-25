@@ -49,7 +49,9 @@ public sealed record ApplicationDto(
     string? AnnouncedBackChannelLogoutUri = null,
     string? WebhookUrl = null,
     IReadOnlyList<string>? WebhookEvents = null,
-    bool HasWebhookSecret = false);
+    bool HasWebhookSecret = false,
+    bool RequireConsent = false,
+    bool AllowDeviceFlow = false);
 
 /// <summary>A new webhook signing secret (<c>whsec_…</c>), shown once.</summary>
 public sealed record WebhookSecretDto(string Secret);
@@ -88,7 +90,18 @@ public static class GroupClaimModes
 /// read again: the administrator copies it now or generates a new one.
 /// </summary>
 /// <param name="ClientSecret">Null for a public client, which has none.</param>
-public sealed record ApplicationSecretDto(ApplicationDto Application, string? ClientSecret);
+/// <param name="PreviousSecretValidUntilUtc">After a replacement with an overlap, until when the replaced secret still works.</param>
+public sealed record ApplicationSecretDto(ApplicationDto Application, string? ClientSecret, DateTimeOffset? PreviousSecretValidUntilUtc = null);
+
+/// <summary>Replaces an application's client secret.</summary>
+/// <param name="KeepPreviousHours">
+/// How long the replaced secret keeps working (0 to <see cref="MaxKeepPreviousHours"/>), so the application's servers can
+/// be given the new one without downtime; 0 (the default) stops it at once, as after a leak.
+/// </param>
+public sealed record RegenerateSecretRequest(int KeepPreviousHours = 0)
+{
+    public const int MaxKeepPreviousHours = 720;
+}
 
 /// <summary>Field set for registering an application by hand.</summary>
 /// <param name="Roles">The roles the application understands; none when absent.</param>
@@ -113,7 +126,9 @@ public sealed record CreateApplicationRequest(
     string? ClientType = null,
     string? BackChannelLogoutUri = null,
     string? WebhookUrl = null,
-    IReadOnlyList<string>? WebhookEvents = null);
+    IReadOnlyList<string>? WebhookEvents = null,
+    bool? RequireConsent = null,
+    bool? AllowDeviceFlow = null);
 
 /// <summary>Field set for editing an application. The client id cannot change.</summary>
 /// <param name="Roles">
@@ -138,7 +153,9 @@ public sealed record UpdateApplicationRequest(
     string? Organizations = null,
     string? BackChannelLogoutUri = null,
     string? WebhookUrl = null,
-    IReadOnlyList<string>? WebhookEvents = null);
+    IReadOnlyList<string>? WebhookEvents = null,
+    bool? RequireConsent = null,
+    bool? AllowDeviceFlow = null);
 
 /// <summary>What a running application reports about itself when it announces to the portal.</summary>
 /// <param name="Roles">
@@ -255,6 +272,31 @@ public sealed record UserApplicationAccessDto(
     IReadOnlyList<GroupReferenceDto> ViaGroups,
     IReadOnlyList<string> Roles);
 
+/// <summary>An application the signed-in user let sign them in (it holds a lasting authorization, and may hold tokens).</summary>
+/// <param name="Scopes">What the application receives (<c>openid</c>, <c>email</c>, <c>offline_access</c>…).</param>
+public sealed record AuthorizedApplicationDto(
+    string ClientId,
+    string DisplayName,
+    string? BaseUrl,
+    IReadOnlyList<string> Scopes,
+    DateTimeOffset? AuthorizedAtUtc);
+
+/// <summary>
+/// A slice of a long list (groups, organizations): a search on the name and a window, so a screen or a picker reads a
+/// page instead of everything.
+/// </summary>
+/// <param name="Search">Part of the name (or description), case-insensitive; empty for all.</param>
+public sealed record ListSlice(string? Search = null, int Skip = 0, int? Take = null)
+{
+    public const int MaxTake = 200;
+
+    /// <summary>The whole list (the screens that need every entry).</summary>
+    public static ListSlice All { get; } = new();
+}
+
+/// <summary>One slice of a list, with how many entries match in all.</summary>
+public sealed record SliceDto<T>(IReadOnlyList<T> Items, int TotalCount);
+
 /// <summary>An application on a user's launchpad.</summary>
 public sealed record LaunchpadItemDto(Guid Id, string ClientId, string DisplayName, string? Description, string BaseUrl);
 
@@ -266,11 +308,13 @@ public sealed record LaunchpadItemDto(Guid Id, string ClientId, string DisplayNa
 /// The group names the application receives, as its <see cref="ApplicationDto.GroupClaims"/> setting allows
 /// (empty when refused or when the setting is <c>none</c>).
 /// </param>
+/// <param name="RequireConsent">The application asks the user to agree to what it receives before its first sign-in.</param>
 public sealed record AccessDecision(
     bool Allowed,
     string? ApplicationName,
     IReadOnlyList<string> Roles,
-    IReadOnlyList<string> Groups)
+    IReadOnlyList<string> Groups,
+    bool RequireConsent = false)
 {
     public static AccessDecision Denied(string? applicationName) => new(false, applicationName, [], []);
 }
@@ -310,6 +354,9 @@ public sealed record OrganizationSummaryDto(
     int MemberCount,
     DateTimeOffset CreatedAtUtc);
 
+/// <param name="RequireMultiFactor">Members sign in to the organization's applications with two factors only.</param>
+/// <param name="Domains">The email domains the organization claims, and whether people at them join by themselves.</param>
+/// <param name="Applications">The applications that work per organization and define roles: what members can be given here.</param>
 public sealed record OrganizationDetailDto(
     Guid Id,
     string Name,
@@ -317,23 +364,62 @@ public sealed record OrganizationDetailDto(
     string? Description,
     IReadOnlyList<OrganizationMemberDto> Members,
     DateTimeOffset CreatedAtUtc,
-    DateTimeOffset? UpdatedAtUtc);
+    DateTimeOffset? UpdatedAtUtc,
+    bool RequireMultiFactor = false,
+    IReadOnlyList<OrganizationDomainDto>? Domains = null,
+    IReadOnlyList<OrganizationApplicationDto>? Applications = null);
+
+/// <summary>An email domain an organization claims.</summary>
+/// <param name="RecordValue">The TXT record to publish at the domain to verify it.</param>
+/// <param name="VerifiedBy"><c>dns</c> or <c>administrator</c>.</param>
+/// <param name="AutoJoinRole"><c>member</c> or <c>admin</c>: what someone joining by the domain becomes.</param>
+public sealed record OrganizationDomainDto(
+    Guid Id,
+    string Domain,
+    bool Verified,
+    DateTimeOffset? VerifiedAtUtc,
+    string? VerifiedBy,
+    string RecordValue,
+    bool AutoJoin,
+    string AutoJoinRole);
+
+/// <summary>An application that works per organization, with the roles a member can hold in it within the organization.</summary>
+public sealed record OrganizationApplicationDto(Guid Id, string DisplayName, IReadOnlyList<ApplicationRoleDto> Roles);
+
+/// <summary>The roles a member holds in one application within the organization.</summary>
+public sealed record OrganizationMemberApplicationRolesDto(Guid ApplicationId, IReadOnlyList<string> Roles);
 
 /// <param name="Role"><c>member</c> or <c>admin</c>.</param>
 /// <param name="IsKnown">False when the account no longer exists; the membership is shown so it can be removed.</param>
+/// <param name="ApplicationRoles">The roles the member holds in the organization's applications (within this organization only).</param>
 public sealed record OrganizationMemberDto(
     Guid Id,
     string Email,
     string DisplayName,
     bool IsKnown,
     string Role,
-    DateTimeOffset AddedAtUtc);
+    DateTimeOffset AddedAtUtc,
+    IReadOnlyList<OrganizationMemberApplicationRolesDto>? ApplicationRoles = null);
 
 /// <param name="Slug">Lower-case short name, immutable once created.</param>
 public sealed record CreateOrganizationRequest(string Name, string Slug, string? Description);
 
 /// <summary>The short name (slug) cannot change.</summary>
-public sealed record UpdateOrganizationRequest(string Name, string? Description);
+/// <param name="RequireMultiFactor">Members sign in to the organization's applications with two factors only; absent leaves it.</param>
+public sealed record UpdateOrganizationRequest(string Name, string? Description, bool? RequireMultiFactor = null);
+
+/// <summary>Claims an email domain for the organization (unverified until its DNS shows the record).</summary>
+public sealed record AddOrganizationDomainRequest(string Domain);
+
+/// <summary>Whether people with a confirmed address at the domain join the organization when they sign in, and as what.</summary>
+/// <param name="Role"><c>member</c> (the default) or <c>admin</c>.</param>
+public sealed record UpdateOrganizationDomainRequest(bool AutoJoin, string? Role);
+
+/// <summary>Checks the domain's DNS, or (<paramref name="Manual"/>, portal administrators only) vouches for it.</summary>
+public sealed record VerifyOrganizationDomainRequest(bool Manual = false);
+
+/// <summary>The roles a member holds in one application within the organization (replaces them).</summary>
+public sealed record SetMemberApplicationRolesRequest(IReadOnlyList<string> Roles);
 
 /// <summary>Adds a member or changes their role.</summary>
 /// <param name="Role"><c>member</c> (the default) or <c>admin</c>.</param>
@@ -370,10 +456,14 @@ public enum OrganizationOutcome
 
 /// <param name="Organization">The organization the tokens name, when <see cref="OrganizationOutcome.Selected"/>.</param>
 /// <param name="Choices">The user's organizations, when a choice is needed.</param>
+/// <param name="Roles">The application roles the user holds within the selected organization (added to the grants' roles).</param>
+/// <param name="RequireMultiFactor">The selected organization signs its members in with two factors only.</param>
 public sealed record OrganizationDecision(
     OrganizationOutcome Outcome,
     OrganizationMembershipDto? Organization,
-    IReadOnlyList<OrganizationMembershipDto> Choices);
+    IReadOnlyList<OrganizationMembershipDto> Choices,
+    IReadOnlyList<string>? Roles = null,
+    bool RequireMultiFactor = false);
 
 // ---------------------------------------------------------------------------
 // Access requests.
@@ -567,7 +657,8 @@ public sealed record PagePermissionMatrixDto(
 // ---------------------------------------------------------------------------
 
 /// <summary>A user account as the host's identity store describes it.</summary>
-public sealed record DirectoryUser(Guid Id, string Email, string DisplayName);
+/// <param name="EmailConfirmed">Whether the account proved it controls its address (what joining by email domain relies on).</param>
+public sealed record DirectoryUser(Guid Id, string Email, string DisplayName, bool EmailConfirmed = false);
 
 // ---------------------------------------------------------------------------
 // OpenID Connect.

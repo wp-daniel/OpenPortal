@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenPortal.Notifications.Application.Abstractions;
+using OpenPortal.Notifications.Application.Contracts;
 using OpenPortal.Notifications.Domain;
 using OpenPortal.Notifications.Infrastructure.Configuration;
 using OpenPortal.Notifications.Infrastructure.Persistence;
@@ -26,6 +27,7 @@ internal sealed partial class Notifier : INotifier
     private readonly IClock _clock;
     private readonly ILogger<Notifier> _logger;
     private readonly INotificationPublisher _publisher;
+    private readonly NotificationEmailer _emailer;
 
     public Notifier(
         NotificationsDbContext db,
@@ -33,8 +35,10 @@ internal sealed partial class Notifier : INotifier
         IOptions<NotificationsModuleOptions> options,
         IClock clock,
         ILogger<Notifier> logger,
-        INotificationPublisher publisher)
+        INotificationPublisher publisher,
+        NotificationEmailer emailer)
     {
+        _emailer = emailer;
         _publisher = publisher;
         _db = db;
         _context = context;
@@ -100,6 +104,17 @@ internal sealed partial class Notifier : INotifier
             _db.ChangeTracker.Clear();
 
             await _publisher.PublishAsync(reached, cancellationToken).ConfigureAwait(false);
+
+            await _emailer.SendAsync(
+                    reached,
+                    new NotificationMailItem(
+                        notice.Type,
+                        notice.Parameters ?? new Dictionary<string, string?>(),
+                        Notification.NormaliseLink(notice.Link),
+                        now),
+                    notice.Security,
+                    cancellationToken)
+                .ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

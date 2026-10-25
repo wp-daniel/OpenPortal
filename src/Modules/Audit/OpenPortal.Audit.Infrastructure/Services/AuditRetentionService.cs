@@ -1,3 +1,4 @@
+using OpenPortal.SharedKernel.Jobs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -15,6 +16,11 @@ namespace OpenPortal.Audit.Infrastructure.Services;
 /// </summary>
 internal sealed partial class AuditRetentionService : BackgroundService
 {
+    /// <summary>The job's name in the job list (Administration → System).</summary>
+    public const string JobName = "audit.retention";
+
+    private readonly IJobRegistry _jobs;
+
     private static readonly TimeSpan FirstRunDelay = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan Interval = TimeSpan.FromHours(24);
 
@@ -27,8 +33,11 @@ internal sealed partial class AuditRetentionService : BackgroundService
         IServiceScopeFactory scopes,
         IOptions<AuditModuleOptions> options,
         IClock clock,
-        ILogger<AuditRetentionService> logger)
+        ILogger<AuditRetentionService> logger,
+        IJobRegistry jobs)
     {
+        _jobs = jobs;
+        jobs.Register(JobName, Interval, SweepAsync);
         _scopes = scopes;
         _options = options;
         _clock = clock;
@@ -68,7 +77,7 @@ internal sealed partial class AuditRetentionService : BackgroundService
             {
                 try
                 {
-                    var deleted = await SweepAsync(stoppingToken).ConfigureAwait(false);
+                    var deleted = await _jobs.RunAsync(JobName, stoppingToken).ConfigureAwait(false);
                     if (deleted > 0)
                     {
                         LogSwept(deleted, _options.Value.RetentionDays);

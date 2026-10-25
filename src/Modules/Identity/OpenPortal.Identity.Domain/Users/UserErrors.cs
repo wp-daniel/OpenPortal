@@ -245,4 +245,70 @@ public static class UserErrors
 
     public static Error ReasonRequired { get; } =
         Error.Validation(Prefix + "reason_required", "Say why you need to act as this account (at most 200 characters).");
+
+    public static Error IdleTimeoutInvalid { get; } =
+        Error.Validation(Prefix + "idle_timeout_invalid", "The idle timeout is 0 (off) or between 5 and 1440 minutes.");
+
+    public static Error SessionNotFound { get; } =
+        Error.NotFound(Prefix + "session_not_found", "There is no such open session.");
+
+    public static Error SessionIsCurrent { get; } =
+        Error.Conflict(Prefix + "session_is_current", "This is the session you are using: sign out instead.");
+
+    public static Error PasswordAlreadySet { get; } =
+        Error.Conflict(Prefix + "password_already_set", "The account already has a password; change it with the current one.");
+
+    public static Error ExternalProviderNotFound { get; } =
+        Error.NotFound(Prefix + "external_provider_not_found", "There is no such sign-in provider.");
+
+    public static Error ExternalProviderDisabled { get; } =
+        Error.Forbidden(Prefix + "external_provider_disabled", "Signing in with this provider is turned off.");
+
+    public static Error ExternalProviderIncomplete { get; } =
+        Error.Validation(Prefix + "external_provider_incomplete", "A sign-in provider can only be turned on with its client id and client secret.");
+
+    public static Error ExternalClientIdInvalid { get; } =
+        Error.Validation(Prefix + "external_client_id_invalid", "The client id is at most 200 characters.");
+
+    public static Error ExternalClientSecretInvalid { get; } =
+        Error.Validation(Prefix + "external_client_secret_invalid", "The client secret is too long.");
+
+    public static Error ExternalTenantInvalid { get; } =
+        Error.Validation(
+            Prefix + "external_tenant_invalid",
+            "The tenant is organizations, common, consumers, a directory id or a directory's domain.");
+
+    public static Error ExternalSignUpModeInvalid { get; } =
+        Error.Validation(Prefix + "external_sign_up_invalid", "Account creation must be disabled, open or approval.");
+
+    public static Error ExternalSignInFailed { get; } =
+        Error.Unauthorized(Prefix + "external_sign_in_failed", "The sign-in with the external provider did not complete.");
+
+    public static Error ExternalEmailMissing { get; } =
+        Error.Validation(Prefix + "external_email_missing", "The external account did not share an email address.");
+
+    public static Error ExternalEmailUnverified { get; } =
+        Error.Conflict(
+            Prefix + "external_email_unverified",
+            "An account with this address exists, but the provider does not vouch for the address: sign in with your password and connect the account from your security settings.");
+
+    public static Error ExternalEmailNotVerified { get; } =
+        Error.Forbidden(Prefix + "external_email_not_verified", "The provider does not vouch for this email address, so no account can be created with it.");
+
+    public static Error ExternalSignUpClosed { get; } =
+        Error.Forbidden(Prefix + "external_sign_up_closed", "There is no account for this external account, and this provider does not create new ones.");
+
+    public static Error ExternalDomainNotAllowed { get; } =
+        Error.Forbidden(Prefix + "external_domain_not_allowed", "Accounts with this email domain cannot be created through this provider.");
+
+    public static Error ExternalLoginInUse { get; } =
+        Error.Conflict(Prefix + "external_login_in_use", "This external account is already connected to another portal account.");
+
+    public static Error ExternalLoginNotFound { get; } =
+        Error.NotFound(Prefix + "external_login_not_found", "This account is not connected to that provider.");
+
+    public static Error ExternalLoginLastMethod { get; } =
+        Error.Conflict(
+            Prefix + "external_login_last_method",
+            "This is the only way the account can sign in: set a password or add a passkey before disconnecting it.");
 }

@@ -1,6 +1,9 @@
 import { api, withQuery } from './client'
 import type {
+  AccountSessions,
   CreateUserRequest,
+  ExternalLogin,
+  ExternalProviderKey,
   PagedResult,
   PersonalAccessToken,
   UpdateUserRequest,
@@ -38,6 +41,13 @@ export const userAdminApi = {
   resetTwoFactor: (userId: string) => api.delete<void>(`/api/admin/users/${userId}/two-factor`),
   /** Removes every passkey of an account that lost its devices; its sessions end. */
   resetPasskeys: (userId: string) => api.delete<void>(`/api/admin/users/${userId}/passkeys`),
+  sessions: (userId: string, signal?: AbortSignal) => api.get<AccountSessions>(`/api/admin/users/${userId}/sessions`, signal),
+  revokeSession: (userId: string, sessionId: string) =>
+    api.delete<void>(`/api/admin/users/${userId}/sessions/${encodeURIComponent(sessionId)}`),
+  externalLogins: (userId: string, signal?: AbortSignal) =>
+    api.get<ExternalLogin[]>(`/api/admin/users/${userId}/external-logins`, signal),
+  removeExternalLogin: (userId: string, provider: ExternalProviderKey) =>
+    api.delete<void>(`/api/admin/users/${userId}/external-logins/${provider}`),
 
   uploadAvatar: (userId: string, image: Blob) => api.put<void>(`/api/admin/users/${userId}/avatar`, avatarForm(image)),
 

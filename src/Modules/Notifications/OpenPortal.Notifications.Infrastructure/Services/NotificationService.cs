@@ -190,8 +190,16 @@ internal sealed class NotificationMaintenanceService : INotificationMaintenance
         _db = db;
     }
 
-    public Task ForgetRecipientAsync(Guid userId, CancellationToken cancellationToken) =>
-        _db.Notifications
+    public async Task ForgetRecipientAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        await _db.Notifications
             .Where(notification => notification.RecipientId == userId)
-            .ExecuteDeleteAsync(cancellationToken);
+            .ExecuteDeleteAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        await _db.NotificationPreferences
+            .Where(preference => preference.UserId == userId)
+            .ExecuteDeleteAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
 }

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { notificationKeys, notificationsApi } from '@/api/notifications'
 import type { PortalNotification } from '@/api/types'
+import { NotificationEmailPreferences } from '@/components/NotificationEmailPreferences'
 import { PageHeader } from '@/components/PageHeader'
 import { Section } from '@/components/Section'
 import { EmptyState, ErrorPanel, LoadingState } from '@/components/StatePanels'
@@ -129,6 +130,8 @@ export function NotificationsPage() {
           </>
         )}
       </Section>
+
+      <NotificationEmailPreferences />
     </div>
   )
 }

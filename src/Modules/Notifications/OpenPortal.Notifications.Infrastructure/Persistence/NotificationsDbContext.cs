@@ -23,6 +23,8 @@ public sealed class NotificationsDbContext : DbContext
 
     public DbSet<MailSettings> MailSettings => Set<MailSettings>();
 
+    public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
@@ -32,6 +34,23 @@ public sealed class NotificationsDbContext : DbContext
         SqliteDateTimeOffsetCompatibility.ApplyIfSqlite(modelBuilder, Database.ProviderName);
 
         base.OnModelCreating(modelBuilder);
+    }
+}
+
+internal sealed class NotificationPreferenceConfiguration : IEntityTypeConfiguration<NotificationPreference>
+{
+    public void Configure(EntityTypeBuilder<NotificationPreference> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("NotificationPreferences");
+        builder.HasKey(preference => preference.UserId);
+        builder.Property(preference => preference.UserId).ValueGeneratedNever();
+        builder.Property(preference => preference.Email).IsRequired().HasConversion<string>().HasMaxLength(16);
+
+        // The digest sweep asks for the ones due.
+        builder.HasIndex(preference => new { preference.Email, preference.LastDigestAtUtc })
+            .HasDatabaseName("IX_NotificationPreferences_Email_LastDigestAtUtc");
     }
 }
 

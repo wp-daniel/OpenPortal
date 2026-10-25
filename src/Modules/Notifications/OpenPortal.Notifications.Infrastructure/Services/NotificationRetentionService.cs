@@ -1,3 +1,4 @@
+using OpenPortal.SharedKernel.Jobs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -16,6 +17,11 @@ namespace OpenPortal.Notifications.Infrastructure.Services;
 /// </summary>
 internal sealed partial class NotificationRetentionService : BackgroundService
 {
+    /// <summary>The job's name in the job list (Administration → System).</summary>
+    public const string JobName = "notifications.retention";
+
+    private readonly IJobRegistry _jobs;
+
     private static readonly TimeSpan FirstRunDelay = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan Interval = TimeSpan.FromHours(24);
 
@@ -28,8 +34,11 @@ internal sealed partial class NotificationRetentionService : BackgroundService
         IServiceScopeFactory scopes,
         IOptions<NotificationsModuleOptions> options,
         IClock clock,
-        ILogger<NotificationRetentionService> logger)
+        ILogger<NotificationRetentionService> logger,
+        IJobRegistry jobs)
     {
+        _jobs = jobs;
+        jobs.Register(JobName, Interval, SweepAsync);
         _scopes = scopes;
         _options = options;
         _clock = clock;
@@ -81,7 +90,7 @@ internal sealed partial class NotificationRetentionService : BackgroundService
             {
                 try
                 {
-                    var deleted = await SweepAsync(stoppingToken).ConfigureAwait(false);
+                    var deleted = await _jobs.RunAsync(JobName, stoppingToken).ConfigureAwait(false);
                     if (deleted > 0)
                     {
                         LogSwept(deleted);

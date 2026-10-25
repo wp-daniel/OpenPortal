@@ -48,6 +48,15 @@ public interface IInvitationService
     /// </summary>
     Task<Result<InvitationIssuedDto>> CreateAsync(CreateInvitationRequest request, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Invites an address into one organization, for that organization's own administrators (no users page needed). The
+    /// invitation promises a membership of that organization only.
+    /// </summary>
+    Task<Result<InvitationIssuedDto>> CreateForOrganizationAsync(
+        Guid organizationId,
+        OrganizationInvitationRequest request,
+        CancellationToken cancellationToken);
+
     /// <summary>Issues a new link (the previous one stops working) with a fresh validity period, and emails it.</summary>
     Task<Result<InvitationIssuedDto>> ResendAsync(Guid invitationId, CancellationToken cancellationToken);
 
@@ -61,6 +70,15 @@ public interface IInvitationService
     /// The answer lists what the host still has to apply (memberships) and whom to tell.
     /// </summary>
     Task<Result<AcceptedInvitationDto>> AcceptAsync(AcceptInvitationRequest request, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// Whether the caller may invite people into an organization: the host answers from the Access module (its portal page,
+/// or being one of the organization's administrators), which Identity does not reference.
+/// </summary>
+public interface IOrganizationInvitationAuthorization
+{
+    Task<Result> EnsureCanInviteToAsync(Guid organizationId, CancellationToken cancellationToken);
 }
 
 /// <summary>Accounts counted, for the statistics page. Re-checks the caller (<see cref="UserAdministrationOperation.ViewStatistics"/>).</summary>

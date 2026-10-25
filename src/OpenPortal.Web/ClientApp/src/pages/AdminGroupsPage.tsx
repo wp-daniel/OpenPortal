@@ -34,7 +34,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { ListPager } from '@/components/ListPager'
 import { TableToolbar } from '@/components/TableToolbar'
+import { useDebounced } from '@/hooks/useDebounced'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
@@ -43,10 +45,11 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useSession } from '@/hooks/useSession'
 import { notify } from '@/hooks/useToast'
-import { matchesSearch } from '@/lib/tableFilter'
 import { useI18n } from '@/i18n/useI18n'
 import { describeError, traceIdOf } from '@/lib/errors'
 import { reportFormError, zodFieldErrors } from '@/lib/forms'
+
+const PAGE_SIZE = 25
 
 type GroupTab = 'details' | 'members' | 'subgroups' | 'applications' | 'pages'
 
@@ -64,16 +67,24 @@ export function AdminGroupsPage() {
   const [dialog, setDialog] = useState<DialogState | null>(null)
   const [deleting, setDeleting] = useState<GroupSummary | null>(null)
 
+  const [search, setSearch] = useState(() => new URLSearchParams(window.location.search).get('search') ?? '')
+  const [page, setPage] = useState(1)
+  const term = useDebounced(search.trim())
+
+  // Searched and paged on the server: a portal can hold thousands of groups.
   const groups = useQuery({
-    queryKey: accessKeys.groups,
-    queryFn: ({ signal }) => groupsApi.list(signal),
+    queryKey: [...accessKeys.groups, 'page', term, page],
+    queryFn: ({ signal }) => groupsApi.slice({ search: term, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }, signal),
+    placeholderData: (previous) => previous,
   })
 
-  const [search, setSearch] = useState('')
-  const visibleGroups = useMemo(
-    () => (groups.data ?? []).filter((group) => matchesSearch(search, group.name, group.description)),
-    [groups.data, search],
-  )
+  const visibleGroups = groups.data?.items ?? []
+  const nothingAtAll = groups.data !== undefined && groups.data.totalCount === 0 && term === ''
+
+  function changeSearch(value: string) {
+    setSearch(value)
+    setPage(1)
+  }
 
   const remove = useMutation({
     mutationFn: (group: GroupSummary) => groupsApi.remove(group.id),
@@ -104,17 +115,17 @@ export function AdminGroupsPage() {
 
         {groups.isPending && <LoadingState />}
 
-        {groups.data?.length === 0 && <EmptyState title={t('groups.empty.title')} description={t('groups.empty.description')} />}
+        {nothingAtAll && <EmptyState title={t('groups.empty.title')} description={t('groups.empty.description')} />}
 
-        {groups.data && groups.data.length > 0 && (
+        {groups.data && !nothingAtAll && (
           <>
           <TableToolbar
             search={search}
-            onSearchChange={setSearch}
+            onSearchChange={changeSearch}
             searchPlaceholder={t('groups.searchPlaceholder')}
             filtersActive={search !== ''}
-            onReset={() => setSearch('')}
-            resultCount={visibleGroups.length}
+            onReset={() => changeSearch('')}
+            resultCount={groups.data.totalCount}
           />
           {visibleGroups.length === 0 ? (
             <p className="text-muted-foreground py-6 text-center text-sm">{t('table.noResults')}</p>
@@ -158,6 +169,7 @@ export function AdminGroupsPage() {
                 ))}
               </TableBody>
             </Table>
+            <ListPager page={page} pageSize={PAGE_SIZE} totalCount={groups.data.totalCount} onPageChange={setPage} label={t('groups.listTitle')} />
           </div>
           )}
           </>

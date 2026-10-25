@@ -60,7 +60,7 @@ internal sealed class IdentityUserLookupService : IUserLookupService
         var users = await _userManager.Users
             .AsNoTracking()
             .Where(user => ids.Contains(user.Id))
-            .Select(user => new { user.Id, user.Email, user.DisplayName, user.LockoutEnd, user.PendingApproval, user.DeletionScheduledAtUtc })
+            .Select(user => new { user.Id, user.Email, user.DisplayName, user.LockoutEnd, user.PendingApproval, user.DeletionScheduledAtUtc, user.EmailConfirmed, user.Language })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -72,7 +72,9 @@ internal sealed class IdentityUserLookupService : IUserLookupService
                 user.Email ?? string.Empty,
                 user.DisplayName,
                 IsActive: !user.PendingApproval && (user.LockoutEnd is null || user.LockoutEnd <= now),
-                DeletionScheduled: user.DeletionScheduledAtUtc != null))
+                DeletionScheduled: user.DeletionScheduledAtUtc != null,
+                EmailConfirmed: user.EmailConfirmed,
+                Language: user.Language))
             .ToList();
     }
 }

@@ -28,8 +28,6 @@ public static class PortalPages
     public const string Organizations = "organizations";
     public const string Statistics = "statistics";
     public const string Applications = "applications";
-    public const string ContentProfile = "content.profile";
-    public const string ContentProjects = "content.projects";
     public const string Audit = "audit";
     public const string Announcements = "announcements";
     public const string Legal = "legal";
@@ -44,8 +42,6 @@ public static class PortalPages
         new(AccessReviews, "nav.accessReviews", "nav.identity"),
         new(Organizations, "nav.organizations", "nav.identity"),
         new(Applications, "nav.applications", "nav.applications"),
-        new(ContentProfile, "nav.profile", "nav.content"),
-        new(ContentProjects, "nav.projects", "nav.content"),
         new(Audit, "nav.audit", "nav.security"),
         new(Statistics, "nav.statistics", "nav.security"),
         new(Legal, "nav.legal", "nav.security"),

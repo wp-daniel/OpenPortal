@@ -1,5 +1,5 @@
 import { api, withQuery } from './client'
-import type { NotificationCount, NotificationPage, PortalNotification } from './types'
+import type { NotificationCount, NotificationEmail, NotificationPage, NotificationPreferences, PortalNotification } from './types'
 
 /** The signed-in user's notification center. Every call is about the caller's own notifications. */
 export const notificationsApi = {
@@ -21,6 +21,9 @@ export const notificationsApi = {
   markUnread: (id: string) => api.delete<PortalNotification>(`/api/notifications/${id}/read`),
 
   markAllRead: () => api.post<void>('/api/notifications/read-all'),
+
+  preferences: (signal?: AbortSignal) => api.get<NotificationPreferences>('/api/notifications/preferences', signal),
+  updatePreferences: (email: NotificationEmail) => api.put<NotificationPreferences>('/api/notifications/preferences', { email }),
 
   remove: (id: string) => api.delete<void>(`/api/notifications/${id}`),
 

@@ -6,8 +6,11 @@ import type {
   OutboxMessage,
   OutboxPage,
   OutboxStatus,
+  ExternalProviderKey,
+  ExternalProviderSettings,
   PrivacySettings,
   RegistrationSettings,
+  UpdateExternalProviderRequest,
   SecuritySettings,
   UpdateRegistrationSettingsRequest,
   UpdateSecuritySettingsRequest,
@@ -24,6 +27,9 @@ export const settingsApi = {
   privacy: (signal?: AbortSignal) => api.get<PrivacySettings>('/api/admin/settings/privacy', signal),
   updatePrivacy: (body: { selfDeletionEnabled: boolean; deletionGraceDays: number }) =>
     api.put<PrivacySettings>('/api/admin/settings/privacy', body),
+  externalLogins: (signal?: AbortSignal) => api.get<ExternalProviderSettings[]>('/api/admin/settings/external-logins', signal),
+  updateExternalLogin: (provider: ExternalProviderKey, body: UpdateExternalProviderRequest) =>
+    api.put<ExternalProviderSettings>(`/api/admin/settings/external-logins/${provider}`, body),
   email: (signal?: AbortSignal) => api.get<MailSettings>('/api/admin/settings/email', signal),
   updateEmail: (body: MailServerRequest) => api.put<MailSettings>('/api/admin/settings/email', body),
   testEmail: (body: MailServerRequest & { to: string }) => api.post<MailTestResult>('/api/admin/settings/email/test', body),

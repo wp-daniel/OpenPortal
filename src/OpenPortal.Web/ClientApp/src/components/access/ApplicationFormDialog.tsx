@@ -160,6 +160,8 @@ function ApplicationForm({
   const [groupClaims, setGroupClaims] = useState<GroupClaimMode>(application?.groupClaims ?? 'none')
   const [apiScopes, setApiScopes] = useState<ReadonlySet<ApplicationApiScope>>(() => new Set(application?.apiScopes ?? []))
   const [allowAccessRequests, setAllowAccessRequests] = useState(application?.allowAccessRequests ?? false)
+  const [requireConsent, setRequireConsent] = useState(application?.requireConsent ?? false)
+  const [allowDeviceFlow, setAllowDeviceFlow] = useState(application?.allowDeviceFlow ?? false)
   const [organizations, setOrganizations] = useState<OrganizationMode>(application?.organizations ?? 'none')
   const [clientType, setClientType] = useState<ApplicationClientType>(application?.clientType ?? 'confidential')
   const [backChannelLogoutUri, setBackChannelLogoutUri] = useState(application?.backChannelLogoutUri ?? '')
@@ -201,6 +203,8 @@ function ApplicationForm({
     groupClaims,
     apiScopes: API_SCOPES.map((entry) => entry.scope).filter((scope) => apiScopes.has(scope)),
     allowAccessRequests,
+    requireConsent,
+    allowDeviceFlow,
     organizations,
     backChannelLogoutUri: backChannelLogoutUri.trim() === '' ? null : backChannelLogoutUri.trim(),
     webhookUrl: webhookUrl.trim(),
@@ -505,6 +509,22 @@ function ApplicationForm({
                 <p className="text-muted-foreground text-xs">{t('applications.requests.hint')}</p>
               </div>
               <Switch id="app-allow-requests" checked={allowAccessRequests} onCheckedChange={setAllowAccessRequests} />
+            </div>
+
+            <div className="flex items-start justify-between gap-6 rounded-lg border p-4">
+              <div className="grid gap-1">
+                <Label htmlFor="app-require-consent">{t('applications.consent.title')}</Label>
+                <p className="text-muted-foreground text-xs">{t('applications.consent.hint')}</p>
+              </div>
+              <Switch id="app-require-consent" checked={requireConsent} onCheckedChange={setRequireConsent} />
+            </div>
+
+            <div className="flex items-start justify-between gap-6 rounded-lg border p-4">
+              <div className="grid gap-1">
+                <Label htmlFor="app-device-flow">{t('applications.deviceFlow.title')}</Label>
+                <p className="text-muted-foreground text-xs">{t('applications.deviceFlow.hint')}</p>
+              </div>
+              <Switch id="app-device-flow" checked={allowDeviceFlow} onCheckedChange={setAllowDeviceFlow} />
             </div>
 
             <fieldset className="grid gap-3">

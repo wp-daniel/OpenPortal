@@ -16,4 +16,7 @@ public sealed class NotificationsModuleOptions
     /// reviews requests) notifies the first ones only, so one event cannot write an unbounded number of rows.
     /// </summary>
     public int MaxRecipientsPerNotice { get; set; } = 500;
+
+    /// <summary>How often someone who chose the digest receives it.</summary>
+    public int DigestIntervalHours { get; set; } = 24;
 }

@@ -21,12 +21,6 @@ public static class Architecture
 
     public static Assembly IdentityInfrastructure { get; } = typeof(Identity.Infrastructure.Persistence.IdentityDbContext).Assembly;
 
-    public static Assembly ContentDomain { get; } = typeof(Content.Domain.Profiles.Profile).Assembly;
-
-    public static Assembly ContentApplication { get; } = typeof(Content.Application.Abstractions.IPublicContentService).Assembly;
-
-    public static Assembly ContentInfrastructure { get; } = typeof(Content.Infrastructure.Persistence.ContentDbContext).Assembly;
-
     public static Assembly AccessDomain { get; } = typeof(Access.Domain.Applications.PortalApplication).Assembly;
 
     public static Assembly AccessApplication { get; } = typeof(Access.Application.Abstractions.IApplicationRegistryService).Assembly;
@@ -47,12 +41,12 @@ public static class Architecture
 
     public static Assembly Web { get; } = typeof(OpenPortal.Web.AntiforgeryDefaults).Assembly;
 
-    public static Assembly[] Domains { get; } = [IdentityDomain, ContentDomain, AccessDomain, AuditDomain, NotificationsDomain];
+    public static Assembly[] Domains { get; } = [IdentityDomain, AccessDomain, AuditDomain, NotificationsDomain];
 
-    public static Assembly[] Applications { get; } = [IdentityApplication, ContentApplication, AccessApplication, AuditApplication, NotificationsApplication];
+    public static Assembly[] Applications { get; } = [IdentityApplication, AccessApplication, AuditApplication, NotificationsApplication];
 
     public static Assembly[] Infrastructures { get; } =
-        [IdentityInfrastructure, ContentInfrastructure, AccessInfrastructure, AuditInfrastructure, NotificationsInfrastructure];
+        [IdentityInfrastructure, AccessInfrastructure, AuditInfrastructure, NotificationsInfrastructure];
 }
 
 public sealed class LayeringTests
@@ -106,7 +100,6 @@ public sealed class LayeringTests
         var pairs = new (Assembly Application, Assembly Infrastructure)[]
         {
             (Architecture.IdentityApplication, Architecture.IdentityInfrastructure),
-            (Architecture.ContentApplication, Architecture.ContentInfrastructure),
             (Architecture.AccessApplication, Architecture.AccessInfrastructure),
             (Architecture.AuditApplication, Architecture.AuditInfrastructure),
             (Architecture.NotificationsApplication, Architecture.NotificationsInfrastructure),
@@ -125,19 +118,7 @@ public sealed class LayeringTests
     // -----------------------------------------------------------------------
 
     [Fact]
-    public void Identity_does_not_reference_Content()
-    {
-        // If Identity ever needs something from Content, that is a sign the shared concept belongs in the
-        // shared kernel, not that a module-to-module reference is acceptable.
-        foreach (var assembly in new[] { Architecture.IdentityDomain, Architecture.IdentityApplication, Architecture.IdentityInfrastructure })
-        {
-            assembly.GetReferencedAssemblies().Select(reference => reference.Name)
-                .ShouldNotContain(Architecture.ContentDomain.GetName().Name);
-        }
-    }
-
-    [Fact]
-    public void Access_does_not_reference_Identity_or_Content()
+    public void Access_does_not_reference_Identity()
     {
         // Access stores user ids only; names come through the host's IUserDirectory adapter.
         foreach (var assembly in new[] { Architecture.AccessDomain, Architecture.AccessApplication, Architecture.AccessInfrastructure })
@@ -146,24 +127,22 @@ public sealed class LayeringTests
 
             referenced.ShouldNotContain(Architecture.IdentityDomain.GetName().Name);
             referenced.ShouldNotContain(Architecture.IdentityApplication.GetName().Name);
-            referenced.ShouldNotContain(Architecture.ContentDomain.GetName().Name);
-            referenced.ShouldNotContain(Architecture.ContentApplication.GetName().Name);
+            referenced.ShouldNotContain(Architecture.IdentityInfrastructure.GetName().Name);
         }
     }
 
     [Fact]
-    public void Identity_and_Content_do_not_reference_Access()
+    public void Identity_does_not_reference_Access()
     {
-        var modules = new[]
-        {
-            Architecture.IdentityDomain, Architecture.IdentityApplication, Architecture.IdentityInfrastructure,
-            Architecture.ContentDomain, Architecture.ContentApplication, Architecture.ContentInfrastructure,
-        };
+        // If Identity ever needs something from Access, the host supplies it through a port (as it does for
+        // invitations' memberships), not a module-to-module reference.
+        var access = new[] { Architecture.AccessDomain, Architecture.AccessApplication, Architecture.AccessInfrastructure }
+            .Select(assembly => assembly.GetName().Name)
+            .ToArray();
 
-        foreach (var assembly in modules)
+        foreach (var assembly in new[] { Architecture.IdentityDomain, Architecture.IdentityApplication, Architecture.IdentityInfrastructure })
         {
-            assembly.GetReferencedAssemblies().Select(reference => reference.Name)
-                .ShouldNotContain(Architecture.AccessDomain.GetName().Name);
+            assembly.GetReferencedAssemblies().Select(reference => reference.Name).Intersect(access).ShouldBeEmpty();
         }
     }
 
@@ -184,12 +163,11 @@ public sealed class LayeringTests
     [Fact]
     public void Modules_record_audit_events_without_referencing_the_Audit_module()
     {
-        // Identity, Content and Access write to IAuditTrail (shared kernel); only the host composes the Audit
+        // Identity and Access write to IAuditTrail (shared kernel); only the host composes the Audit
         // module that stores the events, and the Audit module knows none of them.
         var modules = new[]
         {
             Architecture.IdentityDomain, Architecture.IdentityApplication, Architecture.IdentityInfrastructure,
-            Architecture.ContentDomain, Architecture.ContentApplication, Architecture.ContentInfrastructure,
             Architecture.AccessDomain, Architecture.AccessApplication, Architecture.AccessInfrastructure,
         };
 
@@ -216,12 +194,11 @@ public sealed class LayeringTests
     [Fact]
     public void Modules_notify_without_referencing_the_Notifications_module()
     {
-        // Identity, Content, Access and Audit tell people through INotifier (shared kernel); only the host composes
+        // Identity, Access and Audit tell people through INotifier (shared kernel); only the host composes
         // the Notifications module that stores and shows the notices, and that module knows none of them.
         var modules = new[]
         {
             Architecture.IdentityDomain, Architecture.IdentityApplication, Architecture.IdentityInfrastructure,
-            Architecture.ContentDomain, Architecture.ContentApplication, Architecture.ContentInfrastructure,
             Architecture.AccessDomain, Architecture.AccessApplication, Architecture.AccessInfrastructure,
             Architecture.AuditDomain, Architecture.AuditApplication, Architecture.AuditInfrastructure,
         };
@@ -245,16 +222,6 @@ public sealed class LayeringTests
         }
     }
 
-    [Fact]
-    public void Content_does_not_reference_Identity()
-    {
-        foreach (var assembly in new[] { Architecture.ContentDomain, Architecture.ContentApplication, Architecture.ContentInfrastructure })
-        {
-            assembly.GetReferencedAssemblies().Select(reference => reference.Name)
-                .ShouldNotContain(Architecture.IdentityDomain.GetName().Name);
-        }
-    }
-
     // -----------------------------------------------------------------------
     // The shared kernel stays small and dependency-free.
     // -----------------------------------------------------------------------
@@ -269,8 +236,6 @@ public sealed class LayeringTests
             "Microsoft.AspNetCore.Mvc",
             Architecture.IdentityDomain.GetName().Name,
             Architecture.IdentityApplication.GetName().Name,
-            Architecture.ContentDomain.GetName().Name,
-            Architecture.ContentApplication.GetName().Name,
             Architecture.AccessDomain.GetName().Name,
             Architecture.AccessApplication.GetName().Name,
             Architecture.AuditDomain.GetName().Name,
