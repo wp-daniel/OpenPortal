@@ -40,6 +40,9 @@ COPY src/Modules/Access/OpenPortal.Access.Infrastructure/*.csproj src/Modules/Ac
 COPY src/Modules/Audit/OpenPortal.Audit.Domain/*.csproj src/Modules/Audit/OpenPortal.Audit.Domain/
 COPY src/Modules/Audit/OpenPortal.Audit.Application/*.csproj src/Modules/Audit/OpenPortal.Audit.Application/
 COPY src/Modules/Audit/OpenPortal.Audit.Infrastructure/*.csproj src/Modules/Audit/OpenPortal.Audit.Infrastructure/
+COPY src/Modules/Notifications/OpenPortal.Notifications.Domain/*.csproj src/Modules/Notifications/OpenPortal.Notifications.Domain/
+COPY src/Modules/Notifications/OpenPortal.Notifications.Application/*.csproj src/Modules/Notifications/OpenPortal.Notifications.Application/
+COPY src/Modules/Notifications/OpenPortal.Notifications.Infrastructure/*.csproj src/Modules/Notifications/OpenPortal.Notifications.Infrastructure/
 RUN dotnet restore src/OpenPortal.Web/OpenPortal.Web.csproj
 
 COPY src/ src/
