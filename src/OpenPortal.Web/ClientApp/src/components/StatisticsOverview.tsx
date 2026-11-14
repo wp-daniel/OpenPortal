@@ -80,7 +80,7 @@ export function StatisticsOverview({ days, compact = false }: { days: Statistics
   const data = statistics.data
 
   return (
-    <div className={cn('grid gap-4 transition-opacity', statistics.isFetching && 'opacity-70')}>
+    <div className={cn('grid grid-cols-1 gap-4 transition-opacity', statistics.isFetching && 'opacity-70')}>
       {!data.activity.isComplete && (
         <Alert>
           <AlertTriangle />
@@ -90,7 +90,7 @@ export function StatisticsOverview({ days, compact = false }: { days: Statistics
 
       <KeyFigures statistics={data} />
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Section
           className="lg:col-span-2"
           title={t('statistics.activity.title')}
@@ -106,7 +106,7 @@ export function StatisticsOverview({ days, compact = false }: { days: Statistics
       </div>
 
       {!compact && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Section title={t('statistics.topApplications.title')} description={t('statistics.topApplications.description')}>
             <Ranking
               empty={t('statistics.topApplications.empty')}
@@ -148,7 +148,7 @@ export function StatisticsOverview({ days, compact = false }: { days: Statistics
 function OverviewSkeleton() {
   return (
     <div className="grid gap-4" role="status" aria-busy="true">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {[0, 1, 2, 3].map((index) => (
           <Skeleton key={index} className="h-28 rounded-xl" />
         ))}
@@ -169,7 +169,7 @@ function KeyFigures({ statistics }: { statistics: PortalStatistics }) {
   const figure = (key: keyof ActivityTotals) => ({ value: current[key], previous: previous[key] })
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
       <KeyFigure icon={LogIn} label={t('statistics.kpi.signIns')} {...figure('signIns')} />
       <KeyFigure icon={UserCheck} label={t('statistics.kpi.activeUsers')} {...figure('activeUsers')} />
       <KeyFigure icon={AppWindow} label={t('statistics.kpi.applicationSignIns')} {...figure('applicationSignIns')} />
@@ -200,12 +200,12 @@ function KeyFigure({
   return (
     <Card className="gap-2 py-5">
       <CardContent className="grid gap-2">
-        <div className="text-muted-foreground flex items-center justify-between text-sm">
+        <div className="text-muted-foreground flex items-start justify-between gap-1 text-sm">
           <span>{label}</span>
-          <Icon className="size-4" />
+          <Icon className="size-4 shrink-0" />
         </div>
         <div className="text-3xl font-semibold tracking-tight tabular-nums">{formatNumber(value)}</div>
-        <div className="flex items-center gap-1 text-xs">
+        <div className="flex flex-wrap items-center gap-1 text-xs">
           {value !== previous && (
             <span className={cn('flex items-center font-medium', good ? 'text-success' : 'text-destructive')}>
               {up ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}
@@ -282,7 +282,7 @@ function ActivityChart({ statistics }: { statistics: PortalStatistics }) {
             isAnimationActive={false}
           />
         ))}
-        <ChartLegend content={<ChartLegendContent />} />
+        <ChartLegend content={<ChartLegendContent className="flex-wrap gap-x-3 gap-y-1" />} />
       </AreaChart>
     </ChartContainer>
   )

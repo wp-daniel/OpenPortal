@@ -1,24 +1,20 @@
 import { useQuery } from '@tanstack/react-query'
-import { AppWindow, ExternalLink, Sparkles } from 'lucide-react'
+import { AppWindow, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { accessKeys, launchpadApi } from '@/api/access'
 import { myAccessRequestsApi, requestKeys } from '@/api/requests'
 import { PageHeader } from '@/components/PageHeader'
 import { RequestAccessControl } from '@/components/RequestAccess'
 import { Section } from '@/components/Section'
-import { ErrorPanel, LoadingState } from '@/components/StatePanels'
 import { PeriodPicker, StatisticsLink, StatisticsOverview } from '@/components/StatisticsOverview'
 import type { StatisticsPeriod } from '@/lib/statistics'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useSession } from '@/hooks/useSession'
 import { useI18n } from '@/i18n/useI18n'
-import { describeError } from '@/lib/errors'
 
 /**
- * The landing page after sign-in: the overview for whoever holds the statistics page, the applications the user
- * can open (their launchpad), the ones they may ask for, then the portal's own areas.
+ * The activity overview, applications the user may request, and shortcuts to their portal pages.
  */
 export function DashboardPage() {
   const { user, canOpen } = useSession()
@@ -33,12 +29,12 @@ export function DashboardPage() {
       />
 
       {canOpen('statistics') && (
-        <section aria-labelledby="overview-title" className="mb-8 grid gap-3">
+        <section aria-labelledby="overview-title" className="mb-8 grid grid-cols-1 gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 id="overview-title" className="text-muted-foreground text-sm font-medium">
               {t('dashboard.overview')}
             </h2>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <PeriodPicker value={days} onChange={setDays} />
               <StatisticsLink />
             </div>
@@ -47,7 +43,6 @@ export function DashboardPage() {
         </section>
       )}
 
-      <Launchpad />
       <RequestableApplications />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -80,56 +75,9 @@ export function DashboardPage() {
             { to: '/admin/groups', label: t('nav.groups'), page: 'groups' },
             { to: '/admin/organizations', label: t('nav.organizations'), page: 'organizations' },
           ]}
-        />      </div>
+        />
+      </div>
     </>
-  )
-}
-
-/** The applications the user can open. */
-function Launchpad() {
-  const { t } = useI18n()
-
-  const launchpad = useQuery({
-    queryKey: accessKeys.launchpad,
-    queryFn: ({ signal }) => launchpadApi.list(signal),
-  })
-
-  return (
-    <section aria-labelledby="launchpad-title" className="mb-8 grid gap-3">
-      <h2 id="launchpad-title" className="text-muted-foreground text-sm font-medium">
-        {t('launchpad.title')}
-      </h2>
-
-      {launchpad.isError && <ErrorPanel message={describeError(launchpad.error)} onRetry={() => void launchpad.refetch()} />}
-      {launchpad.isPending && <LoadingState />}
-
-      {launchpad.data?.length === 0 && (
-        <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">{t('launchpad.empty')}</p>
-      )}
-
-      {launchpad.data && launchpad.data.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {launchpad.data.map((application) => (
-            <a
-              key={application.id}
-              href={application.baseUrl}
-              className="group focus-visible:ring-ring/50 rounded-xl outline-none focus-visible:ring-[3px]"
-            >
-              <Card className="group-hover:border-foreground/20 h-full transition-colors">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <AppWindow className="text-muted-foreground size-4" />
-                    {application.displayName}
-                    <ExternalLink className="text-muted-foreground ml-auto size-4 opacity-0 transition-opacity group-hover:opacity-100" />
-                  </CardTitle>
-                  {application.description && <CardDescription>{application.description}</CardDescription>}
-                </CardHeader>
-              </Card>
-            </a>
-          ))}
-        </div>
-      )}
-    </section>
   )
 }
 
@@ -147,7 +95,7 @@ function RequestableApplications() {
   }
 
   return (
-    <section aria-labelledby="catalog-title" className="mb-8 grid gap-3">
+    <section aria-labelledby="catalog-title" className="mb-8 grid grid-cols-1 gap-3">
       <div>
         <h2 id="catalog-title" className="text-muted-foreground flex items-center gap-1.5 text-sm font-medium">
           <Sparkles className="size-4" />

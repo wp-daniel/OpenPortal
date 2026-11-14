@@ -40,6 +40,7 @@ import { AdminPagePermissionsPage } from '@/pages/AdminPagePermissionsPage'
 import { AdminUsersPage } from '@/pages/AdminUsersPage'
 import { ConsentPage, DevicePage } from '@/pages/ConsentPages'
 import { DashboardPage } from '@/pages/DashboardPage'
+import { HomePage } from '@/pages/HomePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { SignInPage } from '@/pages/SignInPage'
 import { AppLayout } from '@/routes/AppLayout'
@@ -155,7 +156,8 @@ const router = createBrowserRouter([
                 element: <AppLayout />,
                 // Each `handle.crumbs` adds steps to the header breadcrumb trail (see AppBreadcrumbs).
                 children: [
-                  { index: true, element: <DashboardPage />, handle: crumbs({ labelKey: 'nav.dashboard', to: '/' }) },
+                  { index: true, element: <HomePage />, handle: crumbs({ labelKey: 'nav.home', to: '/' }) },
+                  { path: 'dashboard', element: <DashboardPage />, handle: crumbs({ labelKey: 'nav.dashboard' }) },
                   { path: 'account', element: <AccountPage />, handle: crumbs({ labelKey: 'nav.account' }) },
                   { path: 'access-denied', element: <AccessDeniedPage />, handle: crumbs({ labelKey: 'nav.accessDenied' }) },
                   { path: 'notifications', element: <NotificationsPage />, handle: crumbs({ labelKey: 'nav.notifications' }) },

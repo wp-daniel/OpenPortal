@@ -298,7 +298,7 @@ public sealed record ListSlice(string? Search = null, int Skip = 0, int? Take = 
 public sealed record SliceDto<T>(IReadOnlyList<T> Items, int TotalCount);
 
 /// <summary>An application on a user's launchpad.</summary>
-public sealed record LaunchpadItemDto(Guid Id, string ClientId, string DisplayName, string? Description, string BaseUrl);
+public sealed record LaunchpadItemDto(Guid Id, string ClientId, string DisplayName, string? Description, string BaseUrl, string? IconUrl = null);
 
 /// <summary>The answer to "may this user sign in to this client".</summary>
 /// <param name="Allowed">True only when the application is active and the user holds a grant.</param>

@@ -36,7 +36,7 @@ const PASSKEY_REQUIRED = 'identity.passkey_required'
  * only sends the code.
  *
  * Navigation after success is not done here: invalidating the session makes <PublicOnlyRoute> redirect to
- * the page the user originally asked for (or the dashboard).
+ * the page the user originally asked for (or Home).
  */
 const makeSchema = (t: TFunction) =>
   z.object({

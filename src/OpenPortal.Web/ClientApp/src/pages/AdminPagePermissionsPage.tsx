@@ -155,7 +155,7 @@ function GroupPages({ group, matrix }: { group: GroupReference; matrix: PagePerm
       title={group.name}
       description={t('pagePermissions.groupSummary', { count: granted.size, total: allKeys.length })}
       actions={
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"

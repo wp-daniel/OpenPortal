@@ -5,6 +5,7 @@ using OpenPortal.Web.Security;
 using OpenPortal.Access.Application.Abstractions;
 using OpenPortal.Access.Application.Contracts;
 using OpenPortal.Identity.Application.Abstractions;
+using OpenPortal.SharedKernel.Text;
 using OpenPortal.Web.Infrastructure;
 
 using OpenPortal.Web.Authorization;
@@ -20,11 +21,13 @@ public sealed class LaunchpadController : ControllerBase
 {
     private readonly IAccessEvaluator _access;
     private readonly ICurrentUser _currentUser;
+    private readonly string? _iconDirectory;
 
-    public LaunchpadController(IAccessEvaluator access, ICurrentUser currentUser)
+    public LaunchpadController(IAccessEvaluator access, ICurrentUser currentUser, IConfiguration configuration)
     {
         _access = access;
         _currentUser = currentUser;
+        _iconDirectory = configuration["Launchpad:IconDirectory"];
     }
 
     [HttpGet]
@@ -37,7 +40,41 @@ public sealed class LaunchpadController : ControllerBase
             return Unauthorized();
         }
 
-        return Ok(await _access.GetLaunchpadAsync(userId, cancellationToken).ConfigureAwait(false));
+        var apps = await _access.GetLaunchpadAsync(userId, cancellationToken).ConfigureAwait(false);
+        return Ok(apps.Select(app => FindIcon(app.ClientId) is { } icon
+            ? app with { IconUrl = Url.Action(nameof(IconAsync), new { clientId = app.ClientId, v = icon.LastWriteTimeUtc.Ticks }) }
+            : app).ToArray());
+    }
+
+    [HttpGet("{clientId}/icon")]
+    [Produces("image/png")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> IconAsync(string clientId, CancellationToken cancellationToken)
+    {
+        if (_currentUser.UserId is not Guid userId)
+        {
+            return Unauthorized();
+        }
+
+        var icon = FindIcon(clientId);
+        if (icon is null || !(await _access.EvaluateAsync(userId, clientId, cancellationToken).ConfigureAwait(false)).Allowed)
+        {
+            return NotFound();
+        }
+
+        return PhysicalFile(icon.FullName, "image/png");
+    }
+
+    private FileInfo? FindIcon(string clientId)
+    {
+        if (string.IsNullOrWhiteSpace(_iconDirectory) || !TextRules.TryNormaliseSlug(clientId, out var slug) || slug != clientId)
+        {
+            return null;
+        }
+
+        var file = new FileInfo(Path.Combine(_iconDirectory, slug + ".png"));
+        return file.Exists ? file : null;
     }
 }
 

@@ -25,6 +25,7 @@
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <data name="nav.skip" xml:space="preserve"><value>Skip to content</value></data>
+  <data name="nav.home" xml:space="preserve"><value>Home</value></data>
   <data name="nav.dashboard" xml:space="preserve"><value>Dashboard</value></data>
   <data name="nav.users" xml:space="preserve"><value>Users</value></data>
   <data name="nav.account" xml:space="preserve"><value>Account</value></data>
@@ -64,7 +65,7 @@
   <data name="guards.errorMessage" xml:space="preserve"><value>The server could not be reached. Try again in a moment.</value></data>
   <data name="notFound.title" xml:space="preserve"><value>Page not found</value></data>
   <data name="notFound.description" xml:space="preserve"><value>The address you followed does not match anything on this portal.</value></data>
-  <data name="notFound.back" xml:space="preserve"><value>Back to the dashboard</value></data>
+  <data name="notFound.back" xml:space="preserve"><value>Back to Home</value></data>
   <data name="validation.emailRequired" xml:space="preserve"><value>Email is required.</value></data>
   <data name="validation.emailInvalid" xml:space="preserve"><value>Enter a valid email address.</value></data>
   <data name="validation.passwordRequired" xml:space="preserve"><value>Password is required.</value></data>
@@ -193,13 +194,14 @@
   <data name="nav.groups" xml:space="preserve"><value>Groups</value></data>
   <data name="guards.redirecting" xml:space="preserve"><value>Returning to the application…</value></data>
   <data name="launchpad.title" xml:space="preserve"><value>Your applications</value></data>
+  <data name="launchpad.newTab" xml:space="preserve"><value>Opens in a new tab</value></data>
   <data name="launchpad.empty" xml:space="preserve"><value>You have not been given access to any application yet.</value></data>
   <data name="dashboard.access.title" xml:space="preserve"><value>Application access</value></data>
   <data name="dashboard.access.description" xml:space="preserve"><value>Register applications, organise users into groups and decide who can open what.</value></data>
   <data name="users.access" xml:space="preserve"><value>Access</value></data>
   <data name="accessDenied.title" xml:space="preserve"><value>You do not have access to {application}</value></data>
   <data name="accessDenied.description" xml:space="preserve"><value>Ask an administrator to give you access, directly or through one of your groups.</value></data>
-  <data name="accessDenied.back" xml:space="preserve"><value>Back to the dashboard</value></data>
+  <data name="accessDenied.back" xml:space="preserve"><value>Back to Home</value></data>
   <data name="accessDenied.unknownApplication" xml:space="preserve"><value>this application</value></data>
   <data name="applications.title" xml:space="preserve"><value>Applications</value></data>
   <data name="applications.description" xml:space="preserve"><value>Applications that sign their users in through this portal.</value></data>
@@ -276,7 +278,7 @@
   <data name="applications.form.description" xml:space="preserve"><value>Description</value></data>
   <data name="applications.form.descriptionMax" xml:space="preserve"><value>Use at most {max} characters.</value></data>
   <data name="applications.form.baseUrl" xml:space="preserve"><value>Application URL</value></data>
-  <data name="applications.form.baseUrlHint" xml:space="preserve"><value>Where users open it from their dashboard.</value></data>
+  <data name="applications.form.baseUrlHint" xml:space="preserve"><value>The address users open from Home.</value></data>
   <data name="applications.form.baseUrlInvalid" xml:space="preserve"><value>Enter an absolute http or https URL.</value></data>
   <data name="applications.form.redirectUris" xml:space="preserve"><value>Sign-in redirect URIs</value></data>
   <data name="applications.form.redirectUrisHint" xml:space="preserve"><value>One per line, usually …/signin-oidc. https only (http is allowed for localhost).</value></data>

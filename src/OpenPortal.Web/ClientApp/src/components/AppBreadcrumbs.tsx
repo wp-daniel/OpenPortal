@@ -28,7 +28,7 @@ export interface RouteHandle {
   readonly page?: string
 }
 
-const home: Crumb = { labelKey: 'nav.dashboard', to: '/' }
+const home: Crumb = { labelKey: 'nav.home', to: '/' }
 
 /**
  * The trail shown in the header, built from the `handle.crumbs` of every matched route, so the route tree in

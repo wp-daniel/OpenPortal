@@ -56,7 +56,7 @@ export function ProtectedRoute() {
 /**
  * Nested inside {@link ProtectedRoute}: lets through holders of the page the matched route declares in
  * `handle.page` (administrators hold every page); a route without one is for administrators only. Everyone
- * else returns to the dashboard. A new route is protected by declaring its page, with no change here.
+ * else returns to Home. A new route is protected by declaring its page, with no change here.
  */
 export function PageRoute() {
   const { isAdministrator, canOpen } = useSession()

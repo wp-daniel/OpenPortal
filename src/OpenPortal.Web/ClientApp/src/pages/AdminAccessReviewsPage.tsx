@@ -240,7 +240,7 @@ function ReviewDetail({ reviewId }: { reviewId: string }) {
         description={t('reviews.detailDescription', { application: summary.applicationName })}
         actions={
           open ? (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={() => setConfirming('cancel')}>
                 <Ban />
                 {t('reviews.cancel')}

@@ -25,6 +25,7 @@
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <data name="nav.skip" xml:space="preserve"><value>Aller au contenu</value></data>
+  <data name="nav.home" xml:space="preserve"><value>Accueil</value></data>
   <data name="nav.dashboard" xml:space="preserve"><value>Tableau de bord</value></data>
   <data name="nav.users" xml:space="preserve"><value>Utilisateurs</value></data>
   <data name="nav.account" xml:space="preserve"><value>Compte</value></data>
@@ -64,7 +65,7 @@
   <data name="guards.errorMessage" xml:space="preserve"><value>Le serveur est injoignable. Réessayez dans un instant.</value></data>
   <data name="notFound.title" xml:space="preserve"><value>Page introuvable</value></data>
   <data name="notFound.description" xml:space="preserve"><value>L'adresse suivie ne correspond à rien sur ce portail.</value></data>
-  <data name="notFound.back" xml:space="preserve"><value>Retour au tableau de bord</value></data>
+  <data name="notFound.back" xml:space="preserve"><value>Retour à l’accueil</value></data>
   <data name="validation.emailRequired" xml:space="preserve"><value>L'e-mail est obligatoire.</value></data>
   <data name="validation.emailInvalid" xml:space="preserve"><value>Saisissez une adresse e-mail valide.</value></data>
   <data name="validation.passwordRequired" xml:space="preserve"><value>Le mot de passe est obligatoire.</value></data>
@@ -193,13 +194,14 @@
   <data name="nav.groups" xml:space="preserve"><value>Groupes</value></data>
   <data name="guards.redirecting" xml:space="preserve"><value>Retour à l'application…</value></data>
   <data name="launchpad.title" xml:space="preserve"><value>Vos applications</value></data>
+  <data name="launchpad.newTab" xml:space="preserve"><value>S’ouvre dans un nouvel onglet</value></data>
   <data name="launchpad.empty" xml:space="preserve"><value>Vous n'avez encore accès à aucune application.</value></data>
   <data name="dashboard.access.title" xml:space="preserve"><value>Accès aux applications</value></data>
   <data name="dashboard.access.description" xml:space="preserve"><value>Enregistrez des applications, regroupez les utilisateurs et décidez qui peut ouvrir quoi.</value></data>
   <data name="users.access" xml:space="preserve"><value>Accès</value></data>
   <data name="accessDenied.title" xml:space="preserve"><value>Vous n'avez pas accès à {application}</value></data>
   <data name="accessDenied.description" xml:space="preserve"><value>Demandez à un administrateur de vous donner accès, directement ou via l'un de vos groupes.</value></data>
-  <data name="accessDenied.back" xml:space="preserve"><value>Retour au tableau de bord</value></data>
+  <data name="accessDenied.back" xml:space="preserve"><value>Retour à l’accueil</value></data>
   <data name="accessDenied.unknownApplication" xml:space="preserve"><value>cette application</value></data>
   <data name="applications.title" xml:space="preserve"><value>Applications</value></data>
   <data name="applications.description" xml:space="preserve"><value>Applications qui connectent leurs utilisateurs via ce portail.</value></data>
@@ -276,7 +278,7 @@
   <data name="applications.form.description" xml:space="preserve"><value>Description</value></data>
   <data name="applications.form.descriptionMax" xml:space="preserve"><value>Utilisez au maximum {max} caractères.</value></data>
   <data name="applications.form.baseUrl" xml:space="preserve"><value>URL de l'application</value></data>
-  <data name="applications.form.baseUrlHint" xml:space="preserve"><value>Où les utilisateurs l'ouvrent depuis leur tableau de bord.</value></data>
+  <data name="applications.form.baseUrlHint" xml:space="preserve"><value>L’adresse que les utilisateurs ouvrent depuis l’accueil.</value></data>
   <data name="applications.form.baseUrlInvalid" xml:space="preserve"><value>Saisissez une URL absolue http ou https.</value></data>
   <data name="applications.form.redirectUris" xml:space="preserve"><value>URI de redirection de connexion</value></data>
   <data name="applications.form.redirectUrisHint" xml:space="preserve"><value>Une par ligne, généralement …/signin-oidc. https uniquement (http autorisé pour localhost).</value></data>

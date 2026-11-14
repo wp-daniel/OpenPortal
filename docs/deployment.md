@@ -56,6 +56,10 @@ Everything it must keep lives in `/data`; mount a volume there:
 | `/data/oidc` | token signing and encryption certificates, created on first start (`Oidc:CertificatesPath`) | every application's tokens stop working; users sign in again |
 | `/data/openportal.db` | the SQLite database (SQLite only) | everything |
 
+For optional Home card icons, set `Launchpad__IconDirectory` to a directory readable by the portal,
+such as `/data/application-icons`. Place a square PNG named `<client-id>.png` there for each application.
+The Home page shows the application's initial when an image is missing. Icons can be replaced without rebuilding the image.
+
 **Signing key rollover.** With `Oidc:CertificatesPath` the portal renews its own signing certificate: two months
 before one expires it writes a successor that becomes valid a week later and is published in the JWKS at once,
 so applications already trust it when it starts signing. Keys are read at startup: restart the instances (a

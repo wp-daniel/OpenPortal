@@ -440,6 +440,7 @@ export interface LaunchpadItem {
   readonly displayName: string
   readonly description: string | null
   readonly baseUrl: string
+  readonly iconUrl?: string | null
 }
 
 /** A page of the portal that can be granted to groups. Labels are translation keys. */

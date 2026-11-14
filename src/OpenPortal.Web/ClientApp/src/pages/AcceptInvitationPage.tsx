@@ -105,7 +105,7 @@ function AcceptForm({ token, invitation }: { token: string; invitation: Invitati
         acceptedLegalDocumentIds: consent.documentIds,
       }),
     meta: { handlesErrors: true },
-    // Signed in: the public-only route takes the new account to the dashboard.
+    // Signed in: the public-only route takes the new account to Home.
     onSuccess: () => queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY }),
     onError: (failure) => reportFormError(failure, t('invitation.failed')),
   })

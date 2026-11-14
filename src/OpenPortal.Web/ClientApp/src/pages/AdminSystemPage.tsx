@@ -107,7 +107,7 @@ export function AdminSystemPage() {
               </span>
             }
           >
-            <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+            <dl className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
               {[
                 [t('system.version'), status.data.version],
                 [t('system.environment'), status.data.environment],
@@ -118,7 +118,7 @@ export function AdminSystemPage() {
               ].map(([label, value]) => (
                 <div key={label} className="grid gap-0.5">
                   <dt className="text-muted-foreground text-xs">{label}</dt>
-                  <dd className="font-medium break-words">{value}</dd>
+                  <dd className="font-medium wrap-anywhere">{value}</dd>
                 </div>
               ))}
             </dl>

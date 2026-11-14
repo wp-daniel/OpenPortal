@@ -18,10 +18,12 @@ export function Section({
   return (
     <Card className={className}>
       {(title || description || actions) && (
-        <CardHeader>
-          {title && <CardTitle>{title}</CardTitle>}
-          {description && <CardDescription>{description}</CardDescription>}
-          {actions && <CardAction>{actions}</CardAction>}
+        <CardHeader className="flex flex-wrap items-start justify-between">
+          <div className="min-w-0 flex-[1_1_14rem] space-y-2 wrap-anywhere">
+            {title && <CardTitle>{title}</CardTitle>}
+            {description && <CardDescription>{description}</CardDescription>}
+          </div>
+          {actions && <CardAction className="max-w-full">{actions}</CardAction>}
         </CardHeader>
       )}
       {children && <CardContent>{children}</CardContent>}

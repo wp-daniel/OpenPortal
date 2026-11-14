@@ -86,7 +86,7 @@ OpenIddict, on SQLite by default, organised as a modular monolith whose boundari
   in again)
 - Per-application access for users and for groups; withdrawing access revokes tokens and is re-checked on every refresh
 - Applications announce themselves and wait for approval; a NuGet package (`OpenPortal.Client`) does the wiring
-- A launchpad on the dashboard with the applications each user may open
+- A Home page with cards that open each user’s authorized applications in a new tab
 - Application roles: each application declares the roles it checks, administrators assign them on grants (to
   users or groups), and they reach the application as `role` claims (`User.IsInRole("sales")` just works); an
   application may also receive the user's groups as `groups` claims, if its setting allows

@@ -6,6 +6,7 @@ import {
   ChevronsUpDown,
   Headset,
   History,
+  House,
   LayoutDashboard,
   Megaphone,
   LogOut,
@@ -54,7 +55,7 @@ interface NavLeaf {
   readonly to: string
   /** Translation key of the link text. */
   readonly labelKey: string
-  /** Match only this exact path (the dashboard at `/` would otherwise be active everywhere). */
+  /** Match only this exact path (Home at `/` would otherwise be active everywhere). */
   readonly end?: boolean
   /**
    * Administration links only: the portal page (server `PortalPages` key) the link opens, shown to holders of
@@ -79,7 +80,8 @@ interface NavBranch {
 }
 
 export const portalLinks: readonly NavEntry[] = [
-  { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard, end: true },
+  { to: '/', labelKey: 'nav.home', icon: House, end: true },
+  { to: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
   { to: '/notifications', labelKey: 'nav.notifications', icon: Bell, badge: 'notifications' },
   { to: '/account', labelKey: 'nav.account', icon: UserRound },
 ]
