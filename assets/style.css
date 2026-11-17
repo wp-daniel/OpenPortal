@@ -111,9 +111,6 @@ h1 span { color: var(--caption); }
 .hero-art::before { content: ""; position: absolute; z-index: -1; inset: 0; background-image: radial-gradient(circle, #aaa 0.7px, transparent 1px); background-size: 16px 16px; mask-image: radial-gradient(ellipse at center, #0009 15%, transparent 72%); }
 .hero-art > svg { display: block; width: 56%; max-width: 340px; height: auto; overflow: visible; }
 .hero-art > svg path[stroke] { stroke: var(--brand-ink); }
-.mark-replay { position: absolute; right: 6%; bottom: 1%; display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; background: var(--panel); color: var(--muted); border: 1px solid var(--line); border-radius: 20px; font-size: 12px; font-weight: 550; }
-.mark-replay:hover { color: var(--ink); background: var(--hover); }
-.mark-replay .ico { width: 14px; height: 14px; }
 .specs { display: grid; grid-template-columns: 1fr 1.07fr 1.26fr .83fr; padding-block: 22px; border-block: 1px solid var(--line); }
 .specs > div { padding: 0 clamp(12px, 2.3vw, 36px); border-left: 1px solid var(--line); }
 .specs > div:first-child { padding-left: 0; border-left: 0; }
@@ -291,3 +288,29 @@ footer { padding-block: 34px; background: var(--footer); color: white; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; }
 }
+
+
+.portal-demo { display: flex; min-height: 350px; }
+.portal-sidebar { display: flex; flex-direction: column; gap: 12px; width: 145px; flex: none; padding: 16px 12px; border-right: 1px solid var(--line); background: var(--card); font-size: 11px; }
+.portal-sidebar > img { width: 112px; filter: var(--logo-filter); margin-bottom: 12px; }
+.portal-sidebar > small { color: var(--caption); font-size: 10px; }
+.portal-sidebar > span { display: flex; align-items: center; gap: 8px; padding: 6px; }
+.portal-active { background: var(--tint); border-radius: 6px; font-weight: 600; }
+.portal-person { margin-top: auto; display: flex; align-items: center; gap: 6px; font-size: 10px; }
+.portal-person small { display: block; font-size: 8px; color: var(--caption); margin-top: 3px; }
+.portal-main { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+.portal-toolbar { display: flex; align-items: center; gap: 12px; padding: 14px; border-bottom: 1px solid var(--line); font-size: 11px; }
+.portal-content { padding: 24px 16px; flex: 1; }
+.portal-content h3 { font-size: 20px; letter-spacing: -.04em; margin-bottom: 20px; }
+.portal-apps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.portal-apps button { display: grid; grid-template-columns: 1fr auto; gap: 9px; padding: 14px; text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; transition: background-color .25s, transform .25s; }
+.portal-apps button:hover, .portal-apps button[aria-expanded=true] { background: var(--tint); transform: translateY(-2px); }
+.portal-initial { display: grid; place-items: center; width: 34px; height: 34px; background: var(--action); color: var(--on-action); border-radius: 9px; font-size: 17px; font-weight: 600; }
+.portal-apps b, .portal-apps small { grid-column: 1 / -1; }
+.portal-apps b { font-size: 13px; }
+.portal-apps small { font-size: 10px; color: var(--muted); }
+.portal-detail { font-size: 11px; line-height: 1.5; margin-top: 16px; color: var(--muted); }
+.portal-bottom { padding: 12px; font-size: 9px; color: var(--caption); border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 8px; }
+.demo-stage { grid-template-columns: .65fr 1.35fr; gap: 5%; }
+@media(max-width: 1000px) { .demo-stage { grid-template-columns: 1fr; } .demo-description { max-width: 600px; } }
+@media(max-width: 480px) { .portal-sidebar { width: 82px; padding: 12px 5px; font-size: 8px; gap: 10px; } .portal-sidebar > span { gap: 3px; padding: 4px 2px; } .portal-person > span:last-child { display: none; } .portal-content { padding: 18px 10px; } .portal-apps { grid-template-columns: 1fr; } .portal-apps button { padding: 10px; } .portal-content h3 { font-size: 17px; } .portal-bottom { flex-direction: column; } }

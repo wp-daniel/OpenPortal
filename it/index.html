@@ -199,7 +199,6 @@
       </div>
       <div class="hero-art">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="-105.0 -85.0 210.0 164.0" width="512" height="400" role="img" aria-label="OpenPortal"><defs><mask id="sL" maskUnits="userSpaceOnUse" x="-114" y="-87.0" width="228" height="168"><rect x="-114" y="-87.0" width="228" height="168" fill="#fff"/><g fill="#000"><rect x="-87.0" y="10.299999999999997" width="22" height="34"/><rect x="65.0" y="10.299999999999997" width="22" height="34"/></g></mask><mask id="sW" maskUnits="userSpaceOnUse" x="-114" y="-87.0" width="228" height="168"><rect x="-114" y="-87.0" width="228" height="168" fill="#fff"/><g fill="#000"><rect x="-55.0" y="16.299999999999997" width="34" height="22"/><rect x="21.0" y="16.299999999999997" width="34" height="22"/></g></mask></defs><g mask="url(#sL)"><path d="M-38,70 L-38,0 A38,38 0 0 1 38,0 L38,70" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/><path d="M-76,70 L-76,0 A76,76 0 0 1 76,0 L76,70" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></g><g mask="url(#sW)"><path d="M-96,27.299999999999997 L96,27.299999999999997" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></g></svg>
-        <button class="mark-replay" type="button" hidden aria-label="Rivedi l’animazione del logo OpenPortal"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-replay"></use></svg> Rivedi</button>
       </div>
     </section>
     <dl class="specs wrap" aria-label="Tecnologie e licenza">
@@ -213,41 +212,30 @@
       <div class="demo-stage">
         <div class="demo-copy">
           <p class="eyebrow light"><span class="signal" aria-hidden="true"></span>Demo interattiva</p>
-          <h2 id="demo-title">Dentro OpenPortal.</h2><p class="demo-description">Entra come Elena e apri un’app del suo team. La demo simula nel browser il percorso di accesso, con un account di esempio.</p>
-          <button id="tour" type="button" class="tour" data-play="Guarda il tour" data-pause="Pausa" data-resume="Riprendi il tour" data-replay="Rivedi il tour">
-            <span id="tour-icon"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg></span><span id="tour-label">Guarda il tour</span>
-          </button>
-          <ol class="steps" aria-label="Percorso della demo">
-            <li aria-current="step"><span class="step-dot"></span>Identità</li>
-            <li><span class="step-dot"></span>Applicazioni</li>
-            <li><span class="step-dot"></span>Sessione SSO</li>
-          </ol>
+          <h2 id="demo-title">Dentro OpenPortal.</h2><p class="demo-description">Esplora la Home del portale, con la barra laterale e le schede delle applicazioni. Le app e l’account mostrati sono dati di esempio.</p>
         </div>
-        <div class="console" role="group" aria-label="Simulatore di accesso">
-          <div class="chrome"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="address"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-lock"></use></svg> <span id="address">portal.example.test/sign-in</span></span><span class="window-end" aria-hidden="true"></span></div>
-          <div class="preview">
-            <div data-scene="0" class="scene">
-              <span class="app-mark"><img src="../assets/openportal-symbol-white.svg" width="512" height="400" alt=""></span>
-              <h3 tabindex="-1">Accedi al portale</h3><p>Usa il profilo di esempio per entrare.</p>
-              <div class="account"><span class="avatar">ER</span><span><b>Elena Rossi</b><small>elena@example.test</small></span></div>
-              <button type="button" class="window-primary" id="sign-in">Continua come Elena <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-arrow"></use></svg></button>
-            </div>
-            <div data-scene="1" class="scene" hidden>
-              <span class="app-mark"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-grid"></use></svg></span>
-              <h3 tabindex="-1">Le tue applicazioni</h3><p>Scegli un’app autorizzata per il tuo account.</p>
-              <div class="app-list">
-                <button type="button" data-app="archive" data-host="archive"><span class="app-square"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-archive"></use></svg></span><span><b>Archivio</b><small>Documenti del team</small></span><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-arrow"></use></svg></button>
-                <button type="button" data-app="desk" data-host="desk"><span class="app-square"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-desk"></use></svg></span><span><b>Service Desk</b><small>Richieste di assistenza</small></span><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-arrow"></use></svg></button>
+        <div class="console portal-demo" data-app-note="In OpenPortal questa scheda apre l’applicazione autorizzata in una nuova scheda." role="group" aria-label="Simulatore di accesso">
+          <aside class="portal-sidebar">
+            <img src="../assets/openportal-logo.svg" width="1044" height="260" alt="OpenPortal">
+            <small>Portale</small>
+            <span class="portal-active"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-grid"></use></svg> Home</span>
+            <span><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-desk"></use></svg> Dashboard</span>
+            <span><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-license"></use></svg> Notifiche</span>
+            <span><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-key"></use></svg> Account</span>
+            <div class="portal-person"><span class="avatar">ER</span><span>Elena Rossi<small>elena@example.test</small></span></div>
+          </aside>
+          <div class="portal-main">
+            <div class="portal-toolbar"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-menu"></use></svg> <span>Home</span></div>
+            <div class="portal-content">
+              <h3>Le tue applicazioni</h3>
+              <div class="portal-apps">
+                <button type="button" data-demo-app="archive" aria-expanded="false"><span class="portal-initial">A</span><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-ne"></use></svg><b>Archivio</b><small>Documenti del team</small></button>
+                <button type="button" data-demo-app="desk" aria-expanded="false"><span class="portal-initial">S</span><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-ne"></use></svg><b>Service Desk</b><small>Richieste di assistenza</small></button>
               </div>
+              <p class="portal-detail" hidden role="status"></p>
             </div>
-            <div data-scene="2" class="scene" hidden>
-              <span class="app-mark"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-check"></use></svg></span>
-              <h3 tabindex="-1" id="session-title">Archivio</h3><p>OpenPortal ha verificato i permessi di Elena. La sessione del portale le consente di entrare nell’app.</p>
-              <div class="grant"><span>Identità <b>Elena Rossi</b></span><span><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-check"></use></svg> Accesso consentito</span></div>
-              <button type="button" class="window-secondary" id="switch-app">Cambia applicazione <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-arrow"></use></svg></button>
-            </div>
+            <div class="portal-bottom">OpenPortal · 2026 <span>Ambiente dimostrativo</span></div>
           </div>
-          <div class="window-footer"><img src="../assets/openportal-logo.svg" width="1044" height="260" alt="OpenPortal"><span>Ambiente dimostrativo</span></div>
         </div>
         <noscript><p>Attiva JavaScript per provare il simulatore.</p></noscript>
       </div>
