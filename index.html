@@ -197,7 +197,7 @@
         <p class="lead">Connect your ASP.NET Core applications to OpenPortal and manage identities and permissions on your own server.</p>
         <div class="hero-actions"><a class="primary" href="#demo"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> Try the demo</a><a class="quiet" href="#platform">Explore the platform <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-down"></use></svg></a></div>
       </div>
-      <div class="hero-art">
+      <div class="hero-art" data-replay-label="Replay the OpenPortal logo animation">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="-105.0 -85.0 210.0 164.0" width="512" height="400" role="img" aria-label="OpenPortal"><defs><mask id="sL" maskUnits="userSpaceOnUse" x="-114" y="-87.0" width="228" height="168"><rect x="-114" y="-87.0" width="228" height="168" fill="#fff"/><g fill="#000"><rect x="-87.0" y="10.299999999999997" width="22" height="34"/><rect x="65.0" y="10.299999999999997" width="22" height="34"/></g></mask><mask id="sW" maskUnits="userSpaceOnUse" x="-114" y="-87.0" width="228" height="168"><rect x="-114" y="-87.0" width="228" height="168" fill="#fff"/><g fill="#000"><rect x="-55.0" y="16.299999999999997" width="34" height="22"/><rect x="21.0" y="16.299999999999997" width="34" height="22"/></g></mask></defs><g mask="url(#sL)"><path d="M-38,70 L-38,0 A38,38 0 0 1 38,0 L38,70" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/><path d="M-76,70 L-76,0 A76,76 0 0 1 76,0 L76,70" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></g><g mask="url(#sW)"><path d="M-96,27.299999999999997 L96,27.299999999999997" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></g></svg>
       </div>
     </section>
@@ -212,30 +212,41 @@
       <div class="demo-stage">
         <div class="demo-copy">
           <p class="eyebrow light"><span class="signal" aria-hidden="true"></span>Interactive demo</p>
-          <h2 id="demo-title">Inside OpenPortal.</h2><p class="demo-description">Explore the portal’s Home page with its sidebar and application cards. The applications and account shown here are sample data.</p>
+          <h2 id="demo-title">Inside OpenPortal.</h2><p class="demo-description">Sign in as Elena and open one of her team’s apps. This browser demo walks through the sign-in flow with a sample account.</p>
+          <button id="tour" type="button" class="tour" data-play="Watch the tour" data-pause="Pause" data-resume="Resume tour" data-replay="Replay tour">
+            <span id="tour-icon"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg></span><span id="tour-label">Watch the tour</span>
+          </button>
+          <ol class="steps" aria-label="Demo progress">
+            <li aria-current="step"><span class="step-dot"></span>Identity</li>
+            <li><span class="step-dot"></span>Applications</li>
+            <li><span class="step-dot"></span>SSO session</li>
+          </ol>
         </div>
-        <div class="console portal-demo" data-app-note="In OpenPortal, this card opens the authorized application in a new tab." role="group" aria-label="Sign-in simulator">
-          <aside class="portal-sidebar">
-            <img src="./assets/openportal-logo.svg" width="1044" height="260" alt="OpenPortal">
-            <small>Portal</small>
-            <span class="portal-active"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-grid"></use></svg> Home</span>
-            <span><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-desk"></use></svg> Dashboard</span>
-            <span><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-license"></use></svg> Notifications</span>
-            <span><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-key"></use></svg> Account</span>
-            <div class="portal-person"><span class="avatar">ER</span><span>Elena Rossi<small>elena@example.test</small></span></div>
-          </aside>
-          <div class="portal-main">
-            <div class="portal-toolbar"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-menu"></use></svg> <span>Home</span></div>
-            <div class="portal-content">
-              <h3>Your applications</h3>
-              <div class="portal-apps">
-                <button type="button" data-demo-app="archive" aria-expanded="false"><span class="portal-initial">A</span><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-ne"></use></svg><b>Archive</b><small>Team documents</small></button>
-                <button type="button" data-demo-app="desk" aria-expanded="false"><span class="portal-initial">S</span><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-ne"></use></svg><b>Service Desk</b><small>Support requests</small></button>
-              </div>
-              <p class="portal-detail" hidden role="status"></p>
+        <div class="console" role="group" aria-label="Sign-in simulator">
+          <div class="chrome"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="address"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-lock"></use></svg> <span id="address">portal.example.test/sign-in</span></span><span class="window-end" aria-hidden="true"></span></div>
+          <div class="preview">
+            <div data-scene="0" class="scene">
+              <span class="app-mark"><img src="./assets/openportal-symbol-white.svg" width="512" height="400" alt=""></span>
+              <h3 tabindex="-1">Sign in to the portal</h3><p>Enter with the sample profile.</p>
+              <div class="account"><span class="avatar">ER</span><span><b>Elena Rossi</b><small>elena@example.test</small></span></div>
+              <button type="button" class="window-primary" id="sign-in">Continue as Elena <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-arrow"></use></svg></button>
             </div>
-            <div class="portal-bottom">OpenPortal · 2026 <span>Demo environment</span></div>
+            <div data-scene="1" class="scene" hidden>
+              <span class="app-mark"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-grid"></use></svg></span>
+              <h3 tabindex="-1">Your applications</h3><p>Choose an app your account can access.</p>
+              <div class="app-list">
+                <button type="button" data-app="archive" data-host="archive"><span class="app-square"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-archive"></use></svg></span><span><b>Archive</b><small>Team documents</small></span><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-arrow"></use></svg></button>
+                <button type="button" data-app="desk" data-host="desk"><span class="app-square"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-desk"></use></svg></span><span><b>Service Desk</b><small>Support requests</small></span><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-arrow"></use></svg></button>
+              </div>
+            </div>
+            <div data-scene="2" class="scene" hidden>
+              <span class="app-mark"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-check"></use></svg></span>
+              <h3 tabindex="-1" id="session-title">Archive</h3><p>OpenPortal has checked Elena’s permissions. Her portal session lets her sign in to the app.</p>
+              <div class="grant"><span>Identity <b>Elena Rossi</b></span><span><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-check"></use></svg> Access granted</span></div>
+              <button type="button" class="window-secondary" id="switch-app">Switch application <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-arrow"></use></svg></button>
+            </div>
           </div>
+          <div class="window-footer"><img src="./assets/openportal-logo.svg" width="1044" height="260" alt="OpenPortal"><span>Demo environment</span></div>
         </div>
         <noscript><p>Enable JavaScript to try the simulator.</p></noscript>
       </div>

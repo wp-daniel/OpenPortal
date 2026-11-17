@@ -3,6 +3,7 @@
 
   function setupBrandMotion() {
     const mark = document.querySelector('.hero-art > svg');
+    const label = document.querySelector('.hero-art').dataset.replayLabel;
     if (typeof mark.animate !== 'function') return;
 
     // The official SVG shares a mask between its concentric arches.
@@ -57,9 +58,20 @@
     }
 
     function applyPreference() {
+      mark.setAttribute('role', motionPreference.matches ? 'img' : 'button');
+      mark.setAttribute('aria-label', motionPreference.matches ? 'OpenPortal' : label);
+      if (motionPreference.matches) mark.removeAttribute('tabindex');
+      else mark.setAttribute('tabindex', '0');
       if (motionPreference.matches) stop();
       else play();
     }
+    mark.addEventListener('click', play);
+    mark.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        play();
+      }
+    });
     motionPreference.addEventListener('change', applyPreference);
     applyPreference();
   }
@@ -103,15 +115,95 @@
     }
   }
 
-  const demoApps = [...document.querySelectorAll('[data-demo-app]')];
-  const detail = document.querySelector('.portal-detail');
-  for (const app of demoApps) {
-    app.addEventListener('click', () => {
-      const open = app.getAttribute('aria-expanded') !== 'true';
-      for (const item of demoApps) item.setAttribute('aria-expanded', 'false');
-      app.setAttribute('aria-expanded', String(open));
-      detail.hidden = !open;
-      detail.textContent = app.querySelector('b').textContent + ' — ' + document.querySelector('.portal-demo').dataset.appNote;
+  const scenes = [...document.querySelectorAll('[data-scene]')];
+  const steps = [...document.querySelectorAll('.steps li')];
+  const apps = [...document.querySelectorAll('[data-app]')];
+  const tour = document.querySelector('#tour');
+  const address = document.querySelector('#address');
+  let current = 0;
+  let selectedApp = apps[0];
+  let timer = null;
+  let paused = false;
+
+  function showScene(index, focus = false) {
+    current = index;
+    const hosts = ['portal.example.test/sign-in', 'portal.example.test/home', selectedApp.dataset.host + '.example.test'];
+    address.textContent = hosts[index];
+    document.querySelector('#session-title').textContent = selectedApp.querySelector('b').textContent;
+    scenes.forEach((scene, i) => {
+      scene.hidden = i !== index;
+      if (i === index) steps[i].setAttribute('aria-current', 'step');
+      else steps[i].removeAttribute('aria-current');
     });
+    if (focus) scenes[index].querySelector('h3').focus({ preventScroll: true });
+  }
+
+  function updateTour() {
+    let label = tour.dataset.play;
+    if (timer !== null) label = tour.dataset.pause;
+    else if (current === scenes.length - 1) label = tour.dataset.replay;
+    else if (paused || current > 0) label = tour.dataset.resume;
+    document.querySelector('#tour-label').textContent = label;
+    document.querySelector('#tour-icon use').setAttribute('href', timer === null ? '#i-play' : '#i-pause');
+  }
+
+  function stopTour() {
+    window.clearTimeout(timer);
+    timer = null;
+    updateTour();
+  }
+
+  function manualScene(index) {
+    paused = false;
+    stopTour();
+    showScene(index, true);
+    updateTour();
+  }
+  document.querySelector('#sign-in').addEventListener('click', () => manualScene(1));
+  for (const app of apps) {
+    app.addEventListener('click', () => {
+      selectedApp = app;
+      manualScene(2);
+    });
+  }
+  document.querySelector('#switch-app').addEventListener('click', () => manualScene(1));
+
+  function scheduleAdvance() {
+    timer = window.setTimeout(() => {
+      showScene(current + 1);
+      if (current === scenes.length - 1) stopTour();
+      else scheduleAdvance();
+    }, 3200);
+    updateTour();
+  }
+
+  tour.addEventListener('click', () => {
+    if (timer !== null) {
+      paused = true;
+      stopTour();
+      return;
+    }
+    if (current === scenes.length - 1) {
+      selectedApp = apps[0];
+      showScene(0);
+    }
+    paused = false;
+    scheduleAdvance();
+  });
+
+  function pauseIfPlaying() {
+    if (timer !== null) {
+      paused = true;
+      stopTour();
+    }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) pauseIfPlaying();
+  });
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver(entries => {
+      if (!entries[0].isIntersecting) pauseIfPlaying();
+    });
+    observer.observe(document.querySelector('#demo'));
   }
 })();
