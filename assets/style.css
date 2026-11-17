@@ -109,7 +109,7 @@ h1 span { color: var(--caption); }
 .quiet:hover .ico { transform: translateY(2px); }
 .hero-art { position: relative; isolation: isolate; aspect-ratio: 1.46; display: grid; place-items: center; }
 .hero-art::before { content: ""; position: absolute; z-index: -1; inset: 0; background-image: radial-gradient(circle, #aaa 0.7px, transparent 1px); background-size: 16px 16px; mask-image: radial-gradient(ellipse at center, #0009 15%, transparent 72%); }
-.hero-art > svg { display: block; width: 56%; max-width: 340px; height: auto; overflow: visible; }
+.hero-art > svg { display: block; width: 77.333333%; max-width: 469.524px; height: auto; overflow: visible; }
 .hero-art > svg path[stroke] { stroke: var(--brand-ink); }
 .specs { display: grid; grid-template-columns: 1fr 1.07fr 1.26fr .83fr; padding-block: 22px; border-block: 1px solid var(--line); }
 .specs > div { padding: 0 clamp(12px, 2.3vw, 36px); border-left: 1px solid var(--line); }
@@ -289,5 +289,5 @@ footer { padding-block: 34px; background: var(--footer); color: white; }
   *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; }
 }
 
-.hero-art > svg[role="button"] { cursor: pointer; border-radius: 12px; }
+.hero-art > svg[role="button"] { cursor: pointer; }
 .hero-art > svg:focus-visible { outline: 2px solid var(--ink); outline-offset: 16px; }
