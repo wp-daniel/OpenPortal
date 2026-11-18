@@ -308,9 +308,21 @@ h1 {
 .grant-tree path { fill: none; stroke: var(--caption); stroke-width: 2; }
 .grant-tree rect { fill: var(--raised); stroke: var(--line); }
 .grant-tree text { text-anchor: middle; fill: var(--ink); font: 600 15px var(--sans); }
-.client-nav { padding: 0 5% 14px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
-.client-nav button { justify-self: start; background: transparent; border-radius: 0; padding: 8px 6px; border-top: 3px solid var(--line); color: var(--muted); text-align: left; font-size: 12px; }
-.client-nav button[aria-pressed="true"] { color: var(--ink); font-weight: 650; border-top-color: currentColor; }
+.client-nav {
+  padding: 0 5% 14px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px;
+}
+.client-nav button {
+  position: relative; min-height: 44px; padding: 8px 6px; background: transparent; border-radius: 0;
+  border-top: 3px solid var(--line); color: var(--muted); text-align: left; font-size: 12px;
+  transition: border-top-color .18s ease, color .18s ease;
+}
+.client-nav button:hover { border-top-color: var(--caption); color: var(--ink); }
+.client-nav button[aria-pressed="true"] { border-top-color: var(--line); color: var(--ink); font-weight: 650; }
+.client-nav button[aria-pressed="true"]::before {
+  content: ''; position: absolute; inset: -3px 0 auto; height: 3px; pointer-events: none;
+  background: currentColor; transform-origin: left; transform: scaleX(var(--step-progress, 1));
+}
+@container (max-width: 320px) { .client-nav button { padding-inline: 2px; font-size: 11px; } }
 .auth-flow { width: 100%; height: clamp(185px, 40cqw, 265px); display: block; }
 .oidc-routes path { fill: none; stroke: var(--caption); opacity: .42; stroke-width: 1.4; }
 .map-node rect { fill: var(--raised); stroke: var(--line); }
@@ -470,5 +482,7 @@ footer { padding-block: clamp(35px, 6vw, 84px) 26px; background: var(--footer); 
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
 }
 .cursor-dot { width: 5px; height: 5px; border-radius: 50%; background: white; }
+.cursor-confetti { position: fixed; z-index: 101; pointer-events: none; }
+.cursor-confetti i { position: absolute; left: -2px; top: -3px; width: 4px; height: 6px; border-radius: 1px; }
 html.custom-cursor, html.custom-cursor * { cursor: none !important; }
 html.custom-cursor .magnetic-cursor { visibility: visible; }

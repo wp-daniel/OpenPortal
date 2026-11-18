@@ -18,13 +18,14 @@
 
   function showChapter(index) {
     sequence?.revert();
+    sequence = null;
     chapter = index;
     chapters.forEach((scene, i) => { scene.hidden = i !== index; });
     buttons.forEach((button, i) => button.setAttribute('aria-pressed', String(i === index)));
     client.querySelectorAll('.typing').forEach(line => line.classList.remove('typing'));
     if (client.hidden || !motion.matches) return;
     const scene = chapters[index];
-    sequence = gsap.timeline({ paused: !onScreen || document.hidden });
+    sequence = gsap.timeline({ paused: !onScreen || document.hidden }).timeScale(1.15);
     sequence.from(scene.querySelector('.client-art'), { opacity: 0, y: 8, duration: .34 })
       .from(scene.querySelectorAll('h4,p'), { y: 6, opacity: 0, stagger: .06, duration: .32 }, 0);
     if (index === 0) {
@@ -61,9 +62,10 @@
       sequence.from(scene.querySelectorAll('.grant-tree g:not(:first-of-type)'),
         { opacity: 0, stagger: .2, duration: .35 }, .6);
     }
-    if (automatic && index < chapters.length - 1) {
-      sequence.call(() => showChapter(index + 1), [], '+=2.4');
-    }
+    const advances = automatic && index < chapters.length - 1;
+    const duration = sequence.duration() + (advances ? 2.4 : 0);
+    sequence.fromTo(buttons[index], { '--step-progress': 0 }, { '--step-progress': 1, duration, ease: 'none' }, 0);
+    if (advances) sequence.eventCallback('onComplete', () => showChapter(index + 1));
   }
 
   buttons.forEach((button, index) => button.addEventListener('click', () => {
@@ -173,9 +175,10 @@
     const bar = mark.querySelector('g[mask="url(#sW)"]');
     const outerGaps = mark.querySelector('#sL > g');
     const barGaps = mark.querySelector('#sW > g');
-    const pose = { ox: 0, oy: 0, ix: 0, iy: 0, bx: 0, by: 0 };
+    const rest = { ox: 0, oy: 0, ix: 0, iy: 0, bx: 0, by: 0, x: 0, y: 0, tilt: 0 };
+    const pose = { ...rest };
     const shift = (el, x, y) => el.setAttribute('transform', `translate(${x} ${y})`);
-    const intro = gsap.timeline({
+    const logoTimeline = () => gsap.timeline({
       onStart: () => outer.before(inner),
       onUpdate() {
         shift(outer, pose.ox, pose.oy);
@@ -183,19 +186,47 @@
         shift(bar, pose.bx, pose.by);
         shift(outerGaps, 0, pose.by - pose.oy);
         shift(barGaps, pose.ix - pose.bx, 0);
+        mark.style.transform = pose.x || pose.y || pose.tilt
+          ? `translate(${pose.x}px, ${pose.y}px) rotate(${pose.tilt}deg)` : '';
       },
       onComplete: () => outer.prepend(inner),
       defaults: { ease: 'power2.inOut' },
     });
-    intro.to(pose, { ox: -19, oy: -12, ix: 49, iy: 9, bx: -7, by: 9, duration: .99 }, .38)
+    let logoAnimation = logoTimeline()
+      .to(pose, { ox: -19, oy: -12, ix: 49, iy: 9, bx: -7, by: 9, duration: .99 }, .38)
       .to(pose, { ox: 14, oy: 3, ix: -40, iy: -9, bx: 12, by: -13, duration: .96 })
-      .to(pose, { ox: 0, oy: 0, ix: 0, iy: 0, bx: 0, by: 0, duration: .87 });
-    const restart = event => {
+      .to(pose, { ...rest, duration: .87 });
+
+    const reactions = [
+      // Happy: crouch, jump, and bounce on landing.
+      timeline => timeline
+        .to(pose, { ...rest, y: 9, oy: 5, by: -4, duration: .12, ease: 'power2.in' })
+        .to(pose, { y: -32, tilt: -5, ox: -10, oy: -8, ix: 23, iy: -13, bx: -5, by: 7, duration: .26, ease: 'power3.out' })
+        .to(pose, { ...rest, y: 6, duration: .22, ease: 'power2.in' })
+        .to(pose, { y: -7, tilt: 2, duration: .13, ease: 'power2.out' })
+        .to(pose, { ...rest, duration: .19 }),
+      // Annoyed: flinch away and shake the click off.
+      timeline => timeline
+        .to(pose, { ...rest, x: 20, y: 4, tilt: 10, ox: 7, ix: -15, bx: 5, duration: .14, ease: 'power3.out' })
+        .to(pose, { x: 12, tilt: -8, duration: .1 })
+        .to(pose, { x: 16, tilt: 6, duration: .1 })
+        .to(pose, { x: 10, tilt: -4, duration: .1 })
+        .to(pose, { ...rest, duration: .34, ease: 'power3.out' }),
+      // Playful: lean to one side, then dart back past center.
+      timeline => timeline
+        .to(pose, { ...rest, x: -15, tilt: -12, ox: -12, oy: 6, ix: 26, iy: -5, bx: -6, by: -7, duration: .27 })
+        .to(pose, { x: 14, y: -10, tilt: 8, ox: 7, oy: -4, ix: -17, iy: 3, bx: 5, by: 4, duration: .22 })
+        .to(pose, { ...rest, duration: .36, ease: 'power3.out' }),
+    ];
+    let nextReaction = 0;
+    const react = event => {
       if (!mark.contains(event.target)) return;
-      outer.before(inner);
-      intro.restart();
+      logoAnimation.kill();
+      logoAnimation = reactions[nextReaction](logoTimeline());
+      nextReaction = (nextReaction + 1) % reactions.length;
+      if (event.pointerType === 'mouse') document.dispatchEvent(new Event('logo-replay'));
     };
-    host.addEventListener('click', restart);
+    host.addEventListener('click', react);
 
     const titleLines = document.querySelectorAll('.hero-line');
     gsap.set(titleLines, { overflow: 'clip' });
@@ -242,7 +273,9 @@
       .to(state, { progress: 1, duration: .85 }, '+=.12');
 
     return () => {
-      host.removeEventListener('click', restart);
+      host.removeEventListener('click', react);
+      logoAnimation.kill();
+      mark.style.removeProperty('transform');
       outer.prepend(inner);
       for (const part of [outer, inner, bar, outerGaps, barGaps]) part.removeAttribute('transform');
       series.forEach(line => line.restore());

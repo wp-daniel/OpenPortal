@@ -6,7 +6,10 @@
   cursor.className = 'magnetic-cursor';
   cursor.setAttribute('aria-hidden', 'true');
   cursor.innerHTML = '<i class="cursor-ring"></i><i class="cursor-dot"></i>';
-  document.body.append(cursor);
+  const confetti = document.createElement('div');
+  confetti.className = 'cursor-confetti';
+  confetti.setAttribute('aria-hidden', 'true');
+  document.body.append(cursor, confetti);
   const [ring, dot] = cursor.children;
   const point = { x: 0, y: 0 };
   const shape = { x: 0, y: 0, w: 36, h: 36, radius: 18 };
@@ -14,6 +17,46 @@
   let active = false;
   let pressed = false;
   let hovered = null;
+  let reward = null;
+
+  function clearReward() {
+    if (!reward) return;
+    reward.onfinish = null;
+    reward.cancel();
+    reward = null;
+    confetti.replaceChildren();
+  }
+
+  function celebrate() {
+    if (!active || !enabled.matches) return;
+    clearReward();
+    const colors = ['#2dd4bf', '#60a5fa', '#a78bfa', '#fb7185', '#fbbf24'];
+    const count = 18;
+    const duration = 640;
+    confetti.style.left = shape.x + 'px';
+    confetti.style.top = shape.y + 'px';
+    for (let i = 0; i < count; i++) {
+      const angle = (i + Math.random() * .7) * 2 * Math.PI / count;
+      const x = Math.cos(angle);
+      const y = Math.sin(angle);
+      const distance = 39 + Math.random() * 36;
+      const spin = (i % 2 === 0 ? 1 : -1) * (180 + Math.random() * 270);
+      const particle = document.createElement('i');
+      particle.style.backgroundColor = colors[i % colors.length];
+      confetti.append(particle);
+      particle.animate([
+        { transform: `translate(${x * 18}px, ${y * 18}px) rotate(${angle}rad)` },
+        { transform: `translate(${x * distance}px, ${y * distance + 12}px) rotate(${spin * .65}deg)`, offset: .55 },
+        { transform: `translate(${x * (distance + 9)}px, ${y * (distance + 9) + 40}px) rotate(${spin}deg)`, opacity: 0 },
+      ], { duration, easing: 'cubic-bezier(.16, .72, .32, 1)' });
+    }
+    reward = ring.animate([
+      { opacity: 0 },
+      { opacity: 0, offset: .64 },
+      { opacity: 1 },
+    ], { duration });
+    reward.onfinish = clearReward;
+  }
 
   function paint() {
     frame = 0;
@@ -65,6 +108,7 @@
   function schedule() { if (!frame) frame = requestAnimationFrame(paint); }
 
   function hide() {
+    clearReward();
     active = false;
     pressed = false;
     hovered?.removeAttribute('data-hover-light');
@@ -93,6 +137,7 @@
     track();
   }
   window.addEventListener('pointermove', move, { passive: true });
+  document.addEventListener('logo-replay', celebrate);
   document.addEventListener('pointerover', track, { passive: true });
   document.addEventListener('pointerout', track, { passive: true });
   window.addEventListener('pointerdown', event => { pressed = true; move(event); }, { passive: true });
