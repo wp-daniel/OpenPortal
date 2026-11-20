@@ -25,6 +25,7 @@
   --theme-ease: cubic-bezier(.35, 0, .2, 1);
   --loupe-dock-size: 80px;
   --loupe-dock-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+  --loupe-dock-glass: #e4e8eb;
   --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
@@ -590,7 +591,7 @@ footer { padding-block: clamp(35px, 6vw, 84px) 26px; background: var(--footer); 
   transition: background-color 180ms ease;
 }
 .loupe[data-refraction] .loupe-glass { backdrop-filter: url(#loupe-refraction); }
-.loupe[data-docked] .loupe-glass { background-color: #2b3037; }
+.loupe[data-docked] .loupe-glass { background-color: var(--loupe-dock-glass); }
 .loupe[data-idle] .loupe-glass {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
