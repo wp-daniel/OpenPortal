@@ -11,7 +11,7 @@
   <link rel="alternate" hreflang="it" href="./it/index.html">
   <link rel="alternate" hreflang="en" href="./index.html">
   <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./assets/style.css?v=c6a2616982">
+  <link rel="stylesheet" href="./assets/style.css?v=1ba6b27ffa">
   <style id="dark-palette" media="(prefers-color-scheme: dark)">/* Neutral surfaces and type from the OpenPortal dark theme. */
 :root {
   color-scheme: dark;
@@ -148,7 +148,9 @@
 })();
 </script>
   <script defer src="./assets/vendor/motion-libs.js?v=9a76965bbd"></script>
-  <script defer src="./assets/motion.js?v=c1879bbfd1"></script>
+  <script defer src="./assets/motion.js?v=b71f60b0c6"></script>
+  <script defer src="./assets/logo-player.js?v=ea0a78136d"></script>
+  <script defer src="./assets/logo-game.js?v=dd8579a79d"></script>
   <script defer src="./assets/database-scene.js?v=16ceaab54b"></script>
   <script defer src="./assets/site.js?v=526b51e126"></script>
   <script defer src="./assets/cursor.js?v=81d80762d8"></script>
@@ -202,8 +204,37 @@
         <div class="hero-actions"><a class="primary" href="#overview">Explore the portal <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-down"></use></svg></a><a class="quiet" href="#platform">Explore the platform <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-down"></use></svg></a></div>
       </div>
       <div class="hero-art">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="-145 -119 290 232" width="290" height="232" role="img" aria-label="OpenPortal"><defs><mask id="sL" maskUnits="userSpaceOnUse" x="-114" y="-87.0" width="228" height="168"><rect x="-114" y="-87.0" width="228" height="168" fill="#fff"/><g fill="#000"><rect x="-87.0" y="10.299999999999997" width="22" height="34"/><rect x="65.0" y="10.299999999999997" width="22" height="34"/></g></mask><mask id="sW" maskUnits="userSpaceOnUse" x="-114" y="-87.0" width="228" height="168"><rect x="-114" y="-87.0" width="228" height="168" fill="#fff"/><g fill="#000"><rect x="-55.0" y="16.299999999999997" width="34" height="22"/><rect x="21.0" y="16.299999999999997" width="34" height="22"/></g></mask></defs><g mask="url(#sL)"><path d="M-38,70 L-38,0 A38,38 0 0 1 38,0 L38,70" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/><path d="M-76,70 L-76,0 A76,76 0 0 1 76,0 L76,70" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></g><g mask="url(#sW)"><path d="M-96,27.299999999999997 L96,27.299999999999997" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></g></svg>
+        <button class="hero-logo" type="button" aria-label="OpenPortal"><svg id="hero-mark" xmlns="http://www.w3.org/2000/svg" viewBox="-145 -119 290 232" width="290" height="232" role="img" aria-label="OpenPortal"><defs><mask id="sL" maskUnits="userSpaceOnUse" x="-114" y="-87.0" width="228" height="168"><rect x="-114" y="-87.0" width="228" height="168" fill="#fff"/><g fill="#000"><rect x="-87.0" y="10.299999999999997" width="22" height="34"/><rect x="65.0" y="10.299999999999997" width="22" height="34"/></g></mask><mask id="sW" maskUnits="userSpaceOnUse" x="-114" y="-87.0" width="228" height="168"><rect x="-114" y="-87.0" width="228" height="168" fill="#fff"/><g fill="#000"><rect x="-55.0" y="16.299999999999997" width="34" height="22"/><rect x="21.0" y="16.299999999999997" width="34" height="22"/></g></mask></defs><g mask="url(#sL)"><path d="M-38,70 L-38,0 A38,38 0 0 1 38,0 L38,70" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/><path d="M-76,70 L-76,0 A76,76 0 0 1 76,0 L76,70" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></g><g mask="url(#sW)"><path d="M-96,27.299999999999997 L96,27.299999999999997" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button>
       </div>
+      <section class="logo-game" aria-labelledby="game-title" hidden>
+        <header class="game-header">
+          <h2 id="game-title">Portal Pong</h2>
+          <p class="game-score">Score <output id="game-score">0</output></p>
+          <button type="button" class="game-button" id="game-sound" aria-pressed="true">Sound</button>
+        </header>
+        <div class="game-board" tabindex="0" role="group" aria-labelledby="game-title" aria-describedby="game-controls">
+          <svg viewBox="0 0 640 386" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+            <path class="game-wall" d="M8 32V14H632V32"/>
+            <path class="game-wing" d="M8 106v14m0 126v14M632 106v14m0 126v14"/>
+            <path class="game-line" d="M34 278H606"/>
+            <path id="game-aim" opacity="0"/>
+            <path id="game-trail" opacity="0"/>
+            <g id="game-player"></g>
+            <rect id="game-ball" width="12" height="12" rx="1"/>
+            <circle id="game-impact" r="11" opacity="0"/>
+          </svg>
+          <div class="game-result" hidden>
+            <h3>Game over</h3>
+            <p id="game-final-score"></p>
+            <button type="button" class="game-button" id="game-retry">Retry</button>
+            <button type="button" class="game-button" id="game-back">Go back</button>
+          </div>
+        </div>
+        <footer class="game-footer">
+          <p id="game-controls">Move with your mouse, finger or ← →. Click, tap or press Space as the ball arrives for a harder shot.</p>
+          <button type="button" class="game-button" id="game-exit">Go back</button>
+        </footer>
+      </section>
     </section>
     <dl class="specs wrap" aria-label="Technology and license" data-reveal>
       <div><dt>Framework</dt><dd><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-code"></use></svg> ASP.NET Core</dd></div>

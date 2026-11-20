@@ -169,9 +169,13 @@
 
   gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
     const host = document.querySelector('.hero-art');
-    const mark = host.querySelector('svg');
+    const trigger = host.querySelector('.hero-logo');
+    const mark = document.getElementById('hero-mark');
     const outer = mark.querySelector('g[mask="url(#sL)"]');
     const inner = outer.querySelector('path');
+    const outerArch = inner.nextElementSibling;
+    const innerPath = inner.getAttribute('d');
+    const outerPath = outerArch.getAttribute('d');
     const bar = mark.querySelector('g[mask="url(#sW)"]');
     const outerGaps = mark.querySelector('#sL > g');
     const barGaps = mark.querySelector('#sW > g');
@@ -192,38 +196,110 @@
       onComplete: () => outer.prepend(inner),
       defaults: { ease: 'power2.inOut' },
     });
-    let logoAnimation = logoTimeline()
+    let opening = host.contains(mark) ? logoTimeline()
       .to(pose, { ox: -19, oy: -12, ix: 49, iy: 9, bx: -7, by: 9, duration: .99 }, .38)
       .to(pose, { ox: 14, oy: 3, ix: -40, iy: -9, bx: 12, by: -13, duration: .96 })
-      .to(pose, { ...rest, duration: .87 });
+      .to(pose, { ...rest, duration: .87 }) : null;
 
-    const reactions = [
-      // Happy: crouch, jump, and bounce on landing.
-      timeline => timeline
-        .to(pose, { ...rest, y: 9, oy: 5, by: -4, duration: .12, ease: 'power2.in' })
-        .to(pose, { y: -32, tilt: -5, ox: -10, oy: -8, ix: 23, iy: -13, bx: -5, by: 7, duration: .26, ease: 'power3.out' })
-        .to(pose, { ...rest, y: 6, duration: .22, ease: 'power2.in' })
-        .to(pose, { y: -7, tilt: 2, duration: .13, ease: 'power2.out' })
-        .to(pose, { ...rest, duration: .19 }),
-      // Annoyed: flinch away and shake the click off.
-      timeline => timeline
-        .to(pose, { ...rest, x: 20, y: 4, tilt: 10, ox: 7, ix: -15, bx: 5, duration: .14, ease: 'power3.out' })
-        .to(pose, { x: 12, tilt: -8, duration: .1 })
-        .to(pose, { x: 16, tilt: 6, duration: .1 })
-        .to(pose, { x: 10, tilt: -4, duration: .1 })
-        .to(pose, { ...rest, duration: .34, ease: 'power3.out' }),
-      // Playful: lean to one side, then dart back past center.
-      timeline => timeline
-        .to(pose, { ...rest, x: -15, tilt: -12, ox: -12, oy: 6, ix: 26, iy: -5, bx: -6, by: -7, duration: .27 })
-        .to(pose, { x: 14, y: -10, tilt: 8, ox: 7, oy: -4, ix: -17, iy: 3, bx: 5, by: 4, duration: .22 })
-        .to(pose, { ...rest, duration: .36, ease: 'power3.out' }),
-    ];
-    let nextReaction = 0;
+    const standing = { bend: 0, lag: 0, dent: 0, squat: 0, bridge: 0, x: 0, y: 0, roll: 0 };
+    const body = { ...standing };
+    let reaction;
+
+    function clearPose() {
+      Object.assign(pose, rest);
+      Object.assign(body, standing);
+      mark.style.removeProperty('transform');
+      outer.prepend(inner);
+      inner.setAttribute('d', innerPath);
+      outerArch.setAttribute('d', outerPath);
+      for (const part of [outer, inner, bar, outerGaps, barGaps]) part.removeAttribute('transform');
+    }
+
+    function resetLogo() {
+      opening?.kill();
+      opening = null;
+      reaction?.kill();
+      if (host.contains(mark)) clearPose();
+    }
+    host.addEventListener('logo-game-start', resetLogo);
+
+    function flexArch(path, radius, offset, dent) {
+      const tangent = radius * .55228475;
+      const crown = dent - radius;
+      path.setAttribute('d', `M${-radius} 70V0 C${-radius} ${-tangent} ${offset - tangent} ${crown} ${offset} ${crown}
+        C${offset + tangent} ${crown} ${radius} ${-tangent} ${radius} 0V70`);
+    }
+
+    function drawReaction() {
+      const { bend, lag, dent, squat, bridge, x, y, roll } = body;
+      // Deform the crowns above the weave and keep both stems aligned at the crossings.
+      flexArch(outerArch, 76, bend, dent);
+      flexArch(inner, 38, bend * .48 + lag, dent * .48);
+      const stance = `translate(0 70) scale(${1 + squat * .005} ${1 - squat * .009}) translate(0 -70)`;
+      outer.setAttribute('transform', stance);
+      bar.setAttribute('transform', `${stance} translate(0 ${bridge})`);
+      shift(outerGaps, 0, bridge);
+      mark.style.transform = `translate(${x / 2.9}%, ${y / 2.32}%) rotate(${roll}deg)`;
+    }
+
+    function playReaction(hit) {
+      const { x, y } = hit;
+      const away = -Math.sign(x);
+      const lateral = gsap.utils.clamp(-1, 1, x / 80);
+      const timeline = gsap.timeline({ onUpdate: drawReaction, onComplete: clearPose });
+      if (Math.abs(x) > 55 && y >= 10 && y < 44) {
+        // A lower push puts the weight on the far foot, followed by a quick side step.
+        timeline.to(body, { ...standing, bend: 14 * lateral, squat: 8, bridge: 4, duration: .12, ease: 'power2.out' })
+          .to(body, { ...standing, bend: -19 * lateral, lag: 7 * lateral, x: -22 * lateral, y: -13, roll: -6 * lateral, duration: .21, ease: 'power2.out' })
+          .to(body, { ...standing, bend: 6 * lateral, x: -19 * lateral, squat: 9, bridge: 5, duration: .2, ease: 'power2.in' });
+      } else if (Math.abs(x) > 55 && y < 44) {
+        // One shoulder recoils first. The inner arch catches up as the weight comes back.
+        const bend = away * (23 + 12 * Math.abs(lateral));
+        timeline.to(body, { ...standing, bend, lag: -away * 8, dent: 5, squat: 6, bridge: -3, duration: .13, ease: 'power3.out' })
+          .to(body, { bend: -bend * .34, lag: away * 7, dent: 2, squat: -3, bridge: 3, duration: .2, ease: 'sine.inOut' })
+          .to(body, { bend: bend * .12, lag: -away * 3, squat: 2, bridge: -1, duration: .17, ease: 'sine.inOut' });
+      } else if (y < -32) {
+        // The crown ducks into the arches with the weight planted on the feet.
+        timeline.to(body, { ...standing, bend: -16 * lateral, dent: 16, squat: 15, bridge: 4, duration: .14, ease: 'power3.out' })
+          .to(body, { bend: 7 * lateral, dent: 2, squat: -5, bridge: -3, duration: .25, ease: 'power2.out' }, '+=.05')
+          .to(body, { bend: -3 * lateral, dent: 4, squat: 3, bridge: 1, duration: .14, ease: 'sine.inOut' });
+      } else if (y > 46) {
+        // A tap on a foot pulls that side free, then the body absorbs the landing.
+        timeline.to(body, { ...standing, bend: -14 * lateral, squat: 5, bridge: -8, roll: -5 * lateral, duration: .12, ease: 'power2.out' })
+          .to(body, { ...standing, bend: 7 * lateral, x: -18 * lateral, y: -24, roll: 8 * lateral, squat: -3, duration: .18, ease: 'power3.out' })
+          .to(body, { ...standing, x: -12 * lateral, bend: 4 * lateral, squat: 9, bridge: 4, duration: .2, ease: 'power2.in' })
+          .to(body, { y: -7, squat: -2, bridge: -2, duration: .13, ease: 'power2.out' });
+      } else if (Math.abs(y - 27.3) < 13) {
+        // The traversa slides through its crossings and sends a small ripple up the arches.
+        timeline.to(body, { ...standing, bridge: 10, squat: 4, dent: 6, bend: -9 * lateral, duration: .1, ease: 'power3.out' })
+          .to(body, { bridge: -7, squat: -4, dent: 0, bend: 5 * lateral, lag: -6 * lateral, duration: .16, ease: 'power2.out' })
+          .to(body, { bridge: 3, squat: 2, bend: 0, lag: 3 * lateral, duration: .15, ease: 'sine.inOut' });
+      } else {
+        // Crouch, extend on takeoff, tuck at the apex, then settle through the feet.
+        timeline.to(body, { ...standing, dent: 7, bend: 10 * lateral, squat: 12, bridge: 3, duration: .13, ease: 'power2.in' })
+          .to(body, { ...standing, x: -13 * lateral, y: -35, squat: -7, bend: -15 * lateral, roll: -5 * lateral, bridge: -3, duration: .24, ease: 'power2.out' })
+          .to(body, { ...standing, x: -15 * lateral, y: -23, dent: 4, bridge: 4, squat: 2, duration: .13, ease: 'sine.in' })
+          .to(body, { ...standing, x: -15 * lateral, dent: 6, squat: 10, duration: .18, ease: 'power2.in' });
+      }
+      return timeline.to(body, { ...standing, duration: .25, ease: 'sine.out' });
+    }
+
     const react = event => {
-      if (!mark.contains(event.target)) return;
-      logoAnimation.kill();
-      logoAnimation = reactions[nextReaction](logoTimeline());
-      nextReaction = (nextReaction + 1) % reactions.length;
+      if (event.defaultPrevented || !trigger.contains(event.target)) return;
+      if (opening && opening.progress() < 1) {
+        opening.kill();
+        clearPose();
+      }
+      opening = null;
+      reaction?.kill();
+      const bounds = trigger.getBoundingClientRect();
+      const box = mark.viewBox.baseVal;
+      const ratio = gsap.utils.clamp(0, 1);
+      const hit = event.detail === 0 ? { x: 0, y: 0 } : {
+        x: box.x + box.width * ratio((event.clientX - bounds.left) / bounds.width),
+        y: box.y + box.height * ratio((event.clientY - bounds.top) / bounds.height),
+      };
+      reaction = playReaction(hit);
       if (event.pointerType === 'mouse') document.dispatchEvent(new Event('logo-replay'));
     };
     host.addEventListener('click', react);
@@ -274,10 +350,8 @@
 
     return () => {
       host.removeEventListener('click', react);
-      logoAnimation.kill();
-      mark.style.removeProperty('transform');
-      outer.prepend(inner);
-      for (const part of [outer, inner, bar, outerGaps, barGaps]) part.removeAttribute('transform');
+      host.removeEventListener('logo-game-start', resetLogo);
+      resetLogo();
       series.forEach(line => line.restore());
       area.setAttribute('d', originalArea);
       preview.remove();
