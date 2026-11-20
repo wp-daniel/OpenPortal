@@ -11,7 +11,7 @@
   <link rel="alternate" hreflang="it" href="./it/index.html">
   <link rel="alternate" hreflang="en" href="./index.html">
   <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./assets/style.css?v=1ba6b27ffa">
+  <link rel="stylesheet" href="./assets/style.css?v=40aba9bb40">
   <style id="dark-palette" media="(prefers-color-scheme: dark)">/* Neutral surfaces and type from the OpenPortal dark theme. */
 :root {
   color-scheme: dark;
@@ -154,6 +154,7 @@
   <script defer src="./assets/database-scene.js?v=16ceaab54b"></script>
   <script defer src="./assets/site.js?v=526b51e126"></script>
   <script defer src="./assets/cursor.js?v=81d80762d8"></script>
+  <script defer src="./assets/loupe.js?v=1e362c003f"></script>
 </head>
 <body id="top">
   <svg class="symbols" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -410,5 +411,23 @@
       <a class="to-top" href="#top" aria-label="Back to top"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-up"></use></svg></a>
     </div>
   </footer>
+  <svg class="symbols" xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true" focusable="false">
+  <defs>
+    <filter id="loupe-refraction" x="0" y="0" width="1" height="1"
+            filterUnits="objectBoundingBox" primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
+      <feImage x="0" y="0" width="1" height="1" href="data:image/png;base64,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" result="loupe-map"/>
+      <feDisplacementMap in="SourceGraphic" in2="loupe-map" scale=".5" xChannelSelector="R" yChannelSelector="G"/>
+      <feGaussianBlur stdDeviation=".004"/>
+    </filter>
+  </defs>
+</svg>
+
+  <div class="loupe-layer">
+    <button class="loupe" type="button" aria-label="Loupe" aria-describedby="loupe-help" aria-pressed="false"
+            title="Open the loupe" data-dock-title="Put away the loupe" data-docked data-idle hidden>
+      <span class="loupe-housing" aria-hidden="true"><span class="loupe-glass"></span></span>
+    </button>
+  </div>
+  <span id="loupe-help" hidden>Open the loupe, then drag it or tap a clear spot on the page. Use the arrow keys to move it. Press it again or press Escape to put it away.</span>
 </body>
 </html>
