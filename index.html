@@ -149,7 +149,7 @@
 })();
 </script>
   <script defer src="./assets/vendor/motion-libs.js?v=9a76965bbd"></script>
-  <script defer src="./assets/motion.js?v=b71f60b0c6"></script>
+  <script defer src="./assets/motion.js?v=c3b720eba5"></script>
   <script defer src="./assets/logo-player.js?v=ea0a78136d"></script>
   <script defer src="./assets/logo-game.js?v=dd8579a79d"></script>
   <script defer src="./assets/database-scene.js?v=16ceaab54b"></script>
@@ -208,6 +208,88 @@
       <div class="hero-art">
         <button class="hero-logo" type="button" aria-label="OpenPortal"><svg id="hero-mark" xmlns="http://www.w3.org/2000/svg" viewBox="-145 -119 290 232" width="290" height="232" role="img" aria-label="OpenPortal"><defs><mask id="sL" maskUnits="userSpaceOnUse" x="-114" y="-87.0" width="228" height="168"><rect x="-114" y="-87.0" width="228" height="168" fill="#fff"/><g fill="#000"><rect x="-87.0" y="10.299999999999997" width="22" height="34"/><rect x="65.0" y="10.299999999999997" width="22" height="34"/></g></mask><mask id="sW" maskUnits="userSpaceOnUse" x="-114" y="-87.0" width="228" height="168"><rect x="-114" y="-87.0" width="228" height="168" fill="#fff"/><g fill="#000"><rect x="-55.0" y="16.299999999999997" width="34" height="22"/><rect x="21.0" y="16.299999999999997" width="34" height="22"/></g></mask></defs><g mask="url(#sL)"><path d="M-38,70 L-38,0 A38,38 0 0 1 38,0 L38,70" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/><path d="M-76,70 L-76,0 A76,76 0 0 1 76,0 L76,70" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></g><g mask="url(#sW)"><path d="M-96,27.299999999999997 L96,27.299999999999997" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button>
       </div>
+      <script>(() => {
+  'use strict';
+
+  const motion = matchMedia('(prefers-reduced-motion: no-preference)');
+  if (!motion.matches || !Element.prototype.animate) return;
+
+  const hero = document.currentScript.parentElement;
+  const lines = [...hero.querySelectorAll('.hero-line')];
+  const titleAnimations = lines.map((line, index) => {
+    line.style.overflow = 'clip';
+    const animation = line.firstElementChild.animate([
+      { transform: 'translateY(135%)' }, { transform: 'translateY(0)' },
+    ], { duration: 1000, delay: index * 130, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'backwards' });
+    animation.onfinish = () => line.style.removeProperty('overflow');
+    return animation;
+  });
+
+  const lead = hero.querySelector('.lead');
+  const actions = hero.querySelector('.hero-actions');
+  const fade = { duration: 800, delay: 150, easing: 'ease-out', fill: 'backwards' };
+  const leadFade = lead.animate({ opacity: [0, 1] }, fade);
+  const actionsFade = actions.animate({ opacity: [0, 1] }, fade);
+  actions.addEventListener('focusin', () => actionsFade.cancel(), { once: true });
+
+  const art = hero.querySelector('.hero-art');
+  const trigger = art.querySelector('.hero-logo');
+  const mark = trigger.querySelector('svg');
+  const outer = mark.querySelector('g[mask="url(#sL)"]');
+  const bar = mark.querySelector('g[mask="url(#sW)"]');
+  const outerGaps = mark.querySelector('#sL > g');
+  const barGaps = mark.querySelector('#sW > g');
+  const originalInner = outer.firstElementChild;
+  // The moving inner arch travels outside the mask. Keep the original in place for click reactions.
+  const inner = originalInner.cloneNode(true);
+  outer.before(inner);
+  originalInner.style.visibility = 'hidden';
+
+  const duration = 2820;
+  const settle = 'cubic-bezier(.65, .05, .35, 1)';
+  const rest = { ox: 0, oy: 0, ix: 0, iy: 0, bx: 0, by: 0 };
+  const poses = [
+    { ...rest, offset: 0, easing: 'cubic-bezier(.22, .61, .36, 1)' },
+    { ox: -19, oy: -12, ix: 49, iy: 9, bx: -7, by: 9, offset: 990 / duration, easing: settle },
+    { ox: 14, oy: 3, ix: -40, iy: -9, bx: 12, by: -13, offset: 1950 / duration, easing: settle },
+    { ...rest, offset: 1 },
+  ];
+
+  function move(part, position) {
+    return part.animate(poses.map(pose => {
+      const [x, y] = position(pose);
+      return { transform: `translate(${x}px, ${y}px)`, offset: pose.offset, easing: pose.easing };
+    }), duration);
+  }
+
+  const logoAnimations = [
+    move(outer, ({ ox, oy }) => [ox, oy]),
+    move(inner, ({ ix, iy }) => [ix, iy]),
+    move(bar, ({ bx, by }) => [bx, by]),
+    move(outerGaps, ({ by, oy }) => [0, by - oy]),
+    move(barGaps, ({ ix, bx }) => [ix - bx, 0]),
+  ];
+
+  function stopLogo() {
+    logoAnimations.forEach(animation => animation.cancel());
+    inner.remove();
+    originalInner.style.removeProperty('visibility');
+    trigger.removeEventListener('click', stopLogo);
+    art.removeEventListener('logo-game-start', stopLogo);
+  }
+
+  logoAnimations[0].onfinish = stopLogo;
+  trigger.addEventListener('click', stopLogo);
+  art.addEventListener('logo-game-start', stopLogo);
+  motion.addEventListener('change', () => {
+    stopLogo();
+    titleAnimations.forEach(animation => animation.cancel());
+    lines.forEach(line => line.style.removeProperty('overflow'));
+    leadFade.cancel();
+    actionsFade.cancel();
+  }, { once: true });
+})();
+</script>
       <section class="logo-game" aria-labelledby="game-title" hidden>
         <header class="game-header">
           <h2 id="game-title">Portal Pong</h2>

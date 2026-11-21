@@ -178,46 +178,21 @@
     const outerPath = outerArch.getAttribute('d');
     const bar = mark.querySelector('g[mask="url(#sW)"]');
     const outerGaps = mark.querySelector('#sL > g');
-    const barGaps = mark.querySelector('#sW > g');
-    const rest = { ox: 0, oy: 0, ix: 0, iy: 0, bx: 0, by: 0, x: 0, y: 0, tilt: 0 };
-    const pose = { ...rest };
     const shift = (el, x, y) => el.setAttribute('transform', `translate(${x} ${y})`);
-    const logoTimeline = () => gsap.timeline({
-      onStart: () => outer.before(inner),
-      onUpdate() {
-        shift(outer, pose.ox, pose.oy);
-        shift(inner, pose.ix, pose.iy);
-        shift(bar, pose.bx, pose.by);
-        shift(outerGaps, 0, pose.by - pose.oy);
-        shift(barGaps, pose.ix - pose.bx, 0);
-        mark.style.transform = pose.x || pose.y || pose.tilt
-          ? `translate(${pose.x}px, ${pose.y}px) rotate(${pose.tilt}deg)` : '';
-      },
-      onComplete: () => outer.prepend(inner),
-      defaults: { ease: 'power2.inOut' },
-    });
-    let opening = host.contains(mark) ? logoTimeline()
-      .to(pose, { ox: -19, oy: -12, ix: 49, iy: 9, bx: -7, by: 9, duration: .99 }, .38)
-      .to(pose, { ox: 14, oy: 3, ix: -40, iy: -9, bx: 12, by: -13, duration: .96 })
-      .to(pose, { ...rest, duration: .87 }) : null;
 
     const standing = { bend: 0, lag: 0, dent: 0, squat: 0, bridge: 0, x: 0, y: 0, roll: 0 };
     const body = { ...standing };
     let reaction;
 
     function clearPose() {
-      Object.assign(pose, rest);
       Object.assign(body, standing);
       mark.style.removeProperty('transform');
-      outer.prepend(inner);
       inner.setAttribute('d', innerPath);
       outerArch.setAttribute('d', outerPath);
-      for (const part of [outer, inner, bar, outerGaps, barGaps]) part.removeAttribute('transform');
+      for (const part of [outer, bar, outerGaps]) part.removeAttribute('transform');
     }
 
     function resetLogo() {
-      opening?.kill();
-      opening = null;
       reaction?.kill();
       if (host.contains(mark)) clearPose();
     }
@@ -286,11 +261,6 @@
 
     const react = event => {
       if (event.defaultPrevented || !trigger.contains(event.target)) return;
-      if (opening && opening.progress() < 1) {
-        opening.kill();
-        clearPose();
-      }
-      opening = null;
       reaction?.kill();
       const bounds = trigger.getBoundingClientRect();
       const box = mark.viewBox.baseVal;
@@ -304,11 +274,6 @@
     };
     host.addEventListener('click', react);
 
-    const titleLines = document.querySelectorAll('.hero-line');
-    gsap.set(titleLines, { overflow: 'clip' });
-    gsap.from('.hero-line > span', { yPercent: 135, stagger: .13, duration: 1, ease: 'power3.out',
-      onComplete: () => gsap.set(titleLines, { clearProps: 'overflow' }) });
-    gsap.from('.hero-actions, .lead', { opacity: 0, duration: .8, delay: .15 });
     gsap.to('.reading-progress', { scaleX: 1, ease: 'none', scrollTrigger: { start: 0, end: 'max', scrub: true } });
     for (const section of document.querySelectorAll('[data-reveal]:not(.chart-motion)')) {
       gsap.from(section, { y: 22, opacity: .45, ease: 'none',
