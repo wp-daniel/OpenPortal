@@ -1,15 +1,50 @@
 <!doctype html>
-<html lang="it">
+<html lang="it" prefix="og: https://ogp.me/ns#">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f4f3ef">
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0a0a">
-  <meta name="description" content="OpenPortal riunisce identità, applicazioni e permessi sul tuo server. Scopri la dashboard e il single sign-on per ASP.NET Core.">
-  <title>OpenPortal — Un accesso per tutte le tue app</title>
-  <link rel="alternate" hreflang="it" href="../it/index.html">
-  <link rel="alternate" hreflang="en" href="../index.html">
+  <meta name="description" content="Portale open source per il single sign-on con ASP.NET Core e OpenID Connect. Gestisci utenti, gruppi e permessi delle applicazioni sul tuo server.">
+  <meta name="robots" content="max-image-preview:large">
+  <title>OpenPortal | Single sign-on (SSO) sul tuo server</title>
+  <link rel="canonical" href="https://wp-daniel.github.io/OpenPortal/it/">
+  <link rel="alternate" hreflang="en" href="https://wp-daniel.github.io/OpenPortal/">
+  <link rel="alternate" hreflang="it" href="https://wp-daniel.github.io/OpenPortal/it/">
+  <link rel="alternate" hreflang="x-default" href="https://wp-daniel.github.io/OpenPortal/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="OpenPortal">
+  <meta property="og:title" content="OpenPortal | Single sign-on (SSO) sul tuo server">
+  <meta property="og:description" content="Portale open source per il single sign-on con ASP.NET Core e OpenID Connect. Gestisci utenti, gruppi e permessi delle applicazioni sul tuo server.">
+  <meta property="og:url" content="https://wp-daniel.github.io/OpenPortal/it/">
+  <meta property="og:locale" content="it_IT">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:image" content="https://wp-daniel.github.io/OpenPortal/assets/openportal-social.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Logo OpenPortal">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "url": "https://wp-daniel.github.io/OpenPortal/it/",
+  "inLanguage": "it",
+  "name": "OpenPortal | Single sign-on (SSO) sul tuo server",
+  "description": "Portale open source per il single sign-on con ASP.NET Core e OpenID Connect. Gestisci utenti, gruppi e permessi delle applicazioni sul tuo server.",
+  "mainEntity": {
+    "@type": "WebApplication",
+    "@id": "https://wp-daniel.github.io/OpenPortal/#openportal",
+    "name": "OpenPortal",
+    "url": "https://wp-daniel.github.io/OpenPortal/",
+    "applicationCategory": "DeveloperApplication",
+    "license": "https://wp-daniel.github.io/OpenPortal/LICENSE",
+    "sameAs": "https://github.com/wp-daniel/OpenPortal"
+  }
+}
+  </script>
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/style.css?v=d049b5a156">
   <style id="dark-palette" media="(prefers-color-scheme: dark)">/* Neutral surfaces and type from the OpenPortal dark theme. */
@@ -153,7 +188,7 @@
   <script defer src="../assets/logo-player.js?v=ea0a78136d"></script>
   <script defer src="../assets/logo-game.js?v=dd8579a79d"></script>
   <script defer src="../assets/database-scene.js?v=16ceaab54b"></script>
-  <script defer src="../assets/site.js?v=526b51e126"></script>
+  <script defer src="../assets/site.js?v=d0d1820496"></script>
   <script defer src="../assets/cursor.js?v=af115db4bc"></script>
   <script defer src="../assets/loupe.js?v=d10fd68a1f"></script>
 </head>
@@ -185,7 +220,7 @@
         <a class="mobile-repo" target="_blank" rel="noopener noreferrer" href="https://github.com/wp-daniel/OpenPortal">GitHub <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-ne"></use></svg></a>
       </nav>
       <div class="nav-tools">
-        <div class="languages" role="group" aria-label="Lingua del sito"><a lang="it" hreflang="it" href="../it/index.html" aria-current="page">IT</a><a lang="en" hreflang="en" href="../index.html" >EN</a></div>
+        <div class="languages" role="group" aria-label="Lingua del sito"><a lang="it" hreflang="it" href="../it/" aria-current="page">IT</a><a lang="en" hreflang="en" href="../" >EN</a></div>
         <fieldset class="appearance" aria-label="Aspetto">
           <label title="Tema chiaro"><input type="radio" name="appearance" value="light" aria-label="Tema chiaro"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-sun"></use></svg></label>
           <label title="Tema scuro"><input type="radio" name="appearance" value="dark" aria-label="Tema scuro"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-moon"></use></svg></label>
@@ -202,7 +237,7 @@
           <span class="hero-line"><span>Un accesso.</span></span>
           <span class="hero-line hero-line-secondary"><span>Tutte le tue app.</span></span>
         </h1>
-        <p class="lead">Collega le tue applicazioni ASP.NET Core a OpenPortal e gestisci identità e permessi sul tuo server.</p>
+        <p class="lead">Collega le tue app a OpenPortal con ASP.NET Core o OpenID Connect. Gestisci identità e permessi sul tuo server.</p>
         <div class="hero-actions"><a class="primary" href="#overview">Esplora il portale <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-down"></use></svg></a><a class="quiet" href="#platform">Scopri la piattaforma <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-down"></use></svg></a></div>
       </div>
       <div class="hero-art">

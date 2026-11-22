@@ -21,6 +21,7 @@
   window.matchMedia('(max-width: 740px)').addEventListener('change', () => setMenu(false));
 
   for (const link of document.querySelectorAll('.languages a')) {
+    if (window.location.protocol === 'file:') link.pathname += 'index.html';
     link.addEventListener('click', () => {
       link.hash = window.location.hash;
     });
