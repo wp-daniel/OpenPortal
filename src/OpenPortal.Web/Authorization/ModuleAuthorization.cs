@@ -19,10 +19,24 @@ namespace OpenPortal.Web.Authorization;
 internal sealed class AccessAdminAuthorization : IAccessAdminAuthorization
 {
     private readonly CurrentPagePermissions _permissions;
+    private readonly IUserLookupService _users;
+    private readonly IPagePermissionEvaluator _pages;
 
-    public AccessAdminAuthorization(CurrentPagePermissions permissions)
+    public AccessAdminAuthorization(CurrentPagePermissions permissions, IUserLookupService users, IPagePermissionEvaluator pages)
     {
         _permissions = permissions;
+        _users = users;
+        _pages = pages;
+    }
+
+    public bool IsAdministrator => _permissions.IsAdministrator;
+
+    public async Task<IReadOnlyCollection<Guid>> GetRequestReviewersAsync(
+        IReadOnlySet<Guid> groupMembers, CancellationToken cancellationToken)
+    {
+        var administrators = await _users.ListAdministratorIdsAsync(cancellationToken).ConfigureAwait(false);
+        var holders = await _pages.GetHoldersAsync([PortalPages.AccessRequests], cancellationToken).ConfigureAwait(false);
+        return administrators.Concat(holders.Where(groupMembers.Contains)).ToHashSet();
     }
 
     public async Task<Result> EnsureCanAsync(AccessOperation operation, CancellationToken cancellationToken)

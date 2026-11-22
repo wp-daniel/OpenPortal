@@ -40,6 +40,10 @@ internal sealed class PortalApplicationConfiguration : IEntityTypeConfiguration<
 
         builder.HasKey(application => application.Id);
 
+        builder.HasOne<Group>().WithMany()
+            .HasForeignKey(application => application.AccessRequestApproverGroupId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.Property(application => application.ClientId)
             .IsRequired()
             .HasMaxLength(PortalApplication.ClientIdMaxLength);
@@ -397,7 +401,8 @@ internal sealed class AccessRequestConfiguration : IEntityTypeConfiguration<Acce
         builder.Property(request => request.Status)
             .IsRequired()
             .HasConversion<string>()
-            .HasMaxLength(16);
+            .HasMaxLength(16)
+            .IsConcurrencyToken();
 
         builder.Property(request => request.GrantedRoles).AsStringList();
 
@@ -457,6 +462,7 @@ internal sealed class AccessReviewConfiguration : IEntityTypeConfiguration<Domai
 
         builder.Property(review => review.Name).IsRequired().HasMaxLength(Domain.Reviews.AccessReview.NameMaxLength);
         builder.Property(review => review.Status).IsRequired().HasConversion<string>().HasMaxLength(16);
+        builder.Property(review => review.Revision).IsConcurrencyToken();
 
         // A review outlives nothing: deleting the application deletes its reviews.
         builder.HasOne<PortalApplication>().WithMany().HasForeignKey(review => review.ApplicationId).OnDelete(DeleteBehavior.Cascade);

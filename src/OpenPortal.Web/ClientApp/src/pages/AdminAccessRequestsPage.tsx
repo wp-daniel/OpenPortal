@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { Check, ChevronLeft, ChevronRight, Info, Loader2, X } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
@@ -23,6 +24,7 @@ import { notify } from '@/hooks/useToast'
 import { formatDate, formatRelative } from '@/i18n/store'
 import { useI18n } from '@/i18n/useI18n'
 import { useAccessRefresh } from '@/lib/access'
+import { fromLocalInput } from '@/lib/dateInput'
 import { describeError, traceIdOf } from '@/lib/errors'
 import { reportFormError } from '@/lib/forms'
 import { matchesSearch } from '@/lib/tableFilter'
@@ -235,6 +237,11 @@ function RequestStatus({ request }: { request: AccessRequest }) {
         </span>
       )}
       <RoleBadges roles={request.applicationRoles} keys={request.roles} />
+      {request.grantedUntilUtc && (
+        <span className="text-muted-foreground text-xs">
+          {t('access.expiry.badge', { date: formatDate(request.grantedUntilUtc, { dateStyle: 'short', timeStyle: 'short' }) })}
+        </span>
+      )}
       {request.decisionNote && <span className="text-muted-foreground text-xs italic">“{request.decisionNote}”</span>}
     </div>
   )
@@ -243,17 +250,18 @@ function RequestStatus({ request }: { request: AccessRequest }) {
 /** Approving (roles and a note) or rejecting (a note) one request. */
 function DecisionForm({ decision, onDone }: { decision: Decision; onDone: () => void }) {
   const { t } = useI18n()
-  const queryClient = useQueryClient()
   const refreshAccess = useAccessRefresh()
   const { request, kind } = decision
   const [roles, setRoles] = useState<string[]>([])
   const [note, setNote] = useState('')
+  const [until, setUntil] = useState('')
   const [error, setError] = useState<string | undefined>()
+  const [expiryError, setExpiryError] = useState<string | undefined>()
 
   const decide = useMutation({
-    mutationFn: () => {
+    mutationFn: (expiresAtUtc: string | null) => {
       const text = note.trim() === '' ? null : note.trim()
-      return kind === 'approve' ? accessRequestsApi.approve(request.id, roles, text) : accessRequestsApi.reject(request.id, text)
+      return kind === 'approve' ? accessRequestsApi.approve(request.id, roles, text, expiresAtUtc) : accessRequestsApi.reject(request.id, text)
     },
     meta: { handlesErrors: true },
     onSuccess: async () => {
@@ -262,7 +270,7 @@ function DecisionForm({ decision, onDone }: { decision: Decision; onDone: () => 
         `${request.user.displayName} · ${request.application.displayName}`,
       )
       onDone()
-      await Promise.all([queryClient.invalidateQueries({ queryKey: requestKeys.admin }), refreshAccess()])
+      await refreshAccess()
     },
     onError: (failure) => reportFormError(failure, t('requests.decisionFailed')),
   })
@@ -276,7 +284,14 @@ function DecisionForm({ decision, onDone }: { decision: Decision; onDone: () => 
     }
 
     setError(undefined)
-    decide.mutate()
+    const expiresAtUtc = fromLocalInput(until)
+    if (kind === 'approve' && until && (!expiresAtUtc || Date.parse(expiresAtUtc) <= Date.now())) {
+      setExpiryError(t('error.access.expiry_in_past'))
+      return
+    }
+
+    setExpiryError(undefined)
+    decide.mutate(expiresAtUtc)
   }
 
   return (
@@ -308,6 +323,12 @@ function DecisionForm({ decision, onDone }: { decision: Decision; onDone: () => 
             <p className="text-muted-foreground text-xs">{t('requests.rolesHint')}</p>
             <RoleChecklist roles={request.applicationRoles} value={roles} onChange={setRoles} idPrefix={`request-${request.id}`} />
           </div>
+        )}
+
+        {kind === 'approve' && (
+          <FormField label={t('access.expiry.until')} htmlFor="decision-expiry" hint={t('access.expiry.hint')} error={expiryError}>
+            <Input type="datetime-local" value={until} onChange={(event) => setUntil(event.target.value)} />
+          </FormField>
         )}
 
         <FormField

@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { accessKeys } from '@/api/access'
+import { requestKeys } from '@/api/requests'
 import type { PortalPage } from '@/api/types'
 import { SESSION_QUERY_KEY } from '@/hooks/useSession'
 
@@ -18,6 +19,10 @@ export function useAccessRefresh() {
         queryClient.invalidateQueries({ queryKey: accessKeys.groups }),
         queryClient.invalidateQueries({ queryKey: accessKeys.tree }),
         queryClient.invalidateQueries({ queryKey: ['admin-access-user'] }),
+        queryClient.invalidateQueries({ queryKey: accessKeys.mine }),
+        queryClient.invalidateQueries({ queryKey: requestKeys.admin }),
+        queryClient.invalidateQueries({ queryKey: requestKeys.mine }),
+        queryClient.invalidateQueries({ queryKey: requestKeys.catalog }),
         queryClient.invalidateQueries({ queryKey: accessKeys.launchpad }),
         queryClient.invalidateQueries({ queryKey: accessKeys.pagePermissions }),
         // The signed-in user's own pages may have changed with their groups.

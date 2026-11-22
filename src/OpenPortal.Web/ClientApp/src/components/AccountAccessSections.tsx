@@ -1,9 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Building2, Undo2 } from 'lucide-react'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { accessApi, accessKeys } from '@/api/access'
 import { myOrganizationsApi, organizationKeys } from '@/api/organizations'
 import { myAccessRequestsApi, requestKeys } from '@/api/requests'
 import type { AccessRequestStatus } from '@/api/types'
+import { AccessExplanation } from '@/components/access/AccessExplanation'
 import { OrganizationMembersDialog } from '@/components/OrganizationMembersDialog'
 import { Section } from '@/components/Section'
 import { ErrorPanel, LoadingState } from '@/components/StatePanels'
@@ -13,6 +16,35 @@ import { notify } from '@/hooks/useToast'
 import { formatDate, formatRelative } from '@/i18n/store'
 import { useI18n } from '@/i18n/useI18n'
 import { describeError } from '@/lib/errors'
+
+export function MyEffectiveAccessSection() {
+  const { t } = useI18n()
+  const access = useQuery({
+    queryKey: accessKeys.mine,
+    queryFn: ({ signal }) => accessApi.mine(signal),
+  })
+
+  return (
+    <Section title={t('access.effective.title')}>
+      {access.isPending && <LoadingState />}
+      {access.isError && <ErrorPanel message={describeError(access.error)} onRetry={() => void access.refetch()} />}
+      {access.data?.applications.length === 0 && <p className="text-muted-foreground text-sm">{t('access.effective.empty')}</p>}
+      {!!access.data?.applications.length && (
+        <ul className="divide-y rounded-md border">
+          {access.data.applications.map((application) => (
+            <li key={application.applicationId} className="grid gap-1.5 px-3 py-3">
+              <span className="text-sm font-medium">{application.displayName}</span>
+              <AccessExplanation access={application} />
+            </li>
+          ))}
+        </ul>
+      )}
+      <Button asChild size="sm" variant="outline" className="mt-3">
+        <Link to="/dashboard">{t('access.effective.catalog')}</Link>
+      </Button>
+    </Section>
+  )
+}
 
 /** The organizations the signed-in user belongs to, as applications that work per organization see them. */
 export function MyOrganizationsSection() {
@@ -105,6 +137,11 @@ export function MyAccessRequestsSection() {
                   {t('account.requests.asked', { when: formatRelative(request.createdAtUtc) })}
                   {request.decidedAtUtc && ` · ${t('account.requests.decided', { when: formatRelative(request.decidedAtUtc) })}`}
                 </span>
+                {request.grantedUntilUtc && (
+                  <span className="text-muted-foreground text-xs">
+                    {t('access.expiry.badge', { date: formatDate(request.grantedUntilUtc, { dateStyle: 'short', timeStyle: 'short' }) })}
+                  </span>
+                )}
                 {request.reason && <span className="text-muted-foreground line-clamp-2 text-xs">{request.reason}</span>}
                 {request.decisionNote && <span className="text-xs italic">“{request.decisionNote}”</span>}
               </div>

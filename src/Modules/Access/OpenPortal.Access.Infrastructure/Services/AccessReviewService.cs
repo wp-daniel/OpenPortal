@@ -205,7 +205,14 @@ internal sealed class AccessReviewService : IAccessReviewService
             return Result<AccessReviewDto>.Failure(decided.Error);
         }
 
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Result<AccessReviewDto>.Failure(AccessReviewErrors.ConcurrentChange);
+        }
 
         return Result<AccessReviewDto>.Success(await ToDtoAsync(review, cancellationToken).ConfigureAwait(false));
     }
@@ -230,32 +237,74 @@ internal sealed class AccessReviewService : IAccessReviewService
             return Result<AccessReviewDto>.Failure(completed.Error);
         }
 
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
         var application = await _db.Applications.SingleOrDefaultAsync(candidate => candidate.Id == review.ApplicationId, cancellationToken)
             .ConfigureAwait(false);
-
-        var revoked = 0;
-        if (application is not null)
+        if (application is null)
         {
-            foreach (var item in completed.Value)
+            return Result<AccessReviewDto>.Failure(AccessErrors.ApplicationNotFound);
+        }
+
+        var userIds = completed.Value.Where(item => item.SubjectType == AccessReviewSubjectType.User).Select(item => item.SubjectId).ToArray();
+        var groups = completed.Value.Where(item => item.SubjectType == AccessReviewSubjectType.Group).ToDictionary(item => item.SubjectId);
+        var groupIds = groups.Keys.ToArray();
+        var revokedUsers = new List<Guid>();
+        var revokedGroups = new List<Guid>();
+
+        try
+        {
+            await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+            // Claim this revision before removing grants. OpenIddict uses this context and transaction as well.
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            var userGrants = await _db.UserGrants
+                .Where(grant => grant.ApplicationId == application.Id && userIds.Contains(grant.UserId)
+                    && grant.GrantedAtUtc <= review.CreatedAtUtc)
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            var groupGrants = await _db.GroupGrants
+                .Where(grant => grant.ApplicationId == application.Id && groupIds.Contains(grant.GroupId)
+                    && grant.GrantedAtUtc <= review.CreatedAtUtc)
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+            revokedUsers.AddRange(userGrants.Select(grant => grant.UserId));
+            revokedGroups.AddRange(groupGrants.Select(grant => grant.GroupId));
+            var affectedUsers = revokedUsers.ToHashSet();
+            foreach (var groupId in revokedGroups)
             {
-                if (item.SubjectType == AccessReviewSubjectType.User)
-                {
-                    revoked += await _grants.RevokeAsync(application, item.SubjectId, cancellationToken).ConfigureAwait(false) ? 1 : 0;
-                }
-                else
-                {
-                    revoked += await RevokeGroupAsync(application, item, cancellationToken).ConfigureAwait(false) ? 1 : 0;
-                }
+                affectedUsers.UnionWith(await _graph.MembersOfGroupAsync(groupId, cancellationToken).ConfigureAwait(false));
             }
+
+            _db.UserGrants.RemoveRange(userGrants);
+            _db.GroupGrants.RemoveRange(groupGrants);
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await _access.RevokeIfNoLongerAllowedAsync(application, affectedUsers, cancellationToken).ConfigureAwait(false);
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Result<AccessReviewDto>.Failure(AccessReviewErrors.ConcurrentChange);
+        }
+
+        foreach (var userId in revokedUsers)
+        {
+            await _grants.RecordRevocationAsync(application, userId, cancellationToken).ConfigureAwait(false);
+        }
+
+        foreach (var groupId in revokedGroups)
+        {
+            await _audit.RecordAsync(
+                    AuditEvent.Succeeded(
+                        AccessAuditActions.GroupRevoked,
+                        new AuditSubject(AuditSubjectTypes.Group, groupId.ToString(), groups[groupId].SubjectLabel),
+                        AccessAudit.Details(("application", application.DisplayName), ("clientId", application.ClientId), ("reason", "access_review"))),
+                    cancellationToken)
+                .ConfigureAwait(false);
         }
 
         await _audit.RecordAsync(
                 AuditEvent.Succeeded(
                     AccessAuditActions.ReviewCompleted,
-                    application?.ToAuditSubject(),
-                    AccessAudit.Details(("review", review.Name), ("revoked", revoked.ToString(CultureInfo.InvariantCulture)))),
+                    application.ToAuditSubject(),
+                    AccessAudit.Details(("review", review.Name), ("revoked", (revokedUsers.Count + revokedGroups.Count).ToString(CultureInfo.InvariantCulture)))),
                 cancellationToken)
             .ConfigureAwait(false);
 
@@ -282,7 +331,14 @@ internal sealed class AccessReviewService : IAccessReviewService
             return Result<AccessReviewDto>.Failure(cancelled.Error);
         }
 
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Result<AccessReviewDto>.Failure(AccessReviewErrors.ConcurrentChange);
+        }
 
         await _audit.RecordAsync(
                 AuditEvent.Succeeded(AccessAuditActions.ReviewCancelled, details: AccessAudit.Details(("review", review.Name))),
@@ -290,34 +346,6 @@ internal sealed class AccessReviewService : IAccessReviewService
             .ConfigureAwait(false);
 
         return Result<AccessReviewDto>.Success(await ToDtoAsync(review, cancellationToken).ConfigureAwait(false));
-    }
-
-    private async Task<bool> RevokeGroupAsync(PortalApplication application, AccessReviewItem item, CancellationToken cancellationToken)
-    {
-        var grant = await _db.GroupGrants
-            .SingleOrDefaultAsync(candidate => candidate.ApplicationId == application.Id && candidate.GroupId == item.SubjectId, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (grant is null)
-        {
-            return false;
-        }
-
-        var members = await _graph.MembersOfGroupAsync(item.SubjectId, cancellationToken).ConfigureAwait(false);
-
-        _db.GroupGrants.Remove(grant);
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        await _access.RevokeIfNoLongerAllowedAsync(application, members, cancellationToken).ConfigureAwait(false);
-
-        await _audit.RecordAsync(
-                AuditEvent.Succeeded(
-                    AccessAuditActions.GroupRevoked,
-                    new AuditSubject(AuditSubjectTypes.Group, item.SubjectId.ToString(), item.SubjectLabel),
-                    AccessAudit.Details(("application", application.DisplayName), ("clientId", application.ClientId), ("reason", "access_review"))),
-                cancellationToken)
-            .ConfigureAwait(false);
-
-        return true;
     }
 
     private Task<Result> GuardAsync(CancellationToken cancellationToken) =>

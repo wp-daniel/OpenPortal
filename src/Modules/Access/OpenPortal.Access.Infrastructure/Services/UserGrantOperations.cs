@@ -65,16 +65,40 @@ internal sealed class UserGrantOperations
         CancellationToken cancellationToken,
         ExpiryChange? expiry = null)
     {
+        var staged = await StageGrantAsync(application, userId, roles, expiry, cancellationToken).ConfigureAwait(false);
+        if (staged.IsFailure)
+        {
+            return Result<bool>.Failure(staged.Error);
+        }
+
+        if (staged.Value is not { } change)
+        {
+            return Result<bool>.Success(false);
+        }
+
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await RecordGrantAsync(application, userId, change, notifyUser, cancellationToken).ConfigureAwait(false);
+        return Result<bool>.Success(true);
+    }
+
+    // Access requests save the staged grant and the decision together, and publish only after commit.
+    public async Task<Result<StagedGrant?>> StageGrantAsync(
+        PortalApplication application,
+        Guid userId,
+        IReadOnlyList<string>? roles,
+        ExpiryChange? expiry,
+        CancellationToken cancellationToken)
+    {
         roles = NormaliseRoles(roles);
         if (roles is not null && !roles.All(application.HasRole))
         {
-            return Result<bool>.Failure(AccessErrors.RoleNotFound);
+            return Result<StagedGrant?>.Failure(AccessErrors.RoleNotFound);
         }
 
         var users = await _directory.FindAsync([userId], cancellationToken).ConfigureAwait(false);
         if (!users.TryGetValue(userId, out var user))
         {
-            return Result<bool>.Failure(AccessErrors.UserNotFound);
+            return Result<StagedGrant?>.Failure(AccessErrors.UserNotFound);
         }
 
         var grant = await _db.UserGrants
@@ -91,30 +115,29 @@ internal sealed class UserGrantOperations
         var rolesChanged = roles is not null && grant.SetRoles(roles);
         var expiryChanged = expiry is not null && grant.SetExpiry(expiry.ExpiresAtUtc);
 
-        if (!created && !rolesChanged)
+        return Result<StagedGrant?>.Success(created || rolesChanged || expiryChanged
+            ? new StagedGrant(grant, user.Email, created, rolesChanged)
+            : null);
+    }
+
+    public async Task RecordGrantAsync(
+        PortalApplication application, Guid userId, StagedGrant change, bool notifyUser, CancellationToken cancellationToken)
+    {
+        if (change.Created || change.RolesChanged)
         {
-            if (expiryChanged)
-            {
-                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            }
-
-            return Result<bool>.Success(expiryChanged);
-        }
-
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        await _audit.RecordAsync(
+            await _audit.RecordAsync(
                 AuditEvent.Succeeded(
-                    created ? AccessAuditActions.UserGranted : AccessAuditActions.UserRolesChanged,
-                    new AuditSubject(AuditSubjectTypes.User, userId.ToString(), user.Email),
+                    change.Created ? AccessAuditActions.UserGranted : AccessAuditActions.UserRolesChanged,
+                    new AuditSubject(AuditSubjectTypes.User, userId.ToString(), change.Email),
                     AccessAudit.Details(
                         ("application", application.DisplayName),
                         ("clientId", application.ClientId),
-                        ("roles", AccessAudit.JoinRoles(grant.Roles)))),
+                        ("roles", AccessAudit.JoinRoles(change.Grant.Roles)))),
                 cancellationToken)
-            .ConfigureAwait(false);
+                .ConfigureAwait(false);
+        }
 
-        if (created && notifyUser && application.Status == ApplicationStatus.Active)
+        if (change.Created && notifyUser && application.Status == ApplicationStatus.Active)
         {
             await _notifier.NotifyAsync(
                     new Notice
@@ -128,7 +151,6 @@ internal sealed class UserGrantOperations
                 .ConfigureAwait(false);
         }
 
-        return Result<bool>.Success(true);
     }
 
     /// <summary>
@@ -151,6 +173,12 @@ internal sealed class UserGrantOperations
 
         await _access.RevokeIfNoLongerAllowedAsync(application, [userId], cancellationToken).ConfigureAwait(false);
 
+        await RecordRevocationAsync(application, userId, cancellationToken).ConfigureAwait(false);
+        return true;
+    }
+
+    public async Task RecordRevocationAsync(PortalApplication application, Guid userId, CancellationToken cancellationToken)
+    {
         await _audit.RecordAsync(
                 AuditEvent.Succeeded(
                     AccessAuditActions.UserRevoked,
@@ -159,8 +187,9 @@ internal sealed class UserGrantOperations
                 cancellationToken)
             .ConfigureAwait(false);
 
-        return true;
     }
+
+    internal sealed record StagedGrant(ApplicationUserGrant Grant, string Email, bool Created, bool RolesChanged);
 
     /// <summary>Role keys are compared lower-cased, as the domain stores them.</summary>
     public static IReadOnlyList<string>? NormaliseRoles(IReadOnlyList<string>? roles) =>

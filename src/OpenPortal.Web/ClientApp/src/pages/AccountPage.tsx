@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { accountApi } from '@/api/auth'
 import { ApiError } from '@/api/client'
 import type { AccountProfile, PasswordPolicy, SessionUser } from '@/api/types'
-import { MyAccessRequestsSection, MyOrganizationsSection } from '@/components/AccountAccessSections'
+import { MyAccessRequestsSection, MyEffectiveAccessSection, MyOrganizationsSection } from '@/components/AccountAccessSections'
 import { AvatarUpload } from '@/components/AvatarUpload'
 import { EmailSection } from '@/components/EmailSection'
 import { FormField } from '@/components/FormField'
@@ -134,7 +134,8 @@ export function AccountPage() {
           <MyOrganizationsSection />
         </TabsContent>
 
-        <TabsContent value="requests" className="pt-4">
+        <TabsContent value="requests" className="space-y-6 pt-4">
+          <MyEffectiveAccessSection />
           <MyAccessRequestsSection />
         </TabsContent>
 

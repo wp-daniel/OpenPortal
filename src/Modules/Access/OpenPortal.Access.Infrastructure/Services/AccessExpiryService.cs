@@ -54,15 +54,21 @@ internal sealed partial class AccessExpiryService : BackgroundService
         var now = _clock.UtcNow;
         var removed = 0;
 
-        var userGrants = await db.UserGrants.Where(grant => grant.ExpiresAtUtc != null && grant.ExpiresAtUtc <= now)
+        var userGrants = await db.UserGrants.AsNoTracking().Where(grant => grant.ExpiresAtUtc != null && grant.ExpiresAtUtc <= now)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         foreach (var grant in userGrants)
         {
-            var application = await db.Applications.SingleAsync(candidate => candidate.Id == grant.ApplicationId, cancellationToken).ConfigureAwait(false);
+            var application = await db.Applications.SingleOrDefaultAsync(candidate => candidate.Id == grant.ApplicationId, cancellationToken).ConfigureAwait(false);
+            // An approval or a manual grant can renew the row after the sweep selected it.
+            var deleted = await db.UserGrants.Where(candidate => candidate.ApplicationId == grant.ApplicationId
+                    && candidate.UserId == grant.UserId && candidate.ExpiresAtUtc != null && candidate.ExpiresAtUtc <= now)
+                .ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+            if (deleted == 0 || application is null)
+            {
+                continue;
+            }
 
-            db.UserGrants.Remove(grant);
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             await access.RevokeIfNoLongerAllowedAsync(application, [grant.UserId], cancellationToken).ConfigureAwait(false);
 
             await audit.RecordAsync(

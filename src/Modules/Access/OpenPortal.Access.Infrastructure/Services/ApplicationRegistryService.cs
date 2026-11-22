@@ -141,6 +141,12 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
 
         ConfigureSignIn(application, request.RequireConsent, request.AllowDeviceFlow, now);
 
+        var approvers = await ConfigureApproversAsync(application, request.AccessRequestApprovers, now, cancellationToken).ConfigureAwait(false);
+        if (approvers.IsFailure)
+        {
+            return Result<ApplicationSecretDto>.Failure(approvers.Error);
+        }
+
         var webhook = application.SetWebhook(request.WebhookUrl, request.WebhookEvents, now);
         if (webhook.IsFailure)
         {
@@ -190,6 +196,7 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
         }
 
         var now = _clock.UtcNow;
+        var previousApproverGroup = application.AccessRequestApproverGroupId;
         var rolesBefore = application.Roles.Select(role => (role.Key, role.DisplayName, role.Description)).ToList();
 
         var updated = application.Update(
@@ -223,6 +230,12 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
         }
 
         ConfigureSignIn(application, request.RequireConsent, request.AllowDeviceFlow, now);
+
+        var approvers = await ConfigureApproversAsync(application, request.AccessRequestApprovers, now, cancellationToken).ConfigureAwait(false);
+        if (approvers.IsFailure)
+        {
+            return Result<ApplicationDto>.Failure(approvers.Error);
+        }
 
         // Absent leaves the webhook as it is; an empty URL turns it off.
         if (request.WebhookUrl is not null || request.WebhookEvents is not null)
@@ -259,7 +272,11 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
                 AuditEvent.Succeeded(
                     AccessAuditActions.ApplicationUpdated,
                     application.ToAuditSubject(),
-                    apiScopesChanged ? AccessAudit.Details(("apiScopes", application.ApiScopes.Count > 0 ? AccessAudit.JoinRoles(application.ApiScopes) : "-")) : null),
+                    AccessAudit.Details(
+                        ("apiScopes", apiScopesChanged ? AccessAudit.JoinRoles(application.ApiScopes.DefaultIfEmpty("-").ToList()) : null),
+                        ("approverGroupId", previousApproverGroup != application.AccessRequestApproverGroupId
+                            ? application.AccessRequestApproverGroupId?.ToString() ?? "-"
+                            : null))),
                 cancellationToken)
             .ConfigureAwait(false);
 
@@ -453,6 +470,29 @@ internal sealed class ApplicationRegistryService : IApplicationRegistryService
     /// create or update request. Null leaves each as it is. Returns the keys of the roles that were removed.
     /// </summary>
     /// <summary>Consent and the device flow; null leaves each as it is.</summary>
+    private async Task<Result> ConfigureApproversAsync(
+        PortalApplication application, AccessRequestApproverSettings? settings, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        if (settings is null || application.AccessRequestApproverGroupId == settings.GroupId)
+        {
+            return Result.Success();
+        }
+
+        if (!_authorization.IsAdministrator)
+        {
+            return Result.Failure(AccessErrors.AdministrationForbidden);
+        }
+
+        if (settings.GroupId is Guid groupId
+            && !await _db.Groups.AnyAsync(group => group.Id == groupId, cancellationToken).ConfigureAwait(false))
+        {
+            return Result.Failure(AccessErrors.GroupNotFound);
+        }
+
+        application.SetAccessRequestApproverGroup(settings.GroupId, now);
+        return Result.Success();
+    }
+
     private static void ConfigureSignIn(PortalApplication application, bool? requireConsent, bool? allowDeviceFlow, DateTimeOffset now)
     {
         if (requireConsent is bool consent)

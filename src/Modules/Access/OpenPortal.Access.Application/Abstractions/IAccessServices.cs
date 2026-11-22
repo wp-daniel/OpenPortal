@@ -83,6 +83,8 @@ public interface IAccessAdministrationService
     /// <summary>The applications one user can open, each with the reasons it is allowed.</summary>
     Task<Result<UserAccessDto>> GetUserAccessAsync(Guid userId, CancellationToken cancellationToken);
 
+    Task<Result<UserAccessDto>> GetMyAccessAsync(CancellationToken cancellationToken);
+
     /// <summary>
     /// Grants the application to the user. With <paramref name="roles"/>, the grant carries exactly those roles
     /// (granting again changes only the roles); without, an existing grant keeps its roles.
@@ -451,6 +453,11 @@ public enum AccessOperation
 /// </summary>
 public interface IAccessAdminAuthorization
 {
+    bool IsAdministrator { get; }
+
+    /// <summary>Portal administrators plus eligible group members who hold the access requests page.</summary>
+    Task<IReadOnlyCollection<Guid>> GetRequestReviewersAsync(IReadOnlySet<Guid> groupMembers, CancellationToken cancellationToken);
+
     Task<Result> EnsureCanAsync(AccessOperation operation, CancellationToken cancellationToken);
 }
 

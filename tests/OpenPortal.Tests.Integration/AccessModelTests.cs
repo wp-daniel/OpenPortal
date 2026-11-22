@@ -1,5 +1,11 @@
 using System.Net;
 using System.Text.Json;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
+using OpenPortal.Access.Domain.Grants;
+using OpenPortal.Access.Infrastructure.Persistence;
 
 namespace OpenPortal.Tests.Integration;
 
@@ -40,6 +46,15 @@ public sealed class AccessModelTests : IClassFixture<OpenPortalFactory>
         }
 
         (await LaunchpadAsync(user)).ShouldContain(clientId);
+
+        using (var signedIn = await Scenario.SignedInAsync(_factory, user))
+        {
+            var effective = (await Scenario.GetJsonAsync(signedIn, "/api/account/applications/access")).GetProperty("applications")
+                .EnumerateArray().Single(entry => entry.GetProperty("applicationId").GetGuid() == applicationId);
+            effective.GetProperty("outcome").GetString().ShouldBe("granted");
+            effective.GetProperty("sources").EnumerateArray().Single().GetProperty("groupPath").EnumerateArray()
+                .Select(group => group.GetProperty("id").GetGuid()).ShouldBe([child, parent]);
+        }
 
         // A cycle is refused.
         using (var cycle = await admin.PutAsync($"/api/admin/groups/{child}/subgroups/{parent}", new { }))
@@ -121,6 +136,52 @@ public sealed class AccessModelTests : IClassFixture<OpenPortalFactory>
 
         using var again = await admin.PostAsync($"/api/admin/access-reviews/{reviewId}/complete");
         await Scenario.ExpectErrorAsync(again, HttpStatusCode.Conflict, "access.review_not_open");
+    }
+
+    [Fact]
+    public async Task A_failed_revocation_keeps_the_review_open_and_the_grant_intact()
+    {
+        var (admin, administrator) = await Scenario.AdminAsync(_factory);
+        using var normal = admin;
+        var user = await _factory.CreateUserAsync(Scenario.UniqueEmail("review-rollback"), Scenario.Password);
+        var (applicationId, clientId, _) = await Scenario.CreateApplicationAsync(admin);
+        using (var grant = await admin.PutAsync($"/api/admin/access/applications/{applicationId}/users/{user.Id}", new { }))
+        {
+            grant.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        }
+
+        using var started = await admin.PostAsync("/api/admin/access-reviews", new { applicationId, revokeUndecided = true });
+        var reviewId = (await Scenario.JsonAsync(started, HttpStatusCode.OK)).GetProperty("review").GetProperty("id").GetGuid();
+        await using var host = _factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+            services.ConfigureDbContext<AccessDbContext>(options => options.AddInterceptors(new RejectGrantDeletion(applicationId)))));
+        using (var faulty = await Scenario.SignedInAsync(host, administrator))
+        using (var failed = await faulty.PostAsync($"/api/admin/access-reviews/{reviewId}/complete"))
+        {
+            await Scenario.ExpectErrorAsync(failed, HttpStatusCode.Conflict, "access.review_concurrent_change");
+        }
+
+        var review = await Scenario.GetJsonAsync(admin, $"/api/admin/access-reviews/{reviewId}");
+        review.GetProperty("review").GetProperty("status").GetString().ShouldBe("open");
+        (await LaunchpadAsync(user)).ShouldContain(clientId);
+
+        using var completed = await admin.PostAsync($"/api/admin/access-reviews/{reviewId}/complete");
+        completed.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await LaunchpadAsync(user)).ShouldNotContain(clientId);
+    }
+
+    private sealed class RejectGrantDeletion(Guid applicationId) : SaveChangesInterceptor
+    {
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            if (eventData.Context!.ChangeTracker.Entries<ApplicationUserGrant>()
+                .Any(entry => entry.State == EntityState.Deleted && entry.Entity.ApplicationId == applicationId))
+            {
+                throw new DbUpdateConcurrencyException("Simulated grant removal conflict.");
+            }
+
+            return base.SavingChangesAsync(eventData, result, cancellationToken);
+        }
     }
 
     [Fact]

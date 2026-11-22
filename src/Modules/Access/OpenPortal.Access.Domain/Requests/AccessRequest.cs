@@ -63,6 +63,8 @@ public sealed class AccessRequest
     /// <summary>The role keys the approval granted.</summary>
     public IReadOnlyList<string> GrantedRoles { get; private set; } = [];
 
+    public DateTimeOffset? GrantedUntilUtc { get; private set; }
+
     public bool IsPending => Status == AccessRequestStatus.Pending;
 
     public static Result<AccessRequest> Submit(Guid id, Guid applicationId, Guid userId, string? reason, DateTimeOffset now)
@@ -88,12 +90,23 @@ public sealed class AccessRequest
         });
     }
 
-    /// <summary>Records the approval; the caller has created the grant already.</summary>
-    public Result Approve(Guid reviewerId, IEnumerable<string> grantedRoles, string? note, DateTimeOffset now)
+    /// <summary>Records the approval that will be saved with the grant.</summary>
+    public Result Approve(Guid reviewerId, IEnumerable<string> grantedRoles, string? note, DateTimeOffset now, DateTimeOffset? expiresAtUtc = null)
     {
         ArgumentNullException.ThrowIfNull(grantedRoles);
 
-        return Decide(AccessRequestStatus.Approved, reviewerId, note, now, grantedRoles);
+        if (expiresAtUtc is { } end && end <= now)
+        {
+            return Result.Failure(AccessErrors.ExpiryInPast);
+        }
+
+        var approved = Decide(AccessRequestStatus.Approved, reviewerId, note, now, grantedRoles);
+        if (approved.IsSuccess)
+        {
+            GrantedUntilUtc = expiresAtUtc?.ToUniversalTime();
+        }
+
+        return approved;
     }
 
     public Result Reject(Guid reviewerId, string? note, DateTimeOffset now) =>

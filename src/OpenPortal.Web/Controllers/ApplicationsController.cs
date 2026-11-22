@@ -20,14 +20,24 @@ namespace OpenPortal.Web.Controllers;
 public sealed class LaunchpadController : ControllerBase
 {
     private readonly IAccessEvaluator _access;
+    private readonly IAccessAdministrationService _grants;
     private readonly ICurrentUser _currentUser;
     private readonly string? _iconDirectory;
 
-    public LaunchpadController(IAccessEvaluator access, ICurrentUser currentUser, IConfiguration configuration)
+    public LaunchpadController(IAccessEvaluator access, IAccessAdministrationService grants, ICurrentUser currentUser, IConfiguration configuration)
     {
         _access = access;
+        _grants = grants;
         _currentUser = currentUser;
         _iconDirectory = configuration["Launchpad:IconDirectory"];
+    }
+
+    [HttpGet("access")]
+    [ProducesResponseType<UserAccessDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<UserAccessDto>> GetMyAccessAsync(CancellationToken cancellationToken)
+    {
+        var result = await _grants.GetMyAccessAsync(cancellationToken).ConfigureAwait(false);
+        return result.IsSuccess ? Ok(result.Value) : ProblemResults.FromResult(HttpContext, result);
     }
 
     [HttpGet]

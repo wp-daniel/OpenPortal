@@ -27,8 +27,8 @@ export const accessRequestsApi = {
       signal,
     ),
 
-  approve: (id: string, roles: readonly string[], note: string | null) =>
-    api.post<AccessRequest>(`/api/admin/access-requests/${id}/approve`, { roles, note }),
+  approve: (id: string, roles: readonly string[], note: string | null, expiresAtUtc: string | null) =>
+    api.post<AccessRequest>(`/api/admin/access-requests/${id}/approve`, { roles, note, expiresAtUtc }),
 
   reject: (id: string, note: string | null) => api.post<AccessRequest>(`/api/admin/access-requests/${id}/reject`, { note }),
 }

@@ -2149,4 +2149,20 @@
   <data name="users.emailChange.failed" xml:space="preserve"><value>Impossible de changer l'e-mail</value></data>
   <data name="signIn.reauth.title" xml:space="preserve"><value>Confirmez qu'il s'agit de vous</value></data>
   <data name="signIn.reauth.description" xml:space="preserve"><value>Une application vous demande de vous reconnecter avant de continuer.</value></data>
+  <data name="applications.approvers.label" xml:space="preserve"><value>Groupe d’approbateurs</value></data>
+  <data name="applications.approvers.hint" xml:space="preserve"><value>Par défaut, toute personne ayant accès à la page Demandes d’accès peut décider. Choisissez un groupe pour limiter la délégation à ses membres ayant accès à cette page. Les administrateurs peuvent toujours décider.</value></data>
+  <data name="applications.approvers.reset" xml:space="preserve"><value>Utiliser les réviseurs du portail</value></data>
+  <data name="access.effective.title" xml:space="preserve"><value>Mes accès aux applications</value></data>
+  <data name="access.effective.empty" xml:space="preserve"><value>Vous n’avez aucun droit d’accès aux applications.</value></data>
+  <data name="access.effective.catalog" xml:space="preserve"><value>Consulter le catalogue des applications</value></data>
+  <data name="access.effective.granted" xml:space="preserve"><value>Accès actif</value></data>
+  <data name="access.effective.inactive" xml:space="preserve"><value>Application indisponible</value></data>
+  <data name="access.effective.expired" xml:space="preserve"><value>Accès expiré</value></data>
+  <data name="access.effective.organization_required" xml:space="preserve"><value>Organisation requise</value></data>
+  <data name="access.effective.organization_choice" xml:space="preserve"><value>Choisissez une organisation à la connexion</value></data>
+  <data name="access.effective.organizations" xml:space="preserve"><value>Organisations : {names}</value></data>
+  <data name="access.effective.organizationMfa" xml:space="preserve"><value>MFA requise</value></data>
+  <data name="access.effective.ended" xml:space="preserve"><value>expiré le {date}</value></data>
+  <data name="error.access.review_concurrent_change" xml:space="preserve"><value>La révision ou les droits ont changé. Rechargez la révision et réessayez.</value></data>
+  <data name="error.access.approver_group_in_use" xml:space="preserve"><value>Modifiez les applications qui utilisent ce groupe pour approuver les accès avant de le supprimer.</value></data>
 </root>

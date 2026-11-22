@@ -15,7 +15,7 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.14");
 
             modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication<System.Guid>", b =>
                 {
@@ -254,6 +254,9 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("AccessRequestApproverGroupId")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("AllowAccessRequests")
                         .HasColumnType("INTEGER");
 
@@ -365,6 +368,8 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AccessRequestApproverGroupId");
 
                     b.HasIndex("ClientId")
                         .IsUnique()
@@ -685,11 +690,15 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<long?>("GrantedUntilUtc")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Reason")
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Status")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("TEXT");
@@ -738,6 +747,10 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("Revision")
+                        .IsConcurrencyToken()
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("RevokeUndecided")
@@ -834,6 +847,14 @@ namespace OpenPortal.Web.Persistence.Migrations.Access
                         .HasForeignKey("ApplicationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Applications.PortalApplication", b =>
+                {
+                    b.HasOne("OpenPortal.Access.Domain.Groups.Group", null)
+                        .WithMany()
+                        .HasForeignKey("AccessRequestApproverGroupId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("OpenPortal.Access.Domain.Grants.ApplicationGroupGrant", b =>

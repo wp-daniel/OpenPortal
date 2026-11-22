@@ -17,7 +17,7 @@ namespace OpenPortal.Migrations.PostgreSql.Access
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -259,6 +259,9 @@ namespace OpenPortal.Migrations.PostgreSql.Access
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("AccessRequestApproverGroupId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("AllowAccessRequests")
                         .HasColumnType("boolean");
 
@@ -370,6 +373,8 @@ namespace OpenPortal.Migrations.PostgreSql.Access
                         .HasColumnType("character varying(512)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AccessRequestApproverGroupId");
 
                     b.HasIndex("ClientId")
                         .IsUnique()
@@ -690,11 +695,15 @@ namespace OpenPortal.Migrations.PostgreSql.Access
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTimeOffset?>("GrantedUntilUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Reason")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
                     b.Property<string>("Status")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)");
@@ -744,6 +753,10 @@ namespace OpenPortal.Migrations.PostgreSql.Access
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
+
+                    b.Property<Guid>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("RevokeUndecided")
                         .HasColumnType("boolean");
@@ -839,6 +852,14 @@ namespace OpenPortal.Migrations.PostgreSql.Access
                         .HasForeignKey("ApplicationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("OpenPortal.Access.Domain.Applications.PortalApplication", b =>
+                {
+                    b.HasOne("OpenPortal.Access.Domain.Groups.Group", null)
+                        .WithMany()
+                        .HasForeignKey("AccessRequestApproverGroupId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("OpenPortal.Access.Domain.Grants.ApplicationGroupGrant", b =>

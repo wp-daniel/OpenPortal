@@ -249,7 +249,8 @@ internal static class AccessMapping
         application.WebhookEvents,
         application.ProtectedWebhookSecret is not null,
         application.RequireConsent,
-        application.AllowDeviceFlow);
+        application.AllowDeviceFlow,
+        application.AccessRequestApproverGroupId);
 
     public static string ToContract(this OrganizationMode mode) => mode switch
     {

@@ -190,6 +190,118 @@ public sealed class AccessRequestTests(OpenPortalFactory factory) : IClassFixtur
         decided.GetProperty("decidedBy").GetProperty("id").GetGuid().ShouldBe(reviewer.Id);
     }
 
+    [Fact]
+    public async Task Assigned_reviewers_see_and_decide_their_applications_with_an_optional_expiry()
+    {
+        var (admin, _) = await Scenario.AdminAsync(factory);
+        using var administrator = admin;
+        var reviewer = await factory.CreateUserAsync(Scenario.UniqueEmail("scoped-reviewer"), Scenario.Password);
+        var outsider = await factory.CreateUserAsync(Scenario.UniqueEmail("other-reviewer"), Scenario.Password);
+        var requester = await factory.CreateUserAsync(Scenario.UniqueEmail("requester"), Scenario.Password);
+        var approvers = await Scenario.CreateGroupAsync(admin);
+        var child = await Scenario.CreateGroupAsync(admin, reviewer.Id);
+        using (var nested = await admin.PutAsync($"/api/admin/groups/{approvers}/subgroups/{child}", new { }))
+        {
+            nested.StatusCode.ShouldBe(HttpStatusCode.OK);
+        }
+
+        var otherGroup = await Scenario.CreateGroupAsync(admin, outsider.Id);
+        await Scenario.GrantPageAsync(admin, PortalPages.AccessRequests, approvers);
+        await Scenario.GrantPageAsync(admin, PortalPages.AccessRequests, otherGroup);
+        await Scenario.GrantPageAsync(admin, PortalPages.Applications, otherGroup);
+        var (app, _, _) = await Scenario.CreateApplicationAsync(admin, new
+        {
+            allowAccessRequests = true,
+            accessRequestApprovers = new { groupId = approvers },
+            roles = new[] { new { key = "reader", displayName = "Reader" } },
+        });
+
+        using var applicant = await Scenario.SignedInAsync(factory, requester);
+        using var assigned = await Scenario.SignedInAsync(factory, reviewer);
+        using var unassigned = await Scenario.SignedInAsync(factory, outsider);
+        var queue = $"/api/admin/access-requests?applicationId={app}";
+        var before = (await Scenario.GetJsonAsync(unassigned, queue)).GetProperty("pendingCount").GetInt32();
+        var requestId = await SubmitAsync(applicant, app);
+
+        var assignedQueue = await Scenario.GetJsonAsync(assigned, queue);
+        assignedQueue.GetProperty("items").EnumerateArray().Single().GetProperty("id").GetGuid().ShouldBe(requestId);
+        assignedQueue.GetProperty("pendingCount").GetInt32().ShouldBe(before + 1);
+        var otherQueue = await Scenario.GetJsonAsync(unassigned, queue);
+        otherQueue.GetProperty("items").GetArrayLength().ShouldBe(0);
+        otherQueue.GetProperty("pendingCount").GetInt32().ShouldBe(before);
+        (await Scenario.NotificationTypesAsync(assigned)).ShouldContain(AccessNotificationTypes.RequestSubmitted);
+        (await Scenario.NotificationTypesAsync(unassigned)).ShouldNotContain(AccessNotificationTypes.RequestSubmitted);
+
+        using (var hidden = await unassigned.PostAsync($"/api/admin/access-requests/{requestId}/approve", new { }))
+        {
+            await Scenario.ExpectErrorAsync(hidden, HttpStatusCode.NotFound, "access.request_not_found");
+        }
+
+        using (var moved = await unassigned.PutAsync($"/api/admin/applications/{app}", new
+        {
+            displayName = "Updated application",
+            baseUrl = "https://crm.example.com",
+            redirectUris = new[] { Scenario.RedirectUri },
+            accessRequestApprovers = new { groupId = otherGroup },
+        }))
+        {
+            await Scenario.ExpectErrorAsync(moved, HttpStatusCode.Forbidden, "access.administration_forbidden");
+        }
+
+        using (var deleted = await admin.DeleteAsync($"/api/admin/groups/{approvers}"))
+        {
+            await Scenario.ExpectErrorAsync(deleted, HttpStatusCode.Conflict, "access.approver_group_in_use");
+        }
+
+        using (var past = await assigned.PostAsync($"/api/admin/access-requests/{requestId}/approve", new { expiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1) }))
+        {
+            await Scenario.ExpectErrorAsync(past, HttpStatusCode.BadRequest, "access.expiry_in_past");
+        }
+
+        var end = DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds());
+        using (var approved = await assigned.PostAsync($"/api/admin/access-requests/{requestId}/approve", new
+        {
+            roles = new[] { "reader" },
+            note = "Approved for one day",
+            expiresAtUtc = end,
+        }))
+        {
+            var decision = await Scenario.JsonAsync(approved, HttpStatusCode.OK);
+            decision.GetProperty("grantedUntilUtc").GetDateTimeOffset().ShouldBe(end);
+        }
+
+        var own = (await Scenario.GetJsonAsync(applicant, "/api/account/applications/access")).GetProperty("applications")
+            .EnumerateArray().Single(item => item.GetProperty("applicationId").GetGuid() == app);
+        own.GetProperty("outcome").GetString().ShouldBe("granted");
+        own.GetProperty("sources").EnumerateArray().Single().GetProperty("expiresAtUtc").GetDateTimeOffset().ShouldBe(end);
+        own.GetProperty("roles").EnumerateArray().Single().GetString().ShouldBe("reader");
+        (await Scenario.GetJsonAsync(applicant, "/api/account/access-requests")).EnumerateArray().Single()
+            .GetProperty("grantedUntilUtc").GetDateTimeOffset().ShouldBe(end);
+    }
+
+    [Fact]
+    public async Task Concurrent_approval_and_rejection_leave_one_decision_with_a_matching_grant()
+    {
+        var (admin, administrator) = await Scenario.AdminAsync(factory);
+        using var first = admin;
+        using var second = await Scenario.SignedInAsync(factory, administrator);
+        var requester = await factory.CreateUserAsync(Scenario.UniqueEmail("contended-request"), Scenario.Password);
+        using var applicant = await Scenario.SignedInAsync(factory, requester);
+        var (applicationId, _, _) = await Scenario.CreateApplicationAsync(admin, new { allowAccessRequests = true });
+        var requestId = await SubmitAsync(applicant, applicationId);
+        var responses = await Task.WhenAll(
+            first.PostAsync($"/api/admin/access-requests/{requestId}/approve", new { }),
+            second.PostAsync($"/api/admin/access-requests/{requestId}/reject", new { }));
+        using var approval = responses[0];
+        using var rejection = responses[1];
+        var approved = approval.StatusCode == HttpStatusCode.OK;
+        await Scenario.ExpectErrorAsync(approved ? rejection : approval, HttpStatusCode.Conflict, "access.request_not_pending");
+        (approved ? approval : rejection).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var access = (await Scenario.GetJsonAsync(applicant, "/api/account/applications/access")).GetProperty("applications");
+        access.EnumerateArray().Any(item => item.GetProperty("applicationId").GetGuid() == applicationId).ShouldBe(approved);
+    }
+
     private static async Task<Guid> SubmitAsync(ApiClient client, Guid applicationId)
     {
         using var submitted = await client.PostAsync("/api/account/access-requests", new { applicationId });

@@ -51,7 +51,8 @@ public sealed record ApplicationDto(
     IReadOnlyList<string>? WebhookEvents = null,
     bool HasWebhookSecret = false,
     bool RequireConsent = false,
-    bool AllowDeviceFlow = false);
+    bool AllowDeviceFlow = false,
+    Guid? AccessRequestApproverGroupId = null);
 
 /// <summary>A new webhook signing secret (<c>whsec_…</c>), shown once.</summary>
 public sealed record WebhookSecretDto(string Secret);
@@ -128,7 +129,8 @@ public sealed record CreateApplicationRequest(
     string? WebhookUrl = null,
     IReadOnlyList<string>? WebhookEvents = null,
     bool? RequireConsent = null,
-    bool? AllowDeviceFlow = null);
+    bool? AllowDeviceFlow = null,
+    AccessRequestApproverSettings? AccessRequestApprovers = null);
 
 /// <summary>Field set for editing an application. The client id cannot change.</summary>
 /// <param name="Roles">
@@ -155,7 +157,11 @@ public sealed record UpdateApplicationRequest(
     string? WebhookUrl = null,
     IReadOnlyList<string>? WebhookEvents = null,
     bool? RequireConsent = null,
-    bool? AllowDeviceFlow = null);
+    bool? AllowDeviceFlow = null,
+    AccessRequestApproverSettings? AccessRequestApprovers = null);
+
+/// <summary>Limits delegated approval to a group. A null group uses the portal-wide reviewers.</summary>
+public sealed record AccessRequestApproverSettings(Guid? GroupId);
 
 /// <summary>What a running application reports about itself when it announces to the portal.</summary>
 /// <param name="Roles">
@@ -270,7 +276,18 @@ public sealed record UserApplicationAccessDto(
     string Status,
     bool Direct,
     IReadOnlyList<GroupReferenceDto> ViaGroups,
-    IReadOnlyList<string> Roles);
+    IReadOnlyList<string> Roles,
+    IReadOnlyList<UserAccessSourceDto> Sources,
+    string Outcome,
+    IReadOnlyList<string> Organizations,
+    bool OrganizationRequiresMultiFactor,
+    IReadOnlyList<ApplicationRoleDto> RoleCatalog);
+
+/// <summary>A direct grant (empty path) or a path from an active membership to a group's grant.</summary>
+public sealed record UserAccessSourceDto(
+    IReadOnlyList<GroupReferenceDto> GroupPath,
+    DateTimeOffset? ExpiresAtUtc,
+    bool Active);
 
 /// <summary>An application the signed-in user let sign them in (it holds a lasting authorization, and may hold tokens).</summary>
 /// <param name="Scopes">What the application receives (<c>openid</c>, <c>email</c>, <c>offline_access</c>…).</param>
@@ -498,7 +515,8 @@ public sealed record MyAccessRequestDto(
     string Status,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset? DecidedAtUtc,
-    string? DecisionNote);
+    string? DecisionNote,
+    DateTimeOffset? GrantedUntilUtc = null);
 
 /// <summary>A request as a reviewer sees it.</summary>
 /// <param name="ApplicationRoles">The roles the application defines, to choose from when approving.</param>
@@ -516,7 +534,8 @@ public sealed record AccessRequestDto(
     string? DecisionNote,
     IReadOnlyList<string> Roles,
     IReadOnlyList<ApplicationRoleDto> ApplicationRoles,
-    bool HasAccess);
+    bool HasAccess,
+    DateTimeOffset? GrantedUntilUtc = null);
 
 /// <summary>A page of access requests, oldest pending first, then newest decided.</summary>
 /// <param name="PendingCount">Requests waiting for a decision in total, whatever the filter.</param>
@@ -560,7 +579,7 @@ public sealed class SubmitAccessRequest
 /// <summary>A reviewer's decision.</summary>
 /// <param name="Roles">On approval, the role keys to grant (none when absent).</param>
 /// <param name="Note">A message for the requester.</param>
-public sealed record ReviewAccessRequest(IReadOnlyList<string>? Roles, string? Note);
+public sealed record ReviewAccessRequest(IReadOnlyList<string>? Roles, string? Note, DateTimeOffset? ExpiresAtUtc = null);
 
 // ---------------------------------------------------------------------------
 // Application API: what an application's backend reads and changes with a token of its own.

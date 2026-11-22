@@ -25,19 +25,50 @@ internal sealed class GroupGraph
     /// <summary>Every group the user belongs to, directly or through a subgroup.</summary>
     public async Task<HashSet<Guid>> GroupsOfUserAsync(Guid userId, CancellationToken cancellationToken)
     {
-        var now = _clock.UtcNow;
-
-        var direct = await _db.GroupMembers
-            .AsNoTracking()
-            .Where(member => member.UserId == userId)
-            .Select(member => new { member.GroupId, member.ExpiresAtUtc })
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        var groups = direct.Where(member => member.ExpiresAtUtc is null || member.ExpiresAtUtc > now).Select(member => member.GroupId);
-
-        return await AncestorsAndSelfAsync(groups, cancellationToken).ConfigureAwait(false);
+        var memberships = await ActiveMembershipsAsync(userId, cancellationToken).ConfigureAwait(false);
+        return await AncestorsAndSelfAsync(memberships.Select(member => member.GroupId), cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>One path per effective group, preferring the membership that keeps the path open longest.</summary>
+    public async Task<IReadOnlyDictionary<Guid, MembershipPath>> PathsOfUserAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var memberships = await ActiveMembershipsAsync(userId, cancellationToken).ConfigureAwait(false);
+        var (parents, _) = await GraphAsync(cancellationToken).ConfigureAwait(false);
+        var paths = new Dictionary<Guid, MembershipPath>();
+        var queue = new Queue<(Guid GroupId, Guid? Previous)>();
+
+        foreach (var member in memberships.OrderByDescending(member => member.ExpiresAtUtc ?? DateTimeOffset.MaxValue).ThenBy(member => member.GroupId))
+        {
+            queue.Enqueue((member.GroupId, null));
+            while (queue.TryDequeue(out var step))
+            {
+                if (!paths.TryAdd(step.GroupId, new MembershipPath(step.Previous, member.ExpiresAtUtc)))
+                {
+                    continue;
+                }
+
+                foreach (var parent in parents[step.GroupId].Order())
+                {
+                    queue.Enqueue((parent, step.GroupId));
+                }
+            }
+        }
+
+        return paths;
+    }
+
+    private async Task<IReadOnlyList<Membership>> ActiveMembershipsAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var now = _clock.UtcNow;
+        return await _db.GroupMembers.AsNoTracking()
+            .Where(member => member.UserId == userId && (member.ExpiresAtUtc == null || member.ExpiresAtUtc > now))
+            .Select(member => new Membership(member.GroupId, member.ExpiresAtUtc))
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private sealed record Membership(Guid GroupId, DateTimeOffset? ExpiresAtUtc);
+
+    internal sealed record MembershipPath(Guid? Previous, DateTimeOffset? ExpiresAtUtc);
 
     /// <summary>Every user who belongs to the group, directly or through one of its subgroups.</summary>
     public async Task<HashSet<Guid>> MembersOfGroupAsync(Guid groupId, CancellationToken cancellationToken)

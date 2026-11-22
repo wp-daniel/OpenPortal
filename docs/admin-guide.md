@@ -52,8 +52,10 @@ An application is anything that signs in through the portal (OpenID Connect).
 3. **Roles**: on the application's *Roles and claims* tab list the roles the application understands, then choose
    the roles on each grant. A user's roles are the union over their grants.
 4. **Options** worth knowing in the application dialog:
-   - *Access*: let users **request access** (requests wait under Access requests) and choose how the application
-     uses **organizations** (none, optional, required).
+   - *Access* enables requests and configures how the application uses organizations. A portal administrator can
+     assign an approver group. Delegated reviewers then need both effective membership in that group and the
+     **Access requests** page. Applications without a group use portal-wide reviewers. An approval can include an
+     end date. The requester sees it under Account → Access requests.
    - *Ask users for consent*: for third-party applications; users see what is shared and can withdraw it later.
    - *Allow the device flow*: for command-line tools and TVs.
    - *API*: what the application's backend may do on its own (read users, manage access, create users).
@@ -64,8 +66,9 @@ An application is anything that signs in through the portal (OpenID Connect).
    application loses them at the next token refresh (minutes).
 
 **Access reviews** (Identity & access → Access reviews) take a snapshot of who can open an application; reviewers
-mark each person *keep* or *revoke*, and completing the review applies the revocations. Run one periodically for
-sensitive applications.
+mark each person or group *keep* or *revoke*. Completion saves the decisions and applies revocations together.
+Run one periodically for sensitive applications. The access panel in **Users** shows each user's effective
+access, including nested group paths and expiration dates. Users can see their own access under Account → Access requests.
 
 ## 4. Delegating administration
 

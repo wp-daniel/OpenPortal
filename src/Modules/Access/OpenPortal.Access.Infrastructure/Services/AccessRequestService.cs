@@ -23,6 +23,7 @@ internal sealed class AccessRequestService : IAccessRequestService
     private readonly AccessDbContext _db;
     private readonly AccessQueries _access;
     private readonly UserGrantOperations _grants;
+    private readonly GroupGraph _graph;
     private readonly IAccessCaller _caller;
     private readonly IAccessAdminAuthorization _authorization;
     private readonly IUserDirectory _directory;
@@ -34,6 +35,7 @@ internal sealed class AccessRequestService : IAccessRequestService
         AccessDbContext db,
         AccessQueries access,
         UserGrantOperations grants,
+        GroupGraph graph,
         IAccessCaller caller,
         IAccessAdminAuthorization authorization,
         IUserDirectory directory,
@@ -44,6 +46,7 @@ internal sealed class AccessRequestService : IAccessRequestService
         _db = db;
         _access = access;
         _grants = grants;
+        _graph = graph;
         _caller = caller;
         _authorization = authorization;
         _directory = directory;
@@ -184,7 +187,7 @@ internal sealed class AccessRequestService : IAccessRequestService
                 new Notice
                 {
                     Type = AccessNotificationTypes.RequestSubmitted,
-                    Audience = NoticeAudience.Holders(AccessNotificationRoles.RequestReviewers),
+                    Audience = await ReviewAudienceAsync(application, cancellationToken).ConfigureAwait(false),
                     Parameters = new Dictionary<string, string?>
                     {
                         ["user"] = requesterName,
@@ -222,7 +225,11 @@ internal sealed class AccessRequestService : IAccessRequestService
             return cancelled;
         }
 
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        var saved = await SaveDecisionAsync(cancellationToken).ConfigureAwait(false);
+        if (saved.IsFailure)
+        {
+            return saved;
+        }
 
         var application = await _db.Applications.AsNoTracking()
             .SingleAsync(candidate => candidate.Id == request.ApplicationId, cancellationToken)
@@ -252,6 +259,19 @@ internal sealed class AccessRequestService : IAccessRequestService
         var pageSize = Math.Clamp(query.PageSize, 1, AccessRequestQuery.MaxPageSize);
 
         var requests = _db.AccessRequests.AsNoTracking();
+        if (!_authorization.IsAdministrator)
+        {
+            var groups = _caller.UserId is Guid userId
+                ? await _graph.GroupsOfUserAsync(userId, cancellationToken).ConfigureAwait(false)
+                : [];
+            var applications = _db.Applications.Where(app => app.AccessRequestApproverGroupId == null
+                || groups.Contains(app.AccessRequestApproverGroupId.Value));
+            requests = requests.Where(request => applications.Any(app => app.Id == request.ApplicationId));
+        }
+
+        var pendingCount = await requests
+            .CountAsync(request => request.Status == AccessRequestStatus.Pending, cancellationToken)
+            .ConfigureAwait(false);
 
         if (query.ApplicationId is Guid applicationId)
         {
@@ -264,10 +284,6 @@ internal sealed class AccessRequestService : IAccessRequestService
         }
 
         var totalCount = await requests.CountAsync(cancellationToken).ConfigureAwait(false);
-        var pendingCount = await _db.AccessRequests
-            .CountAsync(request => request.Status == AccessRequestStatus.Pending, cancellationToken)
-            .ConfigureAwait(false);
-
         // The waiting ones alone are a queue, the longest-waiting at the top; a mixed list shows them first and
         // everything else newest first.
         var ordered = ParseStatus(query.Status) == AccessRequestStatus.Pending
@@ -303,28 +319,45 @@ internal sealed class AccessRequestService : IAccessRequestService
 
         var (request, application, reviewerId) = loaded.Value;
 
-        // The note is checked before anything is granted, so a too-long note cannot leave a grant behind.
-        var note = AccessRequest.ValidateNote(review.Note);
-        if (note.IsFailure)
+        if (application.Status != ApplicationStatus.Active)
         {
-            return Result<AccessRequestDto>.Failure(note.Error);
+            return Result<AccessRequestDto>.Failure(AccessErrors.ApplicationNotActive);
         }
 
-        // The grant first: the request is only closed once the user can actually open the application.
         var roles = UserGrantOperations.NormaliseRoles(review.Roles) ?? [];
-        var granted = await _grants.GrantAsync(application, request.UserId, roles, notifyUser: false, cancellationToken).ConfigureAwait(false);
-        if (granted.IsFailure)
-        {
-            return Result<AccessRequestDto>.Failure(granted.Error);
-        }
-
-        var approved = request.Approve(reviewerId, roles, review.Note, _clock.UtcNow);
+        var approved = request.Approve(reviewerId, roles, review.Note, _clock.UtcNow, review.ExpiresAtUtc);
         if (approved.IsFailure)
         {
             return Result<AccessRequestDto>.Failure(approved.Error);
         }
 
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        Result<UserGrantOperations.StagedGrant?> staged;
+        await using (var transaction = await _db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false))
+        {
+            // Claim the pending decision before touching the grant. The status check in the UPDATE prevents
+            // concurrent approval, rejection or withdrawal from leaving behind a grant or a second decision.
+            var saved = await SaveDecisionAsync(cancellationToken).ConfigureAwait(false);
+            if (saved.IsFailure)
+            {
+                return Result<AccessRequestDto>.Failure(saved.Error);
+            }
+
+            staged = await _grants.StageGrantAsync(
+                application, request.UserId, roles, new ExpiryChange(request.GrantedUntilUtc), cancellationToken).ConfigureAwait(false);
+            if (staged.IsFailure)
+            {
+                return Result<AccessRequestDto>.Failure(staged.Error);
+            }
+
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        if (staged.Value is { } change)
+        {
+            await _grants.RecordGrantAsync(application, request.UserId, change, notifyUser: false, cancellationToken).ConfigureAwait(false);
+        }
+
 
         await RecordDecisionAsync(AccessAuditActions.RequestApproved, AccessNotificationTypes.RequestApproved, request, application, cancellationToken)
             .ConfigureAwait(false);
@@ -353,7 +386,11 @@ internal sealed class AccessRequestService : IAccessRequestService
             return Result<AccessRequestDto>.Failure(rejected.Error);
         }
 
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        var saved = await SaveDecisionAsync(cancellationToken).ConfigureAwait(false);
+        if (saved.IsFailure)
+        {
+            return Result<AccessRequestDto>.Failure(saved.Error);
+        }
 
         await RecordDecisionAsync(AccessAuditActions.RequestRejected, AccessNotificationTypes.RequestRejected, request, application, cancellationToken)
             .ConfigureAwait(false);
@@ -386,16 +423,47 @@ internal sealed class AccessRequestService : IAccessRequestService
             return Result<(AccessRequest, PortalApplication, Guid)>.Failure(AccessErrors.RequestNotFound);
         }
 
+        var application = await _db.Applications
+            .SingleOrDefaultAsync(candidate => candidate.Id == request.ApplicationId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (application is null || (!_authorization.IsAdministrator && application.AccessRequestApproverGroupId is Guid groupId
+            && !(await _graph.GroupsOfUserAsync(reviewerId, cancellationToken).ConfigureAwait(false)).Contains(groupId)))
+        {
+            return Result<(AccessRequest, PortalApplication, Guid)>.Failure(AccessErrors.RequestNotFound);
+        }
+
         if (!request.IsPending)
         {
             return Result<(AccessRequest, PortalApplication, Guid)>.Failure(AccessErrors.RequestNotPending);
         }
 
-        var application = await _db.Applications
-            .SingleAsync(candidate => candidate.Id == request.ApplicationId, cancellationToken)
-            .ConfigureAwait(false);
-
         return Result<(AccessRequest, PortalApplication, Guid)>.Success((request, application, reviewerId));
+    }
+
+    private async Task<Result> SaveDecisionAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            return Result.Success();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Result.Failure(AccessErrors.RequestNotPending);
+        }
+    }
+
+    private async Task<NoticeAudience> ReviewAudienceAsync(PortalApplication application, CancellationToken cancellationToken)
+    {
+        if (application.AccessRequestApproverGroupId is not Guid groupId)
+        {
+            return NoticeAudience.Holders(AccessNotificationRoles.RequestReviewers);
+        }
+
+        var members = await _graph.MembersOfGroupAsync(groupId, cancellationToken).ConfigureAwait(false);
+        var reviewers = await _authorization.GetRequestReviewersAsync(members, cancellationToken).ConfigureAwait(false);
+        return new NoticeAudience(reviewers, []);
     }
 
     private async Task RecordDecisionAsync(
@@ -413,6 +481,7 @@ internal sealed class AccessRequestService : IAccessRequestService
                         ("application", application.DisplayName),
                         ("clientId", application.ClientId),
                         ("roles", request.GrantedRoles.Count > 0 ? AccessAudit.JoinRoles(request.GrantedRoles) : null),
+                        ("expiresAtUtc", request.GrantedUntilUtc?.ToString("O", System.Globalization.CultureInfo.InvariantCulture)),
                         ("note", request.DecisionNote))),
                 cancellationToken)
             .ConfigureAwait(false);
@@ -474,7 +543,8 @@ internal sealed class AccessRequestService : IAccessRequestService
                 application.RolesToContract(),
 
                 // Only worth the lookups while the decision is still to be made.
-                request.IsPending && await _access.HasGrantAsync(application.Id, request.UserId, cancellationToken).ConfigureAwait(false)));
+                request.IsPending && await _access.HasGrantAsync(application.Id, request.UserId, cancellationToken).ConfigureAwait(false),
+                request.GrantedUntilUtc));
         }
 
         return result;
@@ -488,7 +558,8 @@ internal sealed class AccessRequestService : IAccessRequestService
         ToContract(request.Status),
         request.CreatedAtUtc,
         request.DecidedAtUtc,
-        request.DecisionNote);
+        request.DecisionNote,
+        request.GrantedUntilUtc);
 
     private static string ToContract(AccessRequestStatus status) => status switch
     {

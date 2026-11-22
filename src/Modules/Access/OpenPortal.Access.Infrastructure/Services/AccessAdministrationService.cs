@@ -24,6 +24,8 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
     private readonly UserGrantOperations _grants;
     private readonly IAccessUserMaintenance _maintenance;
     private readonly GroupGraph _graph;
+    private readonly IAccessCaller _caller;
+    private readonly IAccessEvaluator _evaluator;
 
     public AccessAdministrationService(
         AccessDbContext db,
@@ -34,7 +36,9 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
         IAuditTrail audit,
         UserGrantOperations grants,
         IAccessUserMaintenance maintenance,
-        GroupGraph graph)
+        GroupGraph graph,
+        IAccessCaller caller,
+        IAccessEvaluator evaluator)
     {
         _graph = graph;
         _db = db;
@@ -45,6 +49,8 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
         _audit = audit;
         _grants = grants;
         _maintenance = maintenance;
+        _caller = caller;
+        _evaluator = evaluator;
     }
 
     public async Task<Result<AccessTreeDto>> GetTreeAsync(CancellationToken cancellationToken)
@@ -117,8 +123,18 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
             return Result<UserAccessDto>.Failure(guard.Error);
         }
 
-        // Every group the user is in, subgroups' parents included, so "via groups" explains inherited access too.
-        var effective = await _graph.GroupsOfUserAsync(userId, cancellationToken).ConfigureAwait(false);
+        return Result<UserAccessDto>.Success(await ReadUserAccessAsync(userId, cancellationToken).ConfigureAwait(false));
+    }
+
+    public async Task<Result<UserAccessDto>> GetMyAccessAsync(CancellationToken cancellationToken) =>
+        _caller.UserId is Guid userId
+            ? Result<UserAccessDto>.Success(await ReadUserAccessAsync(userId, cancellationToken).ConfigureAwait(false))
+            : Result<UserAccessDto>.Failure(AccessErrors.SignInRequired);
+
+    private async Task<UserAccessDto> ReadUserAccessAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var paths = await _graph.PathsOfUserAsync(userId, cancellationToken).ConfigureAwait(false);
+        var effective = paths.Keys.ToArray();
         var memberships = await _db.Groups
             .AsNoTracking()
             .Where(group => effective.Contains(group.Id))
@@ -153,31 +169,75 @@ internal sealed class AccessAdministrationService : IAccessAdministrationService
 
         var groupNames = memberships.ToDictionary(group => group.Id);
 
-        var access = applications
-            .OrderBy(application => application.DisplayName, StringComparer.OrdinalIgnoreCase)
-            .Select(application =>
+        var now = _clock.UtcNow;
+        var access = new List<UserApplicationAccessDto>();
+        var directByApplication = direct.ToDictionary(grant => grant.ApplicationId);
+        var groupsByApplication = viaGroups.ToLookup(grant => grant.ApplicationId);
+        foreach (var application in applications.OrderBy(application => application.DisplayName, StringComparer.OrdinalIgnoreCase))
+        {
+            var own = directByApplication.GetValueOrDefault(application.Id);
+            var shared = groupsByApplication[application.Id].OrderBy(grant => groupNames[grant.GroupId].Name, StringComparer.OrdinalIgnoreCase).ToList();
+            var sources = new List<UserAccessSourceDto>();
+            var directActive = own?.IsActiveAt(now) == true;
+            if (own is not null)
             {
-                var own = direct.Where(grant => grant.ApplicationId == application.Id).ToList();
-                var shared = viaGroups.Where(grant => grant.ApplicationId == application.Id).ToList();
+                sources.Add(new UserAccessSourceDto([], own.ExpiresAtUtc, directActive));
+            }
 
-                return new UserApplicationAccessDto(
-                    application.Id,
-                    application.ClientId,
-                    application.DisplayName,
-                    application.Status.ToContract(),
-                    own.Count > 0,
-                    shared
-                        .Select(grant => groupNames[grant.GroupId])
-                        .OrderBy(group => group.Name, StringComparer.OrdinalIgnoreCase)
-                        .ToList(),
-                    KnownRoles(application, own.SelectMany(grant => grant.Roles).Concat(shared.SelectMany(grant => grant.Roles))));
-            })
-            .ToList();
+            var activeGroups = new List<ApplicationGroupGrant>();
+            foreach (var grant in shared)
+            {
+                var path = new List<GroupReferenceDto>();
+                for (Guid? groupId = grant.GroupId; groupId is Guid id; groupId = paths[id].Previous)
+                {
+                    path.Add(groupNames[id]);
+                }
 
-        return Result<UserAccessDto>.Success(new UserAccessDto(
+                path.Reverse();
+                var membershipEnd = paths[grant.GroupId].ExpiresAtUtc;
+                var end = grant.ExpiresAtUtc is null || membershipEnd < grant.ExpiresAtUtc ? membershipEnd : grant.ExpiresAtUtc;
+                var active = end is null || end > now;
+                sources.Add(new UserAccessSourceDto(path, end, active));
+                if (active)
+                {
+                    activeGroups.Add(grant);
+                }
+            }
+
+            var roles = (directActive ? own!.Roles : []).Concat(activeGroups.SelectMany(grant => grant.Roles));
+            var outcome = application.Status != ApplicationStatus.Active ? "inactive"
+                : directActive || activeGroups.Count > 0 ? "granted" : "expired";
+            IReadOnlyList<string> organizations = [];
+            var requireMultiFactor = false;
+            if (outcome == "granted" && application.Organizations != OrganizationMode.None)
+            {
+                var organization = await _evaluator.EvaluateOrganizationAsync(
+                    userId, application.ClientId, requested: null, interactive: true, cancellationToken).ConfigureAwait(false);
+                outcome = organization.Outcome switch
+                {
+                    OrganizationOutcome.Missing => "organization_required",
+                    OrganizationOutcome.ChoiceNeeded => "organization_choice",
+                    _ => outcome,
+                };
+                organizations = organization.Organization is { } selected
+                    ? [selected.Name]
+                    : organization.Choices.Select(choice => choice.Name).ToList();
+                roles = roles.Concat(organization.Roles ?? []);
+                requireMultiFactor = organization.RequireMultiFactor;
+            }
+
+            var effectiveRoles = KnownRoles(application, roles);
+            access.Add(new UserApplicationAccessDto(
+                application.Id, application.ClientId, application.DisplayName, application.Status.ToContract(), own is not null,
+                shared.Select(grant => groupNames[grant.GroupId]).ToList(),
+                effectiveRoles, sources, outcome, organizations, requireMultiFactor,
+                application.RolesToContract().Where(role => effectiveRoles.Contains(role.Key, StringComparer.Ordinal)).ToList()));
+        }
+
+        return new UserAccessDto(
             userId,
             memberships.OrderBy(group => group.Name, StringComparer.OrdinalIgnoreCase).ToList(),
-            access));
+            access);
     }
 
     public async Task<Result> GrantUserAsync(

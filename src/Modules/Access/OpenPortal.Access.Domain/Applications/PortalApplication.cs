@@ -174,6 +174,17 @@ public sealed class PortalApplication
     /// </summary>
     public bool AllowAccessRequests { get; private set; }
 
+    public Guid? AccessRequestApproverGroupId { get; private set; }
+
+    public void SetAccessRequestApproverGroup(Guid? groupId, DateTimeOffset now)
+    {
+        if (AccessRequestApproverGroupId != groupId)
+        {
+            AccessRequestApproverGroupId = groupId;
+            UpdatedAtUtc = now;
+        }
+    }
+
     /// <summary>
     /// Whether a user is asked to agree to what the application receives (the scopes) the first time it signs them in.
     /// Off for the organization's own applications; on for a third party's.

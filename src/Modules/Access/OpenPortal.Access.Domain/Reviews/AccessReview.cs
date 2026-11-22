@@ -52,6 +52,8 @@ public sealed class AccessReview
 
     public AccessReviewStatus Status { get; private set; }
 
+    public Guid Revision { get; private set; } = Guid.NewGuid();
+
     /// <summary>Whether completing the review also revokes the grants nobody decided on ("use it or lose it").</summary>
     public bool RevokeUndecided { get; private set; }
 
@@ -137,6 +139,7 @@ public sealed class AccessReview
         }
 
         item.Decide(decision, trimmedNote, reviewerId, now);
+        Revision = Guid.NewGuid();
 
         return Result.Success();
     }
@@ -150,6 +153,7 @@ public sealed class AccessReview
         }
 
         Status = AccessReviewStatus.Completed;
+        Revision = Guid.NewGuid();
         ClosedAtUtc = now;
         ClosedById = byId;
 
@@ -167,6 +171,7 @@ public sealed class AccessReview
         }
 
         Status = AccessReviewStatus.Cancelled;
+        Revision = Guid.NewGuid();
         ClosedAtUtc = now;
         ClosedById = byId;
 
@@ -243,6 +248,8 @@ public static class AccessReviewErrors
     public static Error NothingToReview { get; } = Error.Conflict(Prefix + "nothing_to_review", "Nobody has been given this application: there is nothing to review.");
 
     public static Error NotOpen { get; } = Error.Conflict(Prefix + "not_open", "The review is already closed.");
+    public static Error ConcurrentChange { get; } =
+        Error.Conflict(Prefix + "concurrent_change", "The review or its grants changed. Reload the review and try again.");
 
     public static Error DecisionInvalid { get; } = Error.Validation(Prefix + "decision_invalid", "The decision must be pending, keep or revoke.");
 

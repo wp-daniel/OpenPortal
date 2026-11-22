@@ -2149,4 +2149,20 @@
   <data name="users.emailChange.failed" xml:space="preserve"><value>Could not change the email</value></data>
   <data name="signIn.reauth.title" xml:space="preserve"><value>Confirm it is you</value></data>
   <data name="signIn.reauth.description" xml:space="preserve"><value>An application asks you to sign in again before it continues.</value></data>
+  <data name="applications.approvers.label" xml:space="preserve"><value>Approver group</value></data>
+  <data name="applications.approvers.hint" xml:space="preserve"><value>By default, anyone with the Access requests page can review. Choose a group to limit delegated approvals to its members who also have that page. Administrators can always review.</value></data>
+  <data name="applications.approvers.reset" xml:space="preserve"><value>Use portal-wide reviewers</value></data>
+  <data name="access.effective.title" xml:space="preserve"><value>My application access</value></data>
+  <data name="access.effective.empty" xml:space="preserve"><value>You have no application grants.</value></data>
+  <data name="access.effective.catalog" xml:space="preserve"><value>Browse the application catalog</value></data>
+  <data name="access.effective.granted" xml:space="preserve"><value>Active access</value></data>
+  <data name="access.effective.inactive" xml:space="preserve"><value>Application unavailable</value></data>
+  <data name="access.effective.expired" xml:space="preserve"><value>Access expired</value></data>
+  <data name="access.effective.organization_required" xml:space="preserve"><value>Organization required</value></data>
+  <data name="access.effective.organization_choice" xml:space="preserve"><value>Choose an organization at sign-in</value></data>
+  <data name="access.effective.organizations" xml:space="preserve"><value>Organizations: {names}</value></data>
+  <data name="access.effective.organizationMfa" xml:space="preserve"><value>MFA required</value></data>
+  <data name="access.effective.ended" xml:space="preserve"><value>expired on {date}</value></data>
+  <data name="error.access.review_concurrent_change" xml:space="preserve"><value>The review or its grants changed. Reload the review and try again.</value></data>
+  <data name="error.access.approver_group_in_use" xml:space="preserve"><value>Change the applications that use this group for access approvals before deleting it.</value></data>
 </root>

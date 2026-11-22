@@ -211,6 +211,11 @@ internal sealed class GroupService : IGroupService
             return Result.Failure(AccessErrors.GroupNotFound);
         }
 
+        if (await _db.Applications.AnyAsync(application => application.AccessRequestApproverGroupId == groupId, cancellationToken).ConfigureAwait(false))
+        {
+            return Result.Failure(AccessErrors.ApproverGroupInUse);
+        }
+
         // Everyone in the group or its subgroups loses what the group, and the groups above it, gave them.
         var memberIds = (await _graph.MembersOfGroupAsync(group.Id, cancellationToken).ConfigureAwait(false)).ToArray();
         var applications = await GrantedApplicationsAsync(

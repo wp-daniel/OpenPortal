@@ -263,6 +263,7 @@ export interface ApplicationSummary {
   readonly apiScopes: readonly ApplicationApiScope[]
   /** Users who cannot open it see it in their catalog and may ask for it. */
   readonly allowAccessRequests: boolean
+  readonly accessRequestApproverGroupId: string | null
   /** Whether tokens name the organization the user signs in for. */
   readonly organizations: OrganizationMode
   /** `confidential` (server application with a secret) or `public` (SPA or mobile app, PKCE only). */
@@ -325,6 +326,7 @@ export interface UpdateApplicationRequest {
   /** The complete list of application API scopes. */
   readonly apiScopes: readonly ApplicationApiScope[]
   readonly allowAccessRequests: boolean
+  readonly accessRequestApprovers?: { readonly groupId: string | null }
   readonly organizations: OrganizationMode
   readonly backChannelLogoutUri: string | null
   readonly webhookUrl: string | null
@@ -426,6 +428,17 @@ export interface UserApplicationAccess {
   readonly viaGroups: readonly GroupReference[]
   /** The user's roles in the application, from every grant together. */
   readonly roles: readonly string[]
+  readonly sources: readonly UserAccessSource[]
+  readonly outcome: 'granted' | 'inactive' | 'expired' | 'organization_required' | 'organization_choice'
+  readonly organizations: readonly string[]
+  readonly organizationRequiresMultiFactor: boolean
+  readonly roleCatalog: readonly ApplicationRole[]
+}
+
+export interface UserAccessSource {
+  readonly groupPath: readonly GroupReference[]
+  readonly expiresAtUtc: string | null
+  readonly active: boolean
 }
 
 export interface UserAccess {
@@ -644,6 +657,7 @@ export interface MyAccessRequest {
   readonly createdAtUtc: string
   readonly decidedAtUtc: string | null
   readonly decisionNote: string | null
+  readonly grantedUntilUtc: string | null
 }
 
 /** An application the user cannot open but may ask for, with their latest request. */
@@ -666,6 +680,7 @@ export interface AccessRequest {
   readonly decidedAtUtc: string | null
   readonly decidedBy: UserReference | null
   readonly decisionNote: string | null
+  readonly grantedUntilUtc: string | null
   /** Role keys the approval granted. */
   readonly roles: readonly string[]
   /** The roles the application defines, to choose from when approving. */

@@ -16,7 +16,7 @@ import { useI18n } from '@/i18n/useI18n'
 import { describeError } from '@/lib/errors'
 import { useAccessRefresh } from '@/lib/access'
 import { fromLocalInput } from '@/lib/dateInput'
-import { RoleBadges } from './RoleAssignment'
+import { AccessExplanation } from './AccessExplanation'
 import { ApplicationStatusBadge } from './shared'
 
 /**
@@ -119,19 +119,10 @@ export function UserAccessSheet({ user, onClose }: { user: UserSummary | null; o
                             <Label htmlFor={switchId} className="truncate">
                               {application.displayName}
                             </Label>
-                            <div className="flex flex-wrap items-center gap-1">
-                              {application.status !== 'active' && <ApplicationStatusBadge status={application.status} />}
-                              {entry?.viaGroups.map((group) => (
-                                <Badge key={group.id} variant="outline">
-                                  {t('access.user.viaGroup', { name: group.name })}
-                                </Badge>
-                              ))}
-                              {!entry && <span className="text-muted-foreground text-xs">{t('access.user.noAccess')}</span>}
-                            </div>
-                            {entry && entry.roles.length > 0 && (
+                            {entry ? <AccessExplanation access={entry} /> : (
                               <div className="flex flex-wrap items-center gap-1">
-                                <span className="text-muted-foreground text-xs">{t('access.user.roles')}</span>
-                                <RoleBadges roles={application.roles} keys={entry.roles} />
+                                {application.status !== 'active' && <ApplicationStatusBadge status={application.status} />}
+                                <span className="text-muted-foreground text-xs">{t('access.user.noAccess')}</span>
                               </div>
                             )}
                           </div>

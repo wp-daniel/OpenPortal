@@ -2149,4 +2149,20 @@
   <data name="users.emailChange.failed" xml:space="preserve"><value>No se pudo cambiar el correo</value></data>
   <data name="signIn.reauth.title" xml:space="preserve"><value>Confirma que eres tú</value></data>
   <data name="signIn.reauth.description" xml:space="preserve"><value>Una aplicación te pide que vuelvas a iniciar sesión antes de continuar.</value></data>
+  <data name="applications.approvers.label" xml:space="preserve"><value>Grupo de aprobadores</value></data>
+  <data name="applications.approvers.hint" xml:space="preserve"><value>De forma predeterminada, puede decidir quien tiene acceso a la página Solicitudes de acceso. Elige un grupo para limitar la delegación a sus miembros con acceso a esa página. Los administradores siempre pueden decidir.</value></data>
+  <data name="applications.approvers.reset" xml:space="preserve"><value>Usar los revisores del portal</value></data>
+  <data name="access.effective.title" xml:space="preserve"><value>Mis accesos a aplicaciones</value></data>
+  <data name="access.effective.empty" xml:space="preserve"><value>No tienes permisos para aplicaciones.</value></data>
+  <data name="access.effective.catalog" xml:space="preserve"><value>Explorar el catálogo de aplicaciones</value></data>
+  <data name="access.effective.granted" xml:space="preserve"><value>Acceso activo</value></data>
+  <data name="access.effective.inactive" xml:space="preserve"><value>Aplicación no disponible</value></data>
+  <data name="access.effective.expired" xml:space="preserve"><value>Acceso caducado</value></data>
+  <data name="access.effective.organization_required" xml:space="preserve"><value>Organización obligatoria</value></data>
+  <data name="access.effective.organization_choice" xml:space="preserve"><value>Elige una organización al iniciar sesión</value></data>
+  <data name="access.effective.organizations" xml:space="preserve"><value>Organizaciones: {names}</value></data>
+  <data name="access.effective.organizationMfa" xml:space="preserve"><value>MFA obligatoria</value></data>
+  <data name="access.effective.ended" xml:space="preserve"><value>caducado el {date}</value></data>
+  <data name="error.access.review_concurrent_change" xml:space="preserve"><value>La revisión o los permisos han cambiado. Recarga la revisión y vuelve a intentarlo.</value></data>
+  <data name="error.access.approver_group_in_use" xml:space="preserve"><value>Cambia las aplicaciones que usan este grupo para aprobar accesos antes de eliminarlo.</value></data>
 </root>

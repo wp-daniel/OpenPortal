@@ -2149,4 +2149,20 @@
   <data name="users.emailChange.failed" xml:space="preserve"><value>Impossibile cambiare l'email</value></data>
   <data name="signIn.reauth.title" xml:space="preserve"><value>Conferma che sei tu</value></data>
   <data name="signIn.reauth.description" xml:space="preserve"><value>Un'applicazione ti chiede di accedere di nuovo prima di continuare.</value></data>
+  <data name="applications.approvers.label" xml:space="preserve"><value>Gruppo di approvatori</value></data>
+  <data name="applications.approvers.hint" xml:space="preserve"><value>Per impostazione predefinita, chi ha accesso alla pagina Richieste di accesso può decidere. Seleziona un gruppo per limitare la delega ai suoi membri che hanno anche accesso alla pagina. Gli amministratori possono sempre decidere.</value></data>
+  <data name="applications.approvers.reset" xml:space="preserve"><value>Usa i revisori del portale</value></data>
+  <data name="access.effective.title" xml:space="preserve"><value>I miei accessi alle applicazioni</value></data>
+  <data name="access.effective.empty" xml:space="preserve"><value>Non hai autorizzazioni per le applicazioni.</value></data>
+  <data name="access.effective.catalog" xml:space="preserve"><value>Esplora il catalogo delle applicazioni</value></data>
+  <data name="access.effective.granted" xml:space="preserve"><value>Accesso attivo</value></data>
+  <data name="access.effective.inactive" xml:space="preserve"><value>Applicazione non disponibile</value></data>
+  <data name="access.effective.expired" xml:space="preserve"><value>Accesso scaduto</value></data>
+  <data name="access.effective.organization_required" xml:space="preserve"><value>Organizzazione obbligatoria</value></data>
+  <data name="access.effective.organization_choice" xml:space="preserve"><value>Scegli un’organizzazione all’accesso</value></data>
+  <data name="access.effective.organizations" xml:space="preserve"><value>Organizzazioni: {names}</value></data>
+  <data name="access.effective.organizationMfa" xml:space="preserve"><value>MFA obbligatoria</value></data>
+  <data name="access.effective.ended" xml:space="preserve"><value>scaduto il {date}</value></data>
+  <data name="error.access.review_concurrent_change" xml:space="preserve"><value>La revisione o le autorizzazioni sono cambiate. Ricarica la revisione e riprova.</value></data>
+  <data name="error.access.approver_group_in_use" xml:space="preserve"><value>Modifica le applicazioni che usano questo gruppo per approvare gli accessi prima di eliminarlo.</value></data>
 </root>

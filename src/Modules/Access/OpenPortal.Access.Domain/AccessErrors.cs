@@ -15,6 +15,9 @@ public static class AccessErrors
     public static Error AdministrationForbidden { get; } =
         Error.Forbidden(Prefix + "administration_forbidden", "Managing application access requires an administrator account.");
 
+    public static Error ApproverGroupInUse { get; } =
+        Error.Conflict(Prefix + "approver_group_in_use", "Change the applications that use this group for access approvals before deleting it.");
+
     public static Error ApplicationNotFound { get; } =
         Error.NotFound(Prefix + "application_not_found", "The requested application does not exist.");
 

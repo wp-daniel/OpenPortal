@@ -73,6 +73,8 @@ export const accessApi = {
 
   user: (userId: string, signal?: AbortSignal) => api.get<UserAccess>(`/api/admin/access/users/${userId}`, signal),
 
+  mine: (signal?: AbortSignal) => api.get<UserAccess>('/api/account/applications/access', signal),
+
   /** Without `roles` an existing grant keeps its roles; with them, the grant carries exactly those. */
   grantUser: (applicationId: string, userId: string, roles?: readonly string[], expiresAtUtc?: string | null) =>
     api.put<void>(`/api/admin/access/applications/${applicationId}/users/${userId}`, {
@@ -120,6 +122,7 @@ export const accessKeys = {
   group: (id: string) => ['admin-groups', id] as const,
   tree: ['admin-access-tree'] as const,
   user: (userId: string) => ['admin-access-user', userId] as const,
+  mine: ['my-effective-access'] as const,
   launchpad: ['launchpad'] as const,
   pagePermissions: ['admin-page-permissions'] as const,
 }

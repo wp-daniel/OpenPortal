@@ -1,8 +1,8 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { z } from 'zod'
-import { applicationsApi } from '@/api/access'
+import { accessKeys, applicationsApi, groupsApi } from '@/api/access'
 import type { ApplicationApiScope, ApplicationClientType, ApplicationSecret, ApplicationSummary, GroupClaimMode, OrganizationMode } from '@/api/types'
 import { FormField } from '@/components/FormField'
 import { Button } from '@/components/ui/button'
@@ -23,10 +23,12 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { notify } from '@/hooks/useToast'
+import { useSession } from '@/hooks/useSession'
 import type { TFunction } from '@/i18n/store'
 import { useI18n } from '@/i18n/useI18n'
 import { reportFormError, zodFieldErrors } from '@/lib/forms'
 import { linesToList } from '@/lib/access'
+import { GroupPicker, type PickedPrincipal } from './PrincipalPicker'
 
 type Field = 'clientId' | 'displayName' | 'description' | 'baseUrl' | 'redirectUris' | 'postLogoutRedirectUris' | 'roles'
 
@@ -138,6 +140,17 @@ function ApplicationForm({
 }) {
   const { t } = useI18n()
   const isEdit = application !== null
+  const { isAdministrator } = useSession()
+  const currentApproverId = application?.accessRequestApproverGroupId
+  const currentApprover = useQuery({
+    queryKey: accessKeys.group(currentApproverId ?? ''),
+    queryFn: ({ signal }) => groupsApi.get(currentApproverId!, signal),
+    enabled: isAdministrator && !!currentApproverId,
+  })
+  const [approver, setApprover] = useState<PickedPrincipal | null | undefined>(undefined)
+  const visibleApprover = approver === undefined && currentApproverId
+    ? { id: currentApproverId, label: currentApprover.data?.name ?? currentApproverId }
+    : approver ?? null
 
   const [tab, setTab] = useState<FormTab>('general')
   const [clientId, setClientId] = useState(application?.clientId ?? '')
@@ -203,6 +216,7 @@ function ApplicationForm({
     groupClaims,
     apiScopes: API_SCOPES.map((entry) => entry.scope).filter((scope) => apiScopes.has(scope)),
     allowAccessRequests,
+    ...(isAdministrator && approver !== undefined ? { accessRequestApprovers: { groupId: approver?.id ?? null } } : {}),
     requireConsent,
     allowDeviceFlow,
     organizations,
@@ -510,6 +524,19 @@ function ApplicationForm({
               </div>
               <Switch id="app-allow-requests" checked={allowAccessRequests} onCheckedChange={setAllowAccessRequests} />
             </div>
+
+            {isAdministrator && (allowAccessRequests || visibleApprover) && (
+              <div className="grid gap-2">
+                <Label htmlFor="app-approvers">{t('applications.approvers.label')}</Label>
+                <p className="text-muted-foreground text-xs">{t('applications.approvers.hint')}</p>
+                <GroupPicker id="app-approvers" value={visibleApprover} onChange={setApprover} />
+                {visibleApprover && (
+                  <Button size="sm" variant="outline" className="justify-self-start" onClick={() => setApprover(null)}>
+                    {t('applications.approvers.reset')}
+                  </Button>
+                )}
+              </div>
+            )}
 
             <div className="flex items-start justify-between gap-6 rounded-lg border p-4">
               <div className="grid gap-1">
