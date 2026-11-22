@@ -30,7 +30,8 @@
   --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 *, *::before, *::after { box-sizing: border-box; }
-html { background-color: var(--page); scroll-behavior: smooth; scroll-padding-top: 90px; }
+html { background-color: var(--page); scroll-behavior: smooth; scroll-padding-top: 90px; scrollbar-width: none; }
+html::-webkit-scrollbar { display: none; }
 body { margin: 0; font-family: var(--sans); color: var(--ink); background: var(--page); -webkit-font-smoothing: antialiased; }
 a { color: inherit; text-decoration: none; }
 button { color: inherit; font: inherit; cursor: pointer; }
