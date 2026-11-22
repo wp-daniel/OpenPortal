@@ -11,6 +11,12 @@ public sealed class SystemStatusTests(OpenPortalFactory factory) : IClassFixture
         var (admin, _) = await Scenario.AdminAsync(factory);
 
         var status = await Scenario.GetJsonAsync(admin, "/api/admin/system");
+        using var anonymous = await Scenario.ClientAsync(factory);
+        var session = await Scenario.GetJsonAsync(anonymous, "/api/auth/session");
+        var buildVersion = session.GetProperty("buildVersion").GetString();
+        buildVersion.ShouldNotBeNullOrWhiteSpace();
+        buildVersion.Split('+')[0].ShouldBe(status.GetProperty("version").GetString());
+
 
         status.GetProperty("databaseProvider").GetString().ShouldNotBeNullOrEmpty();
         status.GetProperty("checks").EnumerateArray().Select(check => check.GetProperty("name").GetString()).ShouldContain("database-identity");

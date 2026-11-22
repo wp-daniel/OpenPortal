@@ -31,6 +31,7 @@ export function useSession() {
     // the marked "unknown" value, which makes password forms skip client-side complexity checks until the
     // server has actually said what it enforces.
     session: data ?? {
+      buildVersion: null,
       isAuthenticated: false,
       user: null,
       passwordPolicy: UNAVAILABLE_PASSWORD_POLICY,

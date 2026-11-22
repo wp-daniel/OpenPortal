@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import { AnnouncementBanner } from '@/components/AnnouncementBanner'
 import { BrandMark } from '@/components/BrandMark'
+import { BuildVersion } from '@/components/BuildVersion'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { MagneticCursor } from '@/components/MagneticCursor'
 import { StarField } from '@/components/StarField'
@@ -43,9 +44,12 @@ export function AuthLayout({ wide = false }: { wide?: boolean }) {
         <Outlet />
       </main>
 
-      <footer className="text-muted-foreground relative z-10 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 px-6 py-5 text-center text-[0.65rem] tracking-[0.25em] uppercase">
-        <span>OpenPortal · {currentYear}</span>
-        <LegalLinks />
+      <footer className="text-muted-foreground relative z-10 flex flex-col items-center gap-y-1 px-6 py-5 text-center text-[0.65rem] tracking-[0.25em] uppercase sm:grid sm:grid-cols-[1fr_auto_1fr]">
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 sm:col-start-2">
+          <span>OpenPortal · {currentYear}</span>
+          <LegalLinks />
+        </div>
+        <BuildVersion className="self-end sm:col-start-3 sm:self-center sm:justify-self-end" />
       </footer>
     </div>
   )

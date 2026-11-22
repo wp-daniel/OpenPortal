@@ -7,6 +7,7 @@ using OpenPortal.Identity.Application.Contracts;
 using OpenPortal.Identity.Domain.Users;
 using OpenPortal.SharedKernel.Results;
 using OpenPortal.Web.Infrastructure;
+using OpenPortal.Web.Operations;
 using OpenPortal.Web.Security;
 
 using OpenPortal.Web.Authorization;
@@ -195,6 +196,7 @@ public sealed class RegistrationController : ControllerBase
         // As after a sign-in: the session the cookie now stands for (the client refreshes it either way).
         var session = await _authentication.GetSessionAsync(cancellationToken).ConfigureAwait(false);
 
-        return Ok(session.IsSuccess ? session.Value : SessionDto.AnonymousFor(_authentication.PasswordPolicy));
+        return Ok((session.IsSuccess ? session.Value : SessionDto.AnonymousFor(_authentication.PasswordPolicy))
+            with { BuildVersion = PortalBuild.DisplayVersion });
     }
 }

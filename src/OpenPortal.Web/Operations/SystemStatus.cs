@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
@@ -91,10 +90,6 @@ public sealed class SystemStatus
     public async Task<SystemStatusDto> GetAsync(CancellationToken cancellationToken)
     {
         var report = await _health.CheckHealthAsync(cancellationToken).ConfigureAwait(false);
-        var version = typeof(SystemStatus).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-            ?? typeof(SystemStatus).Assembly.GetName().Version?.ToString()
-            ?? "unknown";
-
         // The certificate OpenIddict signs with is the valid one that lasts longest (see StoredCertificates).
         var now = DateTime.UtcNow;
         var certificates = _oidc.Value.SigningCredentials
@@ -107,7 +102,7 @@ public sealed class SystemStatus
             .MaxBy(certificate => certificate.NotAfter);
 
         return new SystemStatusDto(
-            version.Split('+')[0],
+            PortalBuild.Version,
             _environment.EnvironmentName,
             System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
             System.Environment.MachineName,

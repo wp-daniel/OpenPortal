@@ -118,6 +118,7 @@ export interface AccountExternalLogins {
 }
 
 export interface Session {
+  readonly buildVersion: string | null
   readonly isAuthenticated: boolean
   readonly user: SessionUser | null
   readonly passwordPolicy: PasswordPolicy

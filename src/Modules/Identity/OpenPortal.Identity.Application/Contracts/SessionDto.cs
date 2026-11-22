@@ -56,6 +56,9 @@ public sealed record SessionDto(
     LegalInfoDto Legal,
     SessionFeaturesDto Features)
 {
+    /// <summary>The web host adds its build version to the session it returns to the browser.</summary>
+    public string? BuildVersion { get; init; }
+
     /// <summary>
     /// The anonymous session. Takes the policy as an argument because there is no default that is honest:
     /// the policy is deployment configuration, so a fabricated one could only ever disagree with the server.

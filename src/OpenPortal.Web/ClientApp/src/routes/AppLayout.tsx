@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 import { AnnouncementBanner } from '@/components/AnnouncementBanner'
 import { AppBreadcrumbs } from '@/components/AppBreadcrumbs'
 import { AppSidebar } from '@/components/AppSidebar'
+import { BuildVersion } from '@/components/BuildVersion'
 import { CommandMenu } from '@/components/CommandMenu'
 import { IdleWarning } from '@/components/IdleWarning'
 import { ImpersonationBanner } from '@/components/ImpersonationBanner'
@@ -69,6 +70,7 @@ export function AppLayout() {
           <div className="text-muted-foreground mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-4 text-xs md:px-6">
             <span>OpenPortal · {currentYear}</span>
             <LegalLinks />
+            <BuildVersion className="ms-auto text-end" />
           </div>
         </footer>
       </SidebarInset>

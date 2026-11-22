@@ -11,6 +11,7 @@ using OpenPortal.Web.Infrastructure;
 
 using OpenPortal.Web.Authorization;
 using OpenPortal.Web.Oidc;
+using OpenPortal.Web.Operations;
 
 namespace OpenPortal.Web.Controllers;
 
@@ -106,9 +107,7 @@ public sealed class AuthController : ControllerBase
             await _autoJoin.JoinByEmailDomainAsync(user.Id, cancellationToken).ConfigureAwait(false);
         }
 
-        return session.IsSuccess
-            ? Ok(session.Value)
-            : Ok(SessionDto.AnonymousFor(_authentication.PasswordPolicy));
+        return Ok(WithBuildVersion(session));
     }
 
     /// <summary>
@@ -193,8 +192,10 @@ public sealed class AuthController : ControllerBase
     {
         var session = await _authentication.GetSessionAsync(cancellationToken).ConfigureAwait(false);
 
-        return session.IsSuccess
-            ? Ok(session.Value)
-            : Ok(SessionDto.AnonymousFor(_authentication.PasswordPolicy));
+        return Ok(WithBuildVersion(session));
     }
+
+    private SessionDto WithBuildVersion(Result<SessionDto> session) =>
+        (session.IsSuccess ? session.Value : SessionDto.AnonymousFor(_authentication.PasswordPolicy))
+        with { BuildVersion = PortalBuild.DisplayVersion };
 }

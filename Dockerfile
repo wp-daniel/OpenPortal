@@ -46,7 +46,10 @@ COPY src/Modules/Notifications/OpenPortal.Notifications.Infrastructure/*.csproj 
 RUN dotnet restore src/OpenPortal.Web/OpenPortal.Web.csproj
 
 COPY src/ src/
-RUN dotnet publish src/OpenPortal.Web/OpenPortal.Web.csproj \
+ARG OPENPORTAL_VERSION
+ARG OPENPORTAL_REVISION
+RUN Version="$OPENPORTAL_VERSION" SourceRevisionId="$OPENPORTAL_REVISION" \
+    dotnet publish src/OpenPortal.Web/OpenPortal.Web.csproj \
       --configuration Release \
       --no-restore \
       --output /app \

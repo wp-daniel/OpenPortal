@@ -24,6 +24,16 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - id: release
+        if: github.ref_type == 'tag'
+        env:
+          OPENPORTAL_TAG: ${{ github.ref_name }}
+        run: |
+          if [[ ! "$OPENPORTAL_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$ ]]; then
+            echo "Select a version tag such as v0.1.0." >&2
+            exit 1
+          fi
+          echo "version=${OPENPORTAL_TAG#v}" >> "$GITHUB_OUTPUT"
       - id: meta
         uses: docker/metadata-action@v6
         with:
@@ -38,5 +48,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            OPENPORTAL_VERSION=${{ steps.release.outputs.version }}
+            OPENPORTAL_REVISION=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
