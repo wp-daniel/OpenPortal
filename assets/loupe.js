@@ -3,6 +3,7 @@
 
   const loupe = document.querySelector('.loupe');
   const layer = loupe.parentElement;
+  const footer = document.querySelector('.site-footer');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const openTitle = loupe.title;
   const isDocked = () => loupe.hasAttribute('data-docked');
@@ -34,7 +35,13 @@
       size: fullSize };
   }
 
+  function updateDockGlass() {
+    const overFooter = isDocked() && footer.getBoundingClientRect().top < position.y + position.size / 2;
+    loupe.toggleAttribute('data-over-footer', overFooter);
+  }
+
   function render() {
+    updateDockGlass();
     loupe.style.translate = `${position.x - fullSize / 2}px ${position.y - fullSize / 2}px`;
     loupe.style.scale = position.size / fullSize;
     loupe.style.setProperty('--loupe-lean', `${clamp(velocity.y / 240, -2.5, 2.5)}px`);
@@ -240,6 +247,7 @@
     measure();
     moveTo(isDocked() ? dockPoint() : activePoint(rest.x, rest.y));
   });
+  window.addEventListener('scroll', updateDockGlass, { passive: true });
   reduced.addEventListener('change', () => {
     if (reduced.matches) settle();
   });

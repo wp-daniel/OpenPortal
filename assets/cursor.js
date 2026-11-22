@@ -69,22 +69,25 @@
     if (hovered !== control) hovered?.removeAttribute('data-hover-light');
     const diameter = pressed ? 29 : 36;
     let goal = { x: point.x, y: point.y, w: diameter, h: diameter, radius: diameter / 2 };
+    let followsBorder = false;
     if (control) {
       const box = control.getBoundingClientRect();
-      if (control.matches('.footer-cta a')) {
+      const isInstallLink = control.matches('.footer-cta');
+      if (isInstallLink) {
         control.setAttribute('data-hover-light', '');
         control.style.setProperty('--pointer-x', (point.x - box.left) + 'px');
         control.style.setProperty('--pointer-y', (point.y - box.top) + 'px');
       }
-      // A wide grid tab or full-width link is a hit area, not a cursor shape.
-      if (box.width <= 112 && box.height <= 48) {
+      followsBorder = isInstallLink || (box.width <= 112 && box.height <= 48);
+      if (followsBorder) {
         const gap = 2;
         goal = { x: box.left + box.width / 2, y: box.top + box.height / 2,
           w: box.width + gap * 2, h: box.height + gap * 2,
           radius: Math.min((parseFloat(getComputedStyle(control).borderTopLeftRadius) || 3) + gap, box.height / 2 + gap) };
       }
-    } else if (hovered) {
-      // Release at the pointer instead of dragging a control-sized outline across the page.
+    }
+    if (!followsBorder && (control || hovered)) {
+      // Keep the circle at the pointer on wide controls and on hover exit.
       Object.assign(shape, goal);
     }
     hovered = control;
