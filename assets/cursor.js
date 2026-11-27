@@ -78,7 +78,7 @@
         control.style.setProperty('--pointer-x', (point.x - box.left) + 'px');
         control.style.setProperty('--pointer-y', (point.y - box.top) + 'px');
       }
-      followsBorder = isInstallLink || (box.width <= 112 && box.height <= 48);
+      followsBorder = box.width <= 112 && box.height <= 48;
       if (followsBorder) {
         const gap = 2;
         goal = { x: box.left + box.width / 2, y: box.top + box.height / 2,
@@ -86,10 +86,7 @@
           radius: Math.min((parseFloat(getComputedStyle(control).borderTopLeftRadius) || 3) + gap, box.height / 2 + gap) };
       }
     }
-    if (!followsBorder && (control || hovered)) {
-      // Keep the circle at the pointer on wide controls and on hover exit.
-      Object.assign(shape, goal);
-    }
+    if (!followsBorder) Object.assign(shape, goal);
     hovered = control;
     let moving = false;
     for (const key of Object.keys(shape)) {
@@ -98,6 +95,7 @@
       else { shape[key] += delta * .2; moving = true; }
     }
     ring.style.transform = `translate3d(${shape.x - shape.w / 2}px, ${shape.y - shape.h / 2}px, 0)`;
+    dot.style.transform = `translate3d(${point.x - 2.5}px, ${point.y - 2.5}px, 0)`;
     ring.style.width = shape.w + 'px';
     ring.style.height = shape.h + 'px';
     ring.style.borderRadius = shape.radius + 'px';
@@ -136,7 +134,6 @@
       active = true;
       root.classList.add('custom-cursor');
     }
-    dot.style.transform = `translate3d(${point.x - 2.5}px, ${point.y - 2.5}px, 0)`;
     track();
   }
   window.addEventListener('pointermove', move, { passive: true });

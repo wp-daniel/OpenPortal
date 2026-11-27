@@ -6,6 +6,14 @@
   const { gsap, ScrollTrigger } = lib;
   gsap.registerPlugin(ScrollTrigger);
 
+  function travelAlong(route, placePacket) {
+    const head = { distance: 0 };
+    return gsap.to(head, {
+      distance: route.getTotalLength(), duration: 1.05, ease: 'sine.inOut',
+      onUpdate: () => placePacket(route.getPointAtLength(head.distance)),
+    });
+  }
+
   const integration = document.querySelector('.integration');
   const client = integration.querySelector('#net-visual');
   const chapters = [...client.querySelectorAll('.client-scene')];
@@ -99,18 +107,13 @@
       animation = gsap.timeline();
       animation.from(map.querySelectorAll('.map-node'), { opacity: 0, y: 5, duration: .35, stagger: .09 });
       for (const [i, route] of [...map.querySelectorAll('.oidc-routes path')].entries()) {
-        const distance = route.getTotalLength();
-        const head = { progress: 0 };
         animation.call(() => { caption.textContent = route.dataset.caption; })
           .set(packet, { opacity: 1 })
           .to(route, { opacity: 1, strokeWidth: 2.4, duration: .18 })
-          .to(head, {
-            progress: 1, duration: 1.05, ease: 'sine.inOut', onUpdate() {
-              const point = route.getPointAtLength(head.progress * distance);
-              packet.setAttribute('cx', point.x);
-              packet.setAttribute('cy', point.y);
-            },
-          }, '<')
+          .add(travelAlong(route, point => {
+            packet.setAttribute('cx', point.x);
+            packet.setAttribute('cy', point.y);
+          }), '<')
           .to(endpoints[i < 3 ? 0 : 1], { borderTopColor: 'currentColor', duration: .25 }, '<')
           .to(packet, { opacity: 0, duration: .2 }, '+=.26')
           .to(route, { opacity: .42, strokeWidth: 1.4, duration: .2 }, '<');
@@ -275,6 +278,12 @@
     host.addEventListener('click', react);
 
     gsap.to('.reading-progress', { scaleX: 1, ease: 'none', scrollTrigger: { start: 0, end: 'max', scrub: true } });
+    for (const title of document.querySelectorAll('[data-rise-title]')) {
+      gsap.from(title.firstElementChild, {
+        y: () => Math.min(88, title.offsetHeight * .9), opacity: .25, ease: 'power2.out',
+        scrollTrigger: { trigger: title, start: 'top 98%', end: 'top 68%', scrub: true, invalidateOnRefresh: true },
+      });
+    }
     for (const section of document.querySelectorAll('[data-reveal]:not(.chart-motion)')) {
       gsap.from(section, { y: 22, opacity: .45, ease: 'none',
         scrollTrigger: { trigger: section, start: 'top 96%', end: 'top 71%', scrub: true } });

@@ -46,7 +46,7 @@
 }
   </script>
   <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./assets/style.css?v=d049b5a156">
+  <link rel="stylesheet" href="./assets/style.css?v=f542a2f25a">
   <style id="dark-palette" media="(prefers-color-scheme: dark)">/* Neutral surfaces and type from the OpenPortal dark theme. */
 :root {
   color-scheme: dark;
@@ -183,13 +183,14 @@
   });
 })();
 </script>
-  <script defer src="./assets/vendor/motion-libs.js?v=9a76965bbd"></script>
-  <script defer src="./assets/motion.js?v=c3b720eba5"></script>
+  <script defer src="./assets/vendor/motion-libs.js?v=c26b9f5a17"></script>
+  <script defer src="./assets/motion.js?v=157a7dcc14"></script>
+  <script defer src="./assets/access-story.js?v=612f4488ad"></script>
   <script defer src="./assets/logo-player.js?v=ea0a78136d"></script>
   <script defer src="./assets/logo-game.js?v=dd8579a79d"></script>
   <script defer src="./assets/database-scene.js?v=16ceaab54b"></script>
   <script defer src="./assets/site.js?v=d0d1820496"></script>
-  <script defer src="./assets/cursor.js?v=af115db4bc"></script>
+  <script defer src="./assets/cursor.js?v=217d6ee9fe"></script>
   <script defer src="./assets/loupe.js?v=d10fd68a1f"></script>
 </head>
 <body id="top">
@@ -365,9 +366,9 @@
     <section class="activity" id="overview" aria-labelledby="activity-title">
       <div class="wrap">
         <div class="chapter-intro">
-          <div data-reveal>
+          <div>
             <p class="eyebrow"><span class="short-rule"></span>Portal statistics</p>
-            <h2 id="activity-title">Sign-ins, day by day.</h2>
+            <h2 id="activity-title" data-rise-title><span>Sign-ins, day by day.</span></h2>
           </div>
           <p data-reveal>Track portal sign-ins, application sign-ins and failed attempts from one dashboard.</p>
         </div>
@@ -409,9 +410,75 @@
       </div>
     </section>
 
-    <section id="platform" class="platform wrap" aria-labelledby="platform-title">
+    <section class="access-story" id="access" aria-labelledby="access-title">
+      <div class="access-sticky">
+        <div class="access-layout wrap">
+          <header class="access-heading">
+            <h2 id="access-title">Users, groups and permissions.</h2>
+          </header>
+          <div class="access-scenes">
+            <article class="access-scene">
+              <div class="access-copy">
+                <h3>Manage users</h3><p>Check each account’s status. In this example, Elena Rossi is active.</p>
+              </div>
+              <div class="access-shot" aria-hidden="true">
+                <div class="access-camera">
+                  <picture class="access-light">
+                    <source media="(max-width: 740px)" srcset="./assets/portal/en-light-users-mobile.png" width="1088" height="880">
+                    <img src="./assets/portal/en-light-users.png" width="1240" height="690" loading="lazy" decoding="async" alt="">
+                  </picture>
+                  <picture class="access-dark">
+                    <source media="(max-width: 740px)" srcset="./assets/portal/en-dark-users-mobile.png" width="1088" height="880">
+                    <img src="./assets/portal/en-dark-users.png" width="1240" height="690" loading="lazy" decoding="async" alt="">
+                  </picture>
+                  <span class="access-focus"></span>
+                </div>
+              </div>
+            </article>
+            <article class="access-scene">
+              <div class="access-copy">
+                <h3>Organize groups</h3><p>The Support group has four members. You can grant access to the entire group.</p>
+              </div>
+              <div class="access-shot" aria-hidden="true">
+                <div class="access-camera">
+                  <picture class="access-light">
+                    <source media="(max-width: 740px)" srcset="./assets/portal/en-light-groups-mobile.png" width="1088" height="880">
+                    <img src="./assets/portal/en-light-groups.png" width="1240" height="690" loading="lazy" decoding="async" alt="">
+                  </picture>
+                  <picture class="access-dark">
+                    <source media="(max-width: 740px)" srcset="./assets/portal/en-dark-groups-mobile.png" width="1088" height="880">
+                    <img src="./assets/portal/en-dark-groups.png" width="1240" height="690" loading="lazy" decoding="async" alt="">
+                  </picture>
+                  <span class="access-focus"></span>
+                </div>
+              </div>
+            </article>
+            <article class="access-scene">
+              <div class="access-copy">
+                <h3>Assign permissions</h3><p>Choose which pages Support can open. In this view, Users and Groups are enabled.</p>
+              </div>
+              <div class="access-shot" aria-hidden="true">
+                <div class="access-camera">
+                  <picture class="access-light">
+                    <source media="(max-width: 740px)" srcset="./assets/portal/en-light-permissions-mobile.png" width="1088" height="880">
+                    <img src="./assets/portal/en-light-permissions.png" width="1240" height="690" loading="lazy" decoding="async" alt="">
+                  </picture>
+                  <picture class="access-dark">
+                    <source media="(max-width: 740px)" srcset="./assets/portal/en-dark-permissions-mobile.png" width="1088" height="880">
+                    <img src="./assets/portal/en-dark-permissions.png" width="1240" height="690" loading="lazy" decoding="async" alt="">
+                  </picture>
+                  <span class="access-focus"></span>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="platform" class="platform wrap" aria-labelledby="platform-title" tabindex="-1">
       <div class="chapter-intro">
-        <div data-reveal><p class="eyebrow"><span class="short-rule"></span>The platform</p><h2 id="platform-title">On your server.</h2></div>
+        <div><p class="eyebrow"><span class="short-rule"></span>The platform</p><h2 id="platform-title" data-rise-title><span>On your server.</span></h2></div>
         <p data-reveal>Choose how your applications connect and where your identity data lives.</p>
       </div>
       <div class="tech-grid">
