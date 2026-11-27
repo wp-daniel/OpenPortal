@@ -18,7 +18,7 @@
   document.addEventListener('click', event => {
     if (!event.target.closest('.header')) setMenu(false);
   });
-  window.matchMedia('(max-width: 740px)').addEventListener('change', () => setMenu(false));
+  window.matchMedia('(max-width: 880px)').addEventListener('change', () => setMenu(false));
 
   for (const link of document.querySelectorAll('.languages a')) {
     if (window.location.protocol === 'file:') link.pathname += 'index.html';
@@ -51,4 +51,64 @@
     }
   }
 
+  const copyButton = document.querySelector('.quickstart-copy-button');
+  if (navigator.clipboard?.writeText) {
+    const command = document.getElementById('quickstart-code');
+    const copyAction = copyButton.closest('.quickstart-copy-action');
+    const feedback = copyAction.querySelector('.quickstart-feedback');
+    const feedbackLabel = feedback.querySelector('span');
+    const status = document.querySelector('.quickstart-status');
+    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+    let feedbackAnimation;
+    let copyAttempt = 0;
+    copyAction.hidden = false;
+
+    function showCopyFeedback(copied) {
+      if (feedbackAnimation) {
+        feedbackAnimation.onfinish = null;
+        feedbackAnimation.cancel();
+      }
+      const message = copied ? status.dataset.copied : status.dataset.copyError;
+      status.textContent = message;
+      feedbackLabel.textContent = message;
+      feedback.toggleAttribute('data-error', !copied);
+      feedback.hidden = false;
+
+      const button = copyButton.getBoundingClientRect();
+      const center = button.left + button.width / 2;
+      const edge = feedback.offsetWidth / 2 + 12;
+      const transform = (x, y, tilt = 0, scale = 1) => {
+        const drift = Math.min(innerWidth - center - edge, Math.max(edge - center, x));
+        return `translate(${drift}px, ${y}px) rotate(${tilt}deg) scale(${scale})`;
+      };
+      const direction = Math.random() < .5 ? -1 : 1;
+      const offset = direction * (14 + Math.random() * 9);
+      const keyframes = reducedMotion.matches ? [
+        { transform: transform(0, 0) }, { transform: transform(0, 0) },
+      ] : [
+        { opacity: .85, transform: transform(offset * .45, 0, -direction * 7, .84), easing: 'cubic-bezier(.2, .8, .3, 1.12)' },
+        { opacity: 1, transform: transform(offset, -9, direction * 4, 1.04), offset: .2 },
+        { opacity: 1, transform: transform(offset, -11), offset: .76 },
+        { opacity: 0, transform: transform(offset + direction * 6, -24, direction * 3, .97) },
+      ];
+      feedbackAnimation = feedback.animate(keyframes, { duration: copied ? 1500 : 3400, fill: 'both' });
+      feedbackAnimation.onfinish = () => {
+        feedback.hidden = true;
+        feedbackAnimation.cancel();
+        feedbackAnimation = null;
+      };
+    }
+
+    copyButton.addEventListener('click', async () => {
+      const attempt = ++copyAttempt;
+      status.textContent = '';
+      let copied = true;
+      try {
+        await navigator.clipboard.writeText(command.textContent);
+      } catch {
+        copied = false;
+      }
+      if (attempt === copyAttempt) showCopyFeedback(copied);
+    });
+  }
 })();

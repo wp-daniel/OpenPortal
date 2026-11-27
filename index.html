@@ -46,7 +46,7 @@
 }
   </script>
   <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./assets/style.css?v=f542a2f25a">
+  <link rel="stylesheet" href="./assets/style.css?v=1794cfbacb">
   <style id="dark-palette" media="(prefers-color-scheme: dark)">/* Neutral surfaces and type from the OpenPortal dark theme. */
 :root {
   color-scheme: dark;
@@ -189,8 +189,8 @@
   <script defer src="./assets/logo-player.js?v=ea0a78136d"></script>
   <script defer src="./assets/logo-game.js?v=dd8579a79d"></script>
   <script defer src="./assets/database-scene.js?v=16ceaab54b"></script>
-  <script defer src="./assets/site.js?v=d0d1820496"></script>
-  <script defer src="./assets/cursor.js?v=217d6ee9fe"></script>
+  <script defer src="./assets/site.js?v=151a92f964"></script>
+  <script defer src="./assets/cursor.js?v=0102f10051"></script>
   <script defer src="./assets/loupe.js?v=d10fd68a1f"></script>
 </head>
 <body id="top">
@@ -203,6 +203,8 @@
   <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="9" r="4.5"/><path d="m11.5 12.3 7.4 7.4 2.4-2.4-1.9-1.9 1.3-1.4-2.2-2.1-1.4 1.3-2-2"/></symbol>
   <symbol id="i-license" viewBox="0 0 24 24"><path d="M4 5.5c2.5-1.7 5-1.5 8 .2 3-1.7 5.5-1.9 8-.2v14c-2.5-1.6-5-1.4-8 .3-3-1.7-5.5-1.9-8-.3zM12 6v13"/></symbol>
   <symbol id="i-code" viewBox="0 0 24 24"><path d="m7.6 7-5 5 5 5m8.8-10 5 5-5 5m-3.1-13-2.6 16"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></symbol>
   <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 8h16M4 16h16"/></symbol>
   <symbol id="i-system" viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="13.5" rx="2.5"/><path d="M12 17.5v3m-4 0h8"/></symbol>
   <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></symbol>
@@ -217,6 +219,7 @@
       <a class="brand" href="#top" aria-label="OpenPortal, top of page"><img src="./assets/openportal-logo.svg" width="1044" height="260" alt="OpenPortal"></a>
       <nav class="nav-links" id="navigation" aria-label="Main navigation">
         <a href="#overview">Overview</a><a href="#platform">Platform</a>
+        <a href="#quickstart">Install</a>
         <a target="_blank" rel="noopener noreferrer" href="https://github.com/wp-daniel/OpenPortal/wiki">Documentation <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-ne"></use></svg></a>
         <a class="mobile-repo" target="_blank" rel="noopener noreferrer" href="https://github.com/wp-daniel/OpenPortal">GitHub <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-ne"></use></svg></a>
       </nav>
@@ -581,6 +584,45 @@
               <span class="db-caption-sqlite"><strong>SQLite</strong>One file on the portal server</span>
               <span class="db-caption-postgres"><strong>PostgreSQL</strong>Multiple instances, one shared database</span>
             </figcaption>
+          </figure>
+        </article>
+        <article class="tech-card quickstart" id="quickstart" aria-labelledby="quickstart-title" tabindex="-1">
+          <div class="quickstart-copy" data-reveal>
+            <h3 id="quickstart-title">Your first launch</h3>
+            <ol class="quickstart-steps">
+              <li>
+                <strong>Prepare the project</strong>
+                <p>Clone OpenPortal and copy <code>.env.example</code> to <code>.env</code>. Set the PostgreSQL password, provisioning key and initial administrator.</p>
+              </li>
+              <li>
+                <strong>Start the portal</strong>
+                <p>Run the command from the project directory. The included Docker Compose file uses PostgreSQL.</p>
+              </li>
+              <li>
+                <strong>Sign in to the portal</strong>
+                <p>Follow the guide to configure HTTPS, then sign in with the administrator account.</p>
+              </li>
+            </ol>
+            <a class="text-link" target="_blank" rel="noopener noreferrer" href="https://github.com/wp-daniel/OpenPortal/blob/main/docs/deployment.md#docker">Installation guide <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-ne"></use></svg></a>
+          </div>
+          <figure class="quickstart-stage" aria-labelledby="quickstart-stage-title">
+            <figcaption id="quickstart-stage-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-code"></use></svg> Startup sequence</figcaption>
+            <ol class="quickstart-flow" role="list">
+              <li><span class="quickstart-node"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-db"></use></svg></span>Database</li>
+              <li><span class="quickstart-node"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-code"></use></svg></span>Migrations</li>
+              <li><span class="quickstart-node"><img src="./assets/openportal-symbol.svg" width="512" height="400" alt=""></span>OpenPortal</li>
+            </ol>
+            <div class="quickstart-console">
+              <div class="quickstart-command">
+                <span class="quickstart-prompt" aria-hidden="true">$</span>
+                <code id="quickstart-code">docker compose up <span>-d --build</span></code>
+                <div class="quickstart-copy-action" hidden>
+                  <button type="button" class="quickstart-copy-button" aria-label="Copy command" title="Copy command"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-copy"></use></svg></button>
+                  <span class="quickstart-feedback" aria-hidden="true" hidden><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-check"></use></svg><span></span></span>
+                </div>
+              </div>
+              <p class="quickstart-status" role="status" data-copied="Copied!" data-copy-error="Select the command to copy it manually."></p>
+            </div>
           </figure>
         </article>
       </div>

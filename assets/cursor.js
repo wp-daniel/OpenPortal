@@ -78,7 +78,7 @@
         control.style.setProperty('--pointer-x', (point.x - box.left) + 'px');
         control.style.setProperty('--pointer-y', (point.y - box.top) + 'px');
       }
-      followsBorder = box.width <= 112 && box.height <= 48;
+      followsBorder = isInstallLink || (box.width <= 112 && box.height <= 48);
       if (followsBorder) {
         const gap = 2;
         goal = { x: box.left + box.width / 2, y: box.top + box.height / 2,
